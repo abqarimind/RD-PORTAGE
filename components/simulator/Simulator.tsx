@@ -14,7 +14,8 @@ import { deriveLeadSource, deviceType, getAttribution } from "@/lib/tracking/utm
 
 const eur = (n: number) => Math.round(n).toLocaleString("fr-FR");
 const POLICY_VERSION = "privacy-2026-06";
-const RDV_URL = process.env.NEXT_PUBLIC_RDV_URL ?? "#rdv-a-configurer";
+/** Until a booking tool (Calendly) exists, the Diagnostic CTA dials Ridha. */
+const RDV_URL = process.env.NEXT_PUBLIC_RDV_URL ?? "tel:+33632988723";
 
 const STATUTS: { value: CurrentStatus; label: string }[] = [
   { value: "salarie_esn", label: "Salarié en ESN" },
@@ -447,7 +448,7 @@ function Results({
               onClick={() => trackEvent("rdv_clicked", { from: "sim_result" })}
               className="rounded border border-nuit px-6 py-3 text-center font-sans text-base text-nuit transition hover:bg-nuit hover:text-creme"
             >
-              Valider ce chiffre — Diagnostic 30 min
+              Valider ce chiffre — appeler Ridha (Diagnostic 30 min)
             </a>
           </div>
           <p className="mt-3 text-xs text-encre/60">

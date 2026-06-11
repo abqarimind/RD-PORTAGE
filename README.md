@@ -34,11 +34,12 @@ mock (aucune clé requise) : les leads vont dans `data/leads-fallback.ndjson`.
 
 ## Avant la mise en ligne (checklist)
 
-- [ ] `NEXT_PUBLIC_RDV_URL` (lien Calendly du Diagnostic 30 min)
+- [x] Photo de Ridha (section fondateur) — `public/ridha.png`
+- [x] CTA Diagnostic : appel direct +33 6 32 98 87 23 par défaut ;
+      définir `NEXT_PUBLIC_RDV_URL` plus tard si un Calendly arrive
 - [ ] `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` (domaine de prod)
 - [ ] CRM réel (`docs/branchement-brevo-airtable.md`) + `EXPORT_TOKEN`
-- [ ] Photo sobre de Ridha (section fondateur) + nom du garant financier
-      (mentions légales)
+- [ ] Nom du garant financier (mentions légales)
 - [ ] Vérifier le plafond exact de l'abattement 10 % (constante
       `ABATTEMENT_10_2026`, marquée TODO(verify))
 - [ ] Claims `[SOURCE REQUISE]` : sourcer ou retirer avant publication

@@ -5,10 +5,12 @@
  * Every figure comes from content/claims.ts; unsourced claims render as
  * [SOURCE REQUISE] and must not ship.
  */
+import Image from "next/image";
 import Link from "next/link";
 import { CLAIMS, COMPETITORS, claimText, comparatifLegalValidated } from "@/content/claims";
 
-const RDV_URL = process.env.NEXT_PUBLIC_RDV_URL ?? "#rdv-a-configurer";
+/** Until a booking tool (Calendly) exists, the Diagnostic CTA dials Ridha. */
+const RDV_URL = process.env.NEXT_PUBLIC_RDV_URL ?? "tel:+33632988723";
 
 export function AtarhibSection() {
   return (
@@ -98,12 +100,22 @@ export function FounderSection() {
               spectaculaire que les montages — c&rsquo;est aussi ce qui reste debout après un contrôle URSSAF.
             </p>
           </div>
-          {/* TODO(asset): sober portrait photo of Ridha — documents/stamps imagery, no stock smiles. */}
-          <div className="mt-6">
-            <p className="display text-lg text-encre">Ridha Chammam</p>
-            <p className="text-sm text-encre/70">
-              Fondateur de RD Portage — Founder &amp; CEO, RIDCHA DATA (ESN) · ridcha@ridchadata.com
-            </p>
+          <div className="mt-6 flex items-center gap-4">
+            <Image
+              src="/ridha.png"
+              alt="Ridha Chammam, fondateur de RD Portage"
+              width={88}
+              height={88}
+              className="rounded-full border border-laiton"
+            />
+            <div>
+              <p className="display text-lg text-encre">Ridha Chammam</p>
+              <p className="text-sm text-encre/70">
+                Fondateur de RD Portage — Founder &amp; CEO, RIDCHA DATA (ESN)
+                <br />
+                <a href="tel:+33632988723" className="underline">+33 6 32 98 87 23</a> · ridcha@ridchadata.com
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -166,7 +178,7 @@ export function ProofSection() {
 
 export function FinalCta() {
   return (
-    <section className="bg-nuit text-creme">
+    <section id="rdv" className="bg-nuit text-creme">
       <div className="mx-auto max-w-page px-4 py-16 text-center md:py-24">
         {/* Locked promise, repeated as the decision bridge. */}
         <h2 className="display mx-auto max-w-2xl text-2xl md:text-4xl">
@@ -183,7 +195,7 @@ export function FinalCta() {
             href={RDV_URL}
             className="rounded border border-laiton px-6 py-3 font-sans text-base text-creme transition hover:bg-laiton hover:text-encre"
           >
-            Déjà décidé ? Diagnostic 30 min avec Ridha
+            Déjà décidé ? Appelez Ridha — 06 32 98 87 23
           </a>
         </div>
         <p className="mt-4 text-xs text-creme/60">
