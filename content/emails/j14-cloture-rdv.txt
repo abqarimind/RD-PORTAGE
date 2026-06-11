@@ -1,0 +1,31 @@
+Objet : Votre taux réel, validé en 30 minutes
+
+Bonjour {prenom},
+
+Depuis deux semaines, vous avez vu les deux faces : ce que les
+montages coûtent, et ce que le cadre légal rapporte. Votre simulation
+indique {economie_annuelle} €/an d'écart. Il reste une étape pour
+transformer cette estimation en chiffre ferme : la valider ensemble.
+
+Le Diagnostic, concrètement : 30 minutes en visio avec moi. On reprend
+votre TJM, votre foyer, vos frais réels, vos dispositifs éligibles.
+À l'issue : une proposition ferme — et si elle vous convient,
+signature possible sous 48 h. Frais de gestion : 4 %, tout compris,
+sans surprise en bas de page.
+
+Réserver mon Diagnostic 30 min :
+https://rdportage.com/?utm_source=brevo&utm_medium=email&utm_campaign=seq14_j14#rdv
+
+Si le moment n'est pas le bon, aucun souci : votre simulation reste
+valable, et je reste joignable en répondant simplement à cet email.
+
+Au plaisir d'échanger,
+
+Ridha Chammam
+Fondateur de RD Portage, ex-consultant porté.
+
+--
+RD Portage — 1 rue George Stephenson, 78180 Montigny-le-Bretonneux
+RCS Versailles 912 888 013
+Simulation à valeur indicative — ne constitue pas un conseil fiscal personnalisé.
+Se désinscrire : {{ unsubscribe }}

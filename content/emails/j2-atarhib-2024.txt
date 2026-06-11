@@ -1,0 +1,33 @@
+Objet : Ce qui a changé en 2024 (et qu'on ne vous a peut-être pas dit)
+
+Bonjour {prenom},
+
+Une seule information aujourd'hui, mais elle change tout : en cas de
+redressement URSSAF, ce n'est plus seulement la société de portage qui
+paie — la régularisation s'impute sur votre paie. Cotisations
+rappelées, impôt corrigé : le porté est en première ligne.
+
+Concrètement, l'URSSAF peut remonter 3 années civiles complètes
+(5 en cas de travail dissimulé). L'arithmétique est brutale :
+
+  15 000 € d'avantages indus aujourd'hui peuvent coûter
+  jusqu'à 60 000 € demain.
+  (Cotisations rappelées sur 3 ans + majorations + pénalités
+  + impôt redressé. Ordre de grandeur illustratif.)
+
+Si votre société de portage actuelle ne vous a jamais parlé de ce
+risque, posez-vous une question simple : qu'est-ce qu'elle a à perdre
+à vous en parler ?
+
+Vendredi, je vous montre l'envers positif : tout ce que le cadre légal
+permet — chiffres et plafonds à l'appui.
+
+Prudence,
+
+Ridha Chammam
+Fondateur de RD Portage, ex-consultant porté.
+
+--
+RD Portage — 1 rue George Stephenson, 78180 Montigny-le-Bretonneux
+RCS Versailles 912 888 013
+Se désinscrire : {{ unsubscribe }}

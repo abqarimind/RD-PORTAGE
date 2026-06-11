@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Votre simulation détaillée</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F4EFE6;">
+<!-- Préheader -->
+<div style="display:none;max-height:0;overflow:hidden;">Le détail de vos 3 scénarios, calculé sur votre foyer réel.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F4EFE6;">
+<tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#FFFFFF;border:1px solid #B08D57;">
+  <tr><td style="background-color:#0E1B33;padding:18px 32px;">
+    <span style="font-family:Georgia,'Source Serif 4',serif;font-size:20px;color:#F4EFE6;">RD Portage</span>
+  </td></tr>
+  <tr><td style="padding:32px;font-family:Arial,'IBM Plex Sans',sans-serif;color:#1A1A1A;font-size:15px;line-height:1.6;">
+    <p style="margin:0 0 16px;">Bonjour {{ contact.PRENOM }},</p>
+    <p style="margin:0 0 16px;">Voici votre simulation détaillée, promise il y a quelques minutes. Le chiffre qui compte&nbsp;:</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
+      <tr><td style="border-top:1px solid #B08D57;border-bottom:1px solid #B08D57;padding:16px 8px;text-align:center;">
+        <span style="font-family:Georgia,serif;font-size:22px;color:#0E1B33;">Vous laissez <strong style="color:#2F6B4F;">{{ contact.ECONOMIE_ANNUELLE }}&nbsp;€/an</strong> sur la table.</span>
+      </td></tr>
+    </table>
+    <p style="margin:0 0 16px;">Ce montant compare votre statut actuel ({{ contact.STATUT_ACTUEL }}) au scénario {{ contact.SCENARIO_OPTIMAL }} : mêmes revenus, même foyer, mêmes règles URSSAF — seule l'organisation change. Rien de ce que nous calculons ne sort du cadre légal&nbsp;: c'est précisément le principe.</p>
+    <p style="margin:0 0 24px;">Retrouvez le tableau complet des 3 scénarios et votre récapitulatif imprimable ici&nbsp;:</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
+      <tr><td style="background-color:#B08D57;">
+        <a href="https://rdportage.com/simulateur?utm_source=brevo&utm_medium=email&utm_campaign=seq14_j0" style="display:inline-block;padding:13px 28px;font-family:Arial,sans-serif;font-size:15px;color:#1A1A1A;text-decoration:none;">Revoir ma simulation détaillée</a>
+      </td></tr>
+    </table>
+    <p style="margin:0 0 8px;">À très vite,</p>
+    <p style="margin:0;"><span style="font-family:Georgia,serif;font-size:16px;color:#0E1B33;">Ridha Chammam</span><br>
+    <span style="font-size:13px;color:#555555;">Fondateur de RD Portage — et avant cela, consultant porté comme vous. Je sais ce que c'est de découvrir, des années plus tard, tout ce qu'on aurait pu optimiser.</span></p>
+  </td></tr>
+  <tr><td style="padding:16px 32px;border-top:1px solid #B08D57;font-family:Arial,sans-serif;font-size:11px;color:#777777;line-height:1.5;">
+    RD Portage — 1 rue George Stephenson, 78180 Montigny-le-Bretonneux · RCS Versailles 912 888 013<br>
+    Simulation à valeur indicative — ne constitue pas un conseil fiscal personnalisé.<br>
+    <a href="{{ unsubscribe }}" style="color:#777777;">Se désinscrire en un clic</a>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>

@@ -1,0 +1,32 @@
+Objet : Les 18 000 € que le cadre légal vous autorise
+
+Bonjour {prenom},
+
+Mardi je vous parlais du risque. Aujourd'hui, la bonne nouvelle : le
+cadre légal est bien plus généreux qu'on ne le croit — à condition de
+respecter chaque plafond. Dans notre cas de référence, la cagnotte
+d'avantages atteint 18 000 €/an exonérés. Le détail :
+
+  - Cagnotte avantages (vacances, culture, sport, cadeaux,
+    services à la personne) ........... jusqu'à 1 570 €/mois*
+  - Titres-restaurant dématérialisés .. 13 €/jour travaillé
+  - Frais professionnels remboursés ... jusqu'à 30 % du CA
+  - Mobilité durable .................. 800 €/an
+
+* Sur justificatifs, dans les plafonds URSSAF par catégorie :
+cadeaux 193,20 €/an, services à la personne 2 421 €/an, mobilité
+800 €/an. Chaque euro est tracé — c'est ce qui rend l'ensemble
+solide en contrôle.
+
+Votre simulation intègre déjà ces plafonds. Pour voir ce que ça donne
+sur VOS chiffres :
+https://rdportage.com/simulateur?utm_source=brevo&utm_medium=email&utm_campaign=seq14_j4
+
+Ridha Chammam
+Fondateur de RD Portage, ex-consultant porté.
+
+--
+RD Portage — 1 rue George Stephenson, 78180 Montigny-le-Bretonneux
+RCS Versailles 912 888 013
+Simulation à valeur indicative — ne constitue pas un conseil fiscal personnalisé.
+Se désinscrire : {{ unsubscribe }}

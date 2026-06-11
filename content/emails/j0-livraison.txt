@@ -1,0 +1,30 @@
+Objet : Votre simulation détaillée, {prenom}
+
+Bonjour {prenom},
+
+Voici votre simulation détaillée, promise il y a quelques minutes.
+Le chiffre qui compte :
+
+  Vous laissez {economie_annuelle} €/an sur la table.
+
+Ce montant compare votre statut actuel ({statut_actuel}) au scénario
+{scenario_optimal} : mêmes revenus, même foyer, mêmes règles URSSAF —
+seule l'organisation change. Rien de ce que nous calculons ne sort du
+cadre légal : c'est précisément le principe.
+
+Retrouvez le tableau complet des 3 scénarios et votre récapitulatif
+imprimable ici :
+https://rdportage.com/simulateur?utm_source=brevo&utm_medium=email&utm_campaign=seq14_j0
+
+À très vite,
+
+Ridha Chammam
+Fondateur de RD Portage — et avant cela, consultant porté comme vous.
+Je sais ce que c'est de découvrir, des années plus tard, tout ce qu'on
+aurait pu optimiser.
+
+--
+RD Portage — 1 rue George Stephenson, 78180 Montigny-le-Bretonneux
+RCS Versailles 912 888 013
+Simulation à valeur indicative — ne constitue pas un conseil fiscal personnalisé.
+Se désinscrire : {{ unsubscribe }}
