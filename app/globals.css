@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand lock "TRIBUNAL FISCAL". Runtime-loaded webfonts with editorial
+     serif/sans fallbacks — never Inter/Roboto/Lato/Poppins. */
+  --font-serif: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  --font-sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #f4efe6;
+  color: #1a1a1a;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  /* Notarial letterhead rule — 1px brass filet. */
+  .filet {
+    border-top: 1px solid #b08d57;
+  }
+  .display {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Primary CTA: solid brass on night blue, ink text, hover = inversion. */
+  .cta-primary {
+    @apply inline-block rounded bg-laiton px-6 py-3 font-sans text-base font-medium text-encre transition;
+  }
+  .cta-primary:hover {
+    @apply bg-nuit text-creme;
+    box-shadow: inset 0 0 0 1px #b08d57;
+  }
+  /* Legal footnote box — crème background, brass filet. */
+  .note-juridique {
+    @apply border border-laiton bg-creme p-4 text-sm leading-relaxed;
+  }
+}
+
+@media print {
+  header, footer, .no-print {
+    display: none !important;
+  }
+}
