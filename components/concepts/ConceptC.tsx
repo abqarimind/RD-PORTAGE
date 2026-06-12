@@ -1,28 +1,23 @@
 "use client";
 
 /**
- * CONCEPT C — light fintech variant, interactive v2 (client feedback round 1):
- * - Hero: real Three.js phone that tilts toward the mouse; inside, the
- *   simulation figures spin like a slot machine before settling; badge pops
- *   in 3D on hover.
- * - "Vos 3 scénarios": bars slide in + fill on scroll.
- * - "Trois étapes": GSAP pinned horizontal scroll with oversized typography
- *   (desktop); stacked cards on mobile.
- * - Initials avatars everywhere images are pending (hero cluster, trust
- *   band, testimonials) — real photos swap in later.
- * - Common-sense entrance animations per section: central blocks from
- *   top/bottom, side blocks from their edge toward the center.
- * Figures still computed by the real fiscal engine (TJM-420 reference).
+ * CONCEPT C — light fintech variant, v3 (client feedback round 2):
+ * - "Trois étapes" horizontal section rebuilt around a CONTINUOUS BRASS
+ *   THREAD (same stroke as the scribble accent) that draws itself with the
+ *   scroll and travels across the cards: 3 question circles converge into
+ *   one line (30 s chip) → the line diverges through household waypoints
+ *   (situation familiale, garde alternée, frais réels, PER) and reconverges
+ *   → straight to Ridha's photo node, then a signature chip (48 h).
+ *   Extra end-spacer so the 3rd card gets full dwell time before unpin.
+ * - Hero phone rebuilt in crisp CSS 3D (tilt toward cursor, idle float),
+ *   same height as the scenario card; slot-machine digits kept.
+ * - Icons are temporary stand-ins for future generated illustrations.
  */
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Html, RoundedBox } from "@react-three/drei";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { Group } from "three";
-import { MathUtils } from "three";
 import { computePortage } from "@/lib/fiscal/portage";
 
 const REF = computePortage({ tjm: 420, days: 20, ndf: 500, cagnotteMay: 1570, mealVouchers: true });
@@ -36,10 +31,10 @@ const LILAC = "#EFF0FB";
 const MINT = "#E7F6EE";
 const ROSE = "#FDE8E4";
 const INK = "#0B0D12";
+const BRASS = "#B08D57";
 
 /* ————————————————————————— shared bits ————————————————————————— */
 
-/** Directional entrance on first viewport intersection. */
 function Reveal({
   children,
   from = "up",
@@ -84,7 +79,6 @@ function Reveal({
   );
 }
 
-/** Colored circle with initials — stand-in until real portraits/logos. */
 function InitialsAvatar({
   initials,
   bg,
@@ -122,7 +116,25 @@ function Pill({ children, dark = false, href = "/simulateur" }: { children: Reac
 function Scribble() {
   return (
     <svg viewBox="0 0 220 14" className="absolute -bottom-2 left-0 w-full" aria-hidden>
-      <path d="M4 9 C 60 2, 150 2, 216 7" fill="none" stroke="#B08D57" strokeWidth="5" strokeLinecap="round" />
+      <path d="M4 9 C 60 2, 150 2, 216 7" fill="none" stroke={BRASS} strokeWidth="5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/* tiny stroke icons — placeholders for future illustrations */
+function IconClock() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3.5 2" strokeLinecap="round" />
+    </svg>
+  );
+}
+function IconPen() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+      <path d="M3 21c4-1 4-1 6-3L20 7l-3-3L6 15c-2 2-2 2-3 6Z" strokeLinejoin="round" />
+      <path d="M14 6l3 3" />
     </svg>
   );
 }
@@ -150,7 +162,6 @@ function Digit({ d, run, delay }: { d: number; run: boolean; delay: number }) {
   );
 }
 
-/** Renders "5 391 €" with every digit rolling like a slot machine. */
 function SlotValue({ value, run, baseDelay = 0 }: { value: string; run: boolean; baseDelay?: number }) {
   let digitIndex = 0;
   return (
@@ -159,79 +170,21 @@ function SlotValue({ value, run, baseDelay = 0 }: { value: string; run: boolean;
         /\d/.test(ch) ? (
           <Digit key={i} d={Number(ch)} run={run} delay={baseDelay + digitIndex++ * 110} />
         ) : (
-          <span key={i}>{ch === " " ? " " : ch}</span>
+          <span key={i}>{ch === " " ? " " : ch}</span>
         ),
       )}
     </span>
   );
 }
 
-/* ————————————————— 3D phone (hero) ————————————————— */
-
-function PhoneModel({ pointer, run }: { pointer: React.MutableRefObject<{ x: number; y: number }>; run: boolean }) {
-  const g = useRef<Group>(null);
-  useFrame(() => {
-    if (!g.current) return;
-    g.current.rotation.y = MathUtils.lerp(g.current.rotation.y, pointer.current.x * 0.42, 0.08);
-    g.current.rotation.x = MathUtils.lerp(g.current.rotation.x, -pointer.current.y * 0.28, 0.08);
-  });
-  return (
-    <group ref={g}>
-      <RoundedBox args={[2.45, 4.95, 0.17]} radius={0.14} smoothness={6}>
-        <meshStandardMaterial color={INK} metalness={0.45} roughness={0.32} />
-      </RoundedBox>
-      {/* camera notch */}
-      <mesh position={[0, 2.18, 0.095]}>
-        <capsuleGeometry args={[0.045, 0.28, 4, 8]} />
-        <meshStandardMaterial color="#23262F" roughness={0.6} />
-      </mesh>
-      <Html transform position={[0, 0, 0.092]} distanceFactor={1.62} style={{ width: 300 }} className="select-none">
-        <div className="rounded-[26px] bg-white p-4 shadow-2xl" style={{ width: 300, fontFamily: "'Manrope',sans-serif", color: INK }}>
-          <div className="flex items-center justify-between text-[10px] font-bold text-[#7A8093]">
-            <span>9:41</span>
-            <span>Votre simulation</span>
-          </div>
-          <p className="mt-3 text-[11px] font-semibold text-[#7A8093]">Rémunération globale / mois</p>
-          <p className="mt-1 text-[34px] font-extrabold">
-            <SlotValue value={`${eur(REF.globalCompensation)} €`} run={run} />
-          </p>
-          {/* Badge — pops in 3D on hover. */}
-          <span
-            className="mt-2 inline-block cursor-default rounded-full px-2.5 py-1 text-[11px] font-bold transition-transform duration-300 [transform-style:preserve-3d] hover:[transform:perspective(420px)_rotateX(16deg)_rotateY(-12deg)_translateZ(14px)_scale(1.08)] hover:shadow-lg"
-            style={{ backgroundColor: MINT, color: "#2F6B4F" }}
-          >
-            {PCT}&nbsp;% du CA restitué
-          </span>
-          <div className="mt-3 space-y-1.5 text-[11px] font-medium">
-            {[
-              ["Salaire net", `${eur(REF.netSalary)} €`, 350],
-              ["Frais remboursés", `${eur(REF.ndf)} €`, 550],
-              ["Avantages May", `${eur(REF.cagnotteMay)} €`, 750],
-              ["Frais de gestion (4 %)", `−${eur(REF.managementFee)} €`, 950],
-            ].map(([l, v, dl]) => (
-              <div key={l as string} className="flex justify-between rounded-xl bg-[#F6F7FA] px-3 py-2">
-                <span className="text-[#4A5061]">{l}</span>
-                <span className="font-bold">
-                  <SlotValue value={v as string} run={run} baseDelay={dl as number} />
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Html>
-    </group>
-  );
-}
+/* ————————————————— CSS-3D phone (hero) ————————————————— */
 
 function PhoneCard() {
-  const pointer = useRef({ x: 0, y: 0 });
+  const phone = useRef<HTMLDivElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const [run, setRun] = useState(false);
-  const [webgl, setWebgl] = useState(true);
 
   useEffect(() => {
-    const c = document.createElement("canvas");
-    setWebgl(!!(c.getContext("webgl2") || c.getContext("webgl")));
     const el = wrap.current;
     if (!el) return;
     const io = new IntersectionObserver(
@@ -250,30 +203,74 @@ function PhoneCard() {
   return (
     <div
       ref={wrap}
-      className="rounded-3xl p-4 md:p-6"
-      style={{ backgroundColor: PEACH }}
+      className="flex h-full flex-col rounded-3xl p-5 md:p-6"
+      style={{ backgroundColor: PEACH, perspective: "1100px" }}
       onPointerMove={(e) => {
         const r = e.currentTarget.getBoundingClientRect();
-        pointer.current = { x: ((e.clientX - r.left) / r.width) * 2 - 1, y: ((e.clientY - r.top) / r.height) * 2 - 1 };
+        const x = ((e.clientX - r.left) / r.width) * 2 - 1;
+        const y = ((e.clientY - r.top) / r.height) * 2 - 1;
+        if (phone.current) {
+          phone.current.style.transition = "transform .1s linear";
+          phone.current.style.transform = `rotateY(${x * 10}deg) rotateX(${-y * 8}deg)`;
+        }
       }}
-      onPointerLeave={() => (pointer.current = { x: 0, y: 0 })}
+      onPointerLeave={() => {
+        if (phone.current) {
+          phone.current.style.transition = "transform .6s ease-out";
+          phone.current.style.transform = "rotateY(0deg) rotateX(0deg)";
+        }
+      }}
     >
-      <div className="h-[480px] md:h-[520px]">
-        {webgl ? (
-          <Canvas camera={{ position: [0, 0, 5.4], fov: 42 }} dpr={[1, 1.5]} gl={{ alpha: true, antialias: true }}>
-            <ambientLight intensity={0.95} />
-            <directionalLight position={[3, 4, 5]} intensity={1.2} />
-            <PhoneModel pointer={pointer} run={run} />
-          </Canvas>
-        ) : (
-          <div className="flex h-full items-center justify-center text-sm font-semibold text-[#8A6B3F]">
-            Rémunération globale : {eur(REF.globalCompensation)} €/mois — {PCT} % du CA restitué.
+      <div className="flex flex-1 items-center justify-center py-4">
+        <div
+          ref={phone}
+          className="relative w-[272px] rounded-[36px] p-2.5 shadow-2xl will-change-transform"
+          style={{ backgroundColor: INK, transformStyle: "preserve-3d", animation: "phonefloat 7s ease-in-out infinite" }}
+        >
+          {/* notch */}
+          <div className="absolute left-1/2 top-4 h-[10px] w-[88px] -translate-x-1/2 rounded-full bg-[#23262F]" />
+          <div className="rounded-[28px] bg-white px-4 pb-4 pt-6">
+            <div className="flex items-center justify-between text-[10px] font-bold text-[#7A8093]">
+              <span>9:41</span>
+              <span>Votre simulation</span>
+            </div>
+            <p className="mt-3 text-[11px] font-semibold text-[#7A8093]">Rémunération globale / mois</p>
+            <p className="mt-1 text-[32px] font-extrabold">
+              <SlotValue value={`${eur(REF.globalCompensation)} €`} run={run} />
+            </p>
+            <span
+              className="mt-2 inline-block cursor-default rounded-full px-2.5 py-1 text-[11px] font-bold transition-transform duration-300 [transform-style:preserve-3d] hover:[transform:perspective(420px)_rotateX(16deg)_rotateY(-12deg)_translateZ(14px)_scale(1.08)] hover:shadow-lg"
+              style={{ backgroundColor: MINT, color: "#2F6B4F" }}
+            >
+              {PCT}&nbsp;% du CA restitué
+            </span>
+            <div className="mt-3 space-y-1.5 text-[11px] font-medium">
+              {[
+                ["Salaire net", `${eur(REF.netSalary)} €`, 350],
+                ["Frais remboursés", `${eur(REF.ndf)} €`, 550],
+                ["Avantages May", `${eur(REF.cagnotteMay)} €`, 750],
+                ["Frais de gestion (4 %)", `−${eur(REF.managementFee)} €`, 950],
+              ].map(([l, v, dl]) => (
+                <div key={l as string} className="flex justify-between rounded-xl bg-[#F6F7FA] px-3 py-2">
+                  <span className="text-[#4A5061]">{l}</span>
+                  <span className="font-bold">
+                    <SlotValue value={v as string} run={run} baseDelay={dl as number} />
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
+        </div>
       </div>
       <p className="text-xs font-semibold text-[#8A6B3F]">
         Cas de référence TJM 420 € — calculé par notre moteur, pas par le marketing.
       </p>
+      <style jsx global>{`
+        @keyframes phonefloat {
+          0%, 100% { translate: 0 0; }
+          50% { translate: 0 -8px; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -302,11 +299,11 @@ function ScenarioCard() {
   const rows: [string, number, string][] = [
     ["Statut actuel", 51, "#C9CEDA"],
     ["Portage classique", 49, "#C9CEDA"],
-    ["RD Portage optimisé", PCT, "#B08D57"],
+    ["RD Portage optimisé", PCT, BRASS],
   ];
 
   return (
-    <div ref={wrap} className="flex flex-col rounded-3xl p-6 text-left md:p-8" style={{ backgroundColor: LILAC }}>
+    <div ref={wrap} className="flex h-full flex-col rounded-3xl p-6 text-left md:p-8" style={{ backgroundColor: LILAC }}>
       <div className="rounded-2xl bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <p className="text-sm font-bold">Vos 3 scénarios</p>
@@ -352,34 +349,92 @@ function ScenarioCard() {
   );
 }
 
-/* ————————————————— GSAP horizontal steps ————————————————— */
+/* ————————————————— the brass thread — horizontal steps ————————————————— */
 
-const STEPS = [
-  {
-    tint: PEACH,
-    accent: "#8A6B3F",
-    num: "01",
-    title: "Diagnostic flash",
-    body: "3 questions, 30 secondes, zéro email demandé : une première fourchette de ce que vous laissez sur la table chaque année.",
-    tiles: ["Votre statut ?", "Votre TJM ?", "Votre foyer ?"],
-  },
-  {
-    tint: LILAC,
-    accent: "#4A4F8C",
-    num: "02",
-    title: "Simulateur foyer",
-    body: "2-3 minutes pour le calcul complet : situation familiale, garde alternée, frais réels, PER, impatrié — plafonds légaux inclus.",
-    tiles: ["Quotient familial", "Frais réels vs 10 %", "PER plafonné"],
-  },
-  {
-    tint: MINT,
-    accent: "#2F6B4F",
-    num: "03",
-    title: "Diagnostic 30 min",
-    body: "Vous validez votre chiffre avec Ridha, le fondateur (ex-porté). Proposition ferme — signature possible sous 48 h.",
-    tiles: ["Visio 30 min", "Proposition ferme", "Signature 48 h"],
-  },
-];
+/** Chip pinned on the thread (desktop: absolute %, mobile: inline). */
+function ThreadChip({
+  left,
+  top,
+  accent,
+  icon,
+  children,
+}: {
+  left: string;
+  top: string;
+  accent: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      className="step-anim z-20 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold shadow-md transition-transform duration-200 hover:scale-110 md:absolute md:-translate-x-1/2 md:-translate-y-1/2"
+      style={{ left, top, color: accent }}
+    >
+      {icon}
+      {children}
+    </span>
+  );
+}
+
+/** SVG path layer drawn over a card; paths get scroll-scrubbed dashoffset. */
+function ThreadSvg({ paths }: { paths: string[] }) {
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 z-10 hidden h-full w-full md:block"
+      viewBox="0 0 1000 600"
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      {paths.map((d) => (
+        <path key={d} d={d} className="thread-path" fill="none" stroke={BRASS} strokeWidth="4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      ))}
+    </svg>
+  );
+}
+
+function StepShell({
+  tint,
+  accent,
+  num,
+  title,
+  body,
+  bridge,
+  children,
+}: {
+  tint: string;
+  accent: string;
+  num: string;
+  title: string;
+  body: string;
+  bridge: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative md:flex md:h-[70vh] md:items-center md:pr-[4vw]">
+      {/* bridge between cards — the thread continues across the gap (55% = thread line) */}
+      {bridge && <span className="absolute right-0 top-[55%] z-0 hidden h-[4px] w-[4vw] -translate-y-1/2 rounded bg-[#B08D57] md:block" />}
+      <div
+        className="step-panel group relative overflow-hidden rounded-3xl p-6 transition-shadow duration-300 hover:shadow-2xl md:h-[70vh] md:min-w-[52vw] md:p-10"
+        style={{ backgroundColor: tint }}
+      >
+        <p
+          className="step-anim pointer-events-none absolute -right-2 -top-8 z-0 select-none text-[30vw] font-extrabold leading-none md:-top-14 md:text-[13rem]"
+          style={{ color: accent, opacity: 0.13 }}
+        >
+          {num}
+        </p>
+        <div className="relative z-20 max-w-md">
+          <p className="step-anim text-xs font-bold uppercase tracking-widest" style={{ color: accent }}>
+            Étape {num}
+          </p>
+          <h3 className="step-anim mt-1.5 text-3xl font-extrabold tracking-tight md:text-5xl">{title}</h3>
+          <p className="step-anim mt-3 text-sm leading-relaxed text-[#4A5061]">{body}</p>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function HorizontalSteps() {
   const wrap = useRef<HTMLElement>(null);
@@ -398,24 +453,40 @@ function HorizontalSteps() {
         scrollTrigger: {
           trigger: w,
           start: "top top",
-          end: () => `+=${dist()}`,
+          // 1.35x distance = slower travel + dwell time on the last card.
+          end: () => `+=${dist() * 1.35}`,
           scrub: 1,
           pin: true,
           anticipatePin: 1,
           invalidateOnRefresh: true,
         },
       });
+
+      // The thread draws itself as each card crosses the viewport.
+      gsap.utils.toArray<SVGPathElement>(".thread-path").forEach((path) => {
+        const len = path.getTotalLength();
+        gsap.fromTo(
+          path,
+          { strokeDasharray: len, strokeDashoffset: len },
+          {
+            strokeDashoffset: 0,
+            ease: "none",
+            scrollTrigger: { trigger: path.closest(".step-panel"), containerAnimation: tween, start: "left 90%", end: "center 55%", scrub: true },
+          },
+        );
+      });
+
       gsap.utils.toArray<HTMLElement>(".step-panel").forEach((panel) => {
         gsap.fromTo(
           panel.querySelectorAll(".step-anim"),
-          { y: 70, opacity: 0 },
+          { y: 60, opacity: 0 },
           {
             y: 0,
             opacity: 1,
-            stagger: 0.1,
-            duration: 0.8,
+            stagger: 0.09,
+            duration: 0.7,
             ease: "power3.out",
-            scrollTrigger: { trigger: panel, containerAnimation: tween, start: "left 75%" },
+            scrollTrigger: { trigger: panel, containerAnimation: tween, start: "left 80%" },
           },
         );
       });
@@ -427,13 +498,13 @@ function HorizontalSteps() {
     <section id="methode" ref={wrap} className="overflow-hidden bg-white">
       <div
         ref={track}
-        className="flex flex-col gap-6 px-4 py-16 md:h-screen md:flex-row md:flex-nowrap md:items-center md:gap-[4vw] md:py-0 md:pl-[8vw] md:pr-[12vw]"
+        className="flex flex-col gap-6 px-4 py-16 md:h-screen md:flex-row md:flex-nowrap md:items-center md:gap-0 md:py-0 md:pl-[7vw]"
       >
-        {/* Intro panel */}
-        <div className="md:min-w-[34vw]">
+        {/* Intro panel — the thread starts under the scribble. */}
+        <div className="relative md:flex md:h-[70vh] md:min-w-[30vw] md:items-center md:pr-[4vw]">
           <Reveal from="up">
             <p className="text-xs font-bold uppercase tracking-widest text-[#B08D57]">La méthode</p>
-            <h2 className="mt-3 text-4xl font-extrabold leading-tight tracking-tight md:text-6xl">
+            <h2 className="mt-3 text-4xl font-extrabold leading-tight tracking-tight md:text-5xl">
               Trois étapes,
               <br />
               <span className="relative inline-block">
@@ -442,45 +513,109 @@ function HorizontalSteps() {
               </span>
             </h2>
             <p className="mt-4 hidden items-center gap-2 text-sm font-semibold text-[#7A8093] md:flex">
-              Continuez à défiler
+              Suivez le fil
               <svg width="28" height="12" viewBox="0 0 28 12" aria-hidden>
-                <path d="M0 6h24m0 0-5-5m5 5-5 5" stroke="#B08D57" strokeWidth="2" fill="none" />
+                <path d="M0 6h24m0 0-5-5m5 5-5 5" stroke={BRASS} strokeWidth="2" fill="none" />
               </svg>
             </p>
           </Reveal>
+          <span className="absolute right-0 top-[55%] hidden h-[4px] w-[4vw] -translate-y-1/2 rounded bg-[#B08D57] md:block" />
         </div>
 
-        {STEPS.map((s) => (
-          <div
-            key={s.num}
-            className="step-panel group relative flex flex-col justify-between overflow-hidden rounded-3xl p-7 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl md:h-[72vh] md:min-w-[56vw] md:p-12"
-            style={{ backgroundColor: s.tint }}
-          >
-            <p
-              className="step-anim pointer-events-none absolute -right-4 -top-10 select-none text-[38vw] font-extrabold leading-none md:-top-16 md:text-[17rem]"
-              style={{ color: s.accent, opacity: 0.14 }}
-            >
-              {s.num}
-            </p>
-            <div className="relative">
-              <p className="step-anim text-xs font-bold uppercase tracking-widest" style={{ color: s.accent }}>
-                Étape {s.num}
-              </p>
-              <h3 className="step-anim mt-2 text-3xl font-extrabold tracking-tight md:text-6xl">{s.title}</h3>
-              <p className="step-anim mt-4 max-w-md text-sm leading-relaxed text-[#4A5061] md:text-base">{s.body}</p>
-            </div>
-            <div className="relative mt-8 grid grid-cols-1 gap-2 sm:grid-cols-3">
-              {s.tiles.map((tile) => (
-                <div
-                  key={tile}
-                  className="step-anim rounded-2xl bg-white/80 px-4 py-3 text-sm font-bold backdrop-blur transition-transform duration-200 hover:scale-[1.04]"
-                >
-                  {tile}
-                </div>
-              ))}
-            </div>
+        {/* ——— Étape 1 : 3 questions → convergence → 30 s ——— */}
+        <StepShell tint={PEACH} accent="#8A6B3F" num="01" title="Diagnostic flash" body="Trois questions, une fourchette immédiate — sans email." bridge>
+          <ThreadSvg
+            paths={[
+              // three entry lines to the question circles
+              "M 0 240 H 200",
+              "M 0 330 H 200",
+              "M 0 420 H 200",
+              // convergence into the 30s node
+              "M 255 240 C 400 240, 470 330, 580 330",
+              "M 255 330 H 580",
+              "M 255 420 C 400 420, 470 330, 580 330",
+              // exit
+              "M 730 330 H 1000",
+            ]}
+          />
+          {/* question circles + chips — mobile: simple wrapped row */}
+          <div className="relative z-20 mt-6 flex flex-wrap items-center gap-3 md:mt-0 md:block">
+            {[
+              ["Statut ?", "20%", "40%"],
+              ["TJM ?", "20%", "55%"],
+              ["Foyer ?", "20%", "70%"],
+            ].map(([label, left, top]) => (
+              <span
+                key={label}
+                className="step-anim z-20 flex items-center gap-2 md:absolute md:-translate-x-1/2 md:-translate-y-1/2"
+                style={{ left, top }}
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-lg font-extrabold shadow-md" style={{ color: "#8A6B3F" }}>
+                  ?
+                </span>
+                <span className="text-[11px] font-bold text-[#8A6B3F]">{label}</span>
+              </span>
+            ))}
+            <ThreadChip left="65.5%" top="55%" accent="#8A6B3F" icon={<IconClock />}>
+              30 secondes
+            </ThreadChip>
           </div>
-        ))}
+        </StepShell>
+
+        {/* ——— Étape 2 : le fil diverge à travers les balises du foyer ——— */}
+        <StepShell tint={LILAC} accent="#4A4F8C" num="02" title="Simulateur foyer" body="Le fil passe par tout ce que les autres ignorent — plafonds légaux inclus." bridge>
+          <ThreadSvg
+            paths={[
+              "M 0 330 H 100",
+              // diverge
+              "M 100 330 C 180 330, 200 230, 290 230",
+              "M 100 330 C 180 330, 200 440, 290 440",
+              // top branch through 2 waypoints
+              "M 290 230 H 700",
+              // bottom branch through 2 waypoints
+              "M 290 440 H 700",
+              // reconverge
+              "M 700 230 C 800 230, 820 330, 890 330",
+              "M 700 440 C 800 440, 820 330, 890 330",
+              "M 890 330 H 1000",
+            ]}
+          />
+          <div className="relative z-20 mt-6 flex flex-wrap items-center gap-2 md:mt-0 md:block">
+            <ThreadChip left="36%" top="38.3%" accent="#4A4F8C">Situation familiale</ThreadChip>
+            <ThreadChip left="58%" top="38.3%" accent="#4A4F8C">Garde alternée</ThreadChip>
+            <ThreadChip left="36%" top="73.3%" accent="#4A4F8C">Frais réels</ThreadChip>
+            <ThreadChip left="58%" top="73.3%" accent="#4A4F8C">PER plafonné</ThreadChip>
+            <ThreadChip left="74%" top="55%" accent="#4A4F8C" icon={<IconClock />}>2-3 min</ThreadChip>
+          </div>
+        </StepShell>
+
+        {/* ——— Étape 3 : le fil passe par Ridha puis la signature ——— */}
+        <StepShell tint={MINT} accent="#2F6B4F" num="03" title="Diagnostic 30 min" body="Vous validez votre chiffre avec le fondateur — proposition ferme à la clé." bridge={false}>
+          <ThreadSvg
+            paths={[
+              "M 0 330 H 300",
+              "M 420 330 H 600",
+              "M 760 330 H 930",
+            ]}
+          />
+          <div className="relative z-20 mt-6 flex flex-wrap items-center gap-3 md:mt-0 md:block">
+            {/* Ridha node — the human waypoint. */}
+            <span className="step-anim z-20 flex flex-col items-center gap-1.5 md:absolute md:left-[36%] md:top-[55%] md:-translate-x-1/2 md:-translate-y-1/2">
+              <Image src="/ridha.png" alt="Ridha Chammam" width={76} height={76} className="rounded-full shadow-lg ring-4 ring-white" />
+              <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold shadow-md" style={{ color: "#2F6B4F" }}>
+                30 min avec Ridha
+              </span>
+            </span>
+            <ThreadChip left="68%" top="55%" accent="#2F6B4F" icon={<IconPen />}>
+              Signature sous 48 h
+            </ThreadChip>
+            {/* end dot */}
+            <span className="step-anim z-20 hidden h-3.5 w-3.5 rounded-full md:absolute md:left-[94%] md:top-[55%] md:block md:-translate-x-1/2 md:-translate-y-1/2" style={{ backgroundColor: BRASS }} />
+          </div>
+        </StepShell>
+
+        {/* End spacer — dwell room so card 3 settles before the unpin. */}
+        <div className="hidden md:block md:min-w-[16vw]" />
       </div>
     </section>
   );
@@ -511,7 +646,7 @@ export function ConceptC() {
       <div className="border-b border-[#ECEEF3] bg-white">
         <div className="mx-auto flex max-w-page flex-wrap items-center justify-between gap-2 px-4 py-2 text-xs text-[#7A8093]">
           <p>
-            <span className="font-bold text-[#B08D57]">Prototype interne</span> — Concept C, variante UI fintech claire (v2 animée)
+            <span className="font-bold text-[#B08D57]">Prototype interne</span> — Concept C, variante UI fintech claire (v3 : fil doré)
           </p>
           <p>
             <Link href="/concept-a" className="underline">Concept A</Link>
@@ -578,9 +713,9 @@ export function ConceptC() {
           </div>
         </Reveal>
 
-        {/* Mockup cards: 3D phone + scenario bars (stacks on mobile). */}
-        <div className="mt-12 grid gap-6 md:grid-cols-2">
-          <Reveal from="left">
+        {/* Mockup cards — equal heights via items-stretch. */}
+        <div className="mt-12 grid items-stretch gap-6 md:grid-cols-2">
+          <Reveal from="left" className="h-full">
             <PhoneCard />
           </Reveal>
           <Reveal from="right" delay={120} className="h-full">
@@ -606,7 +741,7 @@ export function ConceptC() {
         </div>
       </section>
 
-      {/* ——— GSAP horizontal steps ——— */}
+      {/* ——— GSAP horizontal steps with the brass thread ——— */}
       <HorizontalSteps />
 
       {/* ——— EDITORIAL SPLIT ——— */}
@@ -714,7 +849,7 @@ export function ConceptC() {
         </div>
       </section>
 
-      {/* ——— PRICING / FINAL CTA — solo bottom block: rises from below. ——— */}
+      {/* ——— PRICING / FINAL CTA ——— */}
       <section id="tarif" className="mx-auto max-w-page px-4 py-16 text-center">
         <Reveal from="up">
           <div className="rounded-3xl px-6 py-12 md:py-16" style={{ backgroundColor: PEACH }}>
