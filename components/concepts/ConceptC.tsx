@@ -379,21 +379,10 @@ function ThreadChip({
   );
 }
 
-/** SVG path layer drawn over a card; paths get scroll-scrubbed dashoffset. */
-function ThreadSvg({ paths }: { paths: string[] }) {
-  return (
-    <svg
-      className="pointer-events-none absolute inset-0 z-10 hidden h-full w-full md:block"
-      viewBox="0 0 1000 600"
-      preserveAspectRatio="none"
-      aria-hidden
-    >
-      {paths.map((d) => (
-        <path key={d} d={d} className="thread-path" fill="none" stroke={BRASS} strokeWidth="4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-      ))}
-    </svg>
-  );
-}
+/* The thread is ONE continuous track-level SVG built at runtime from the
+   measured card positions — no per-card segments, no visual cuts. Paths are
+   drawn left → right by a single scrubbed timeline (card 1, then 2, then 3);
+   waypoint chips simply sit on top of the wires. */
 
 function StepShell({
   tint,
@@ -438,6 +427,7 @@ function StepShell({
 function HorizontalSteps() {
   const wrap = useRef<HTMLElement>(null);
   const track = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
@@ -446,6 +436,7 @@ function HorizontalSteps() {
       const t = track.current!;
       const w = wrap.current!;
       const dist = () => t.scrollWidth - window.innerWidth;
+      const endValue = () => `+=${dist() * 1.35}`;
       const tween = gsap.to(t, {
         x: () => -dist(),
         ease: "none",
@@ -453,7 +444,7 @@ function HorizontalSteps() {
           trigger: w,
           start: "top top",
           // 1.35x distance = slower travel + dwell time on the last card.
-          end: () => `+=${dist() * 1.35}`,
+          end: endValue,
           scrub: 1,
           pin: true,
           anticipatePin: 1,
@@ -461,19 +452,70 @@ function HorizontalSteps() {
         },
       });
 
-      // The thread draws itself as each card crosses the viewport.
-      gsap.utils.toArray<SVGPathElement>(".thread-path").forEach((path) => {
-        const len = path.getTotalLength();
-        gsap.fromTo(
-          path,
-          { strokeDasharray: len, strokeDashoffset: len },
-          {
-            strokeDashoffset: 0,
-            ease: "none",
-            scrollTrigger: { trigger: path.closest(".step-panel"), containerAnimation: tween, start: "left 90%", end: "center 55%", scrub: true },
-          },
-        );
+      // ——— ONE continuous thread over the whole track, built from the
+      // measured card rects. Normalized card coords: y 0.55 = the main line.
+      const svg = svgRef.current!;
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      const tr = t.getBoundingClientRect();
+      const rects = gsap.utils.toArray<HTMLElement>(".step-panel").map((p) => {
+        const r = p.getBoundingClientRect();
+        return { l: r.left - tr.left, t: r.top - tr.top, w: r.width, h: r.height };
       });
+      if (rects.length === 3) {
+        const X = (i: number, nx: number) => (rects[i].l + nx * rects[i].w).toFixed(1);
+        const Y = (i: number, ny: number) => (rects[i].t + ny * rects[i].h).toFixed(1);
+        const y55 = Y(0, 0.55);
+        const ds = [
+          // card 1 — top & bottom question lines converging into the main
+          `M ${X(0, 0)} ${Y(0, 0.4)} H ${X(0, 0.23)} C ${X(0, 0.4)} ${Y(0, 0.4)}, ${X(0, 0.47)} ${y55}, ${X(0, 0.6)} ${y55}`,
+          `M ${X(0, 0)} ${Y(0, 0.7)} H ${X(0, 0.23)} C ${X(0, 0.4)} ${Y(0, 0.7)}, ${X(0, 0.47)} ${y55}, ${X(0, 0.6)} ${y55}`,
+          // main line: card-1 left edge → across the gap → card-2 split point
+          `M ${X(0, 0)} ${y55} H ${X(1, 0.1)}`,
+          // card-2 top branch, carrying the line across the gap to the very
+          // end of card 3 (the end dot sits at 94%)
+          `M ${X(1, 0.1)} ${y55} C ${X(1, 0.16)} ${y55}, ${X(1, 0.2)} ${Y(1, 0.383)}, ${X(1, 0.29)} ${Y(1, 0.383)} H ${X(1, 0.68)} C ${X(1, 0.8)} ${Y(1, 0.383)}, ${X(1, 0.83)} ${y55}, ${X(1, 0.89)} ${y55} H ${X(2, 0.94)}`,
+          // card-2 bottom branch, reconverging into the main
+          `M ${X(1, 0.1)} ${y55} C ${X(1, 0.16)} ${y55}, ${X(1, 0.2)} ${Y(1, 0.733)}, ${X(1, 0.29)} ${Y(1, 0.733)} H ${X(1, 0.68)} C ${X(1, 0.8)} ${Y(1, 0.733)}, ${X(1, 0.83)} ${y55}, ${X(1, 0.89)} ${y55}`,
+        ];
+        svg.setAttribute("viewBox", `0 0 ${t.scrollWidth} ${t.offsetHeight}`);
+        svg.setAttribute("width", String(t.scrollWidth));
+        svg.setAttribute("height", String(t.offsetHeight));
+        const paths = ds.map((d) => {
+          const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          p.setAttribute("d", d);
+          p.setAttribute("fill", "none");
+          p.setAttribute("stroke", BRASS);
+          p.setAttribute("stroke-width", "4");
+          p.setAttribute("stroke-linecap", "round");
+          svg.appendChild(p);
+          return p;
+        });
+
+        // Sequenced draw: entries + main first; both branches start once the
+        // main reaches the card-2 split. Durations ∝ length = constant speed,
+        // scrubbed over the entire pinned scroll.
+        const SPEED = 1000; // px per timeline second (arbitrary unit)
+        const len = paths.map((p) => p.getTotalLength());
+        paths.forEach((p, i) => {
+          p.style.strokeDasharray = `${len[i]}`;
+          p.style.strokeDashoffset = `${len[i]}`;
+          // Hidden until its draw starts: with offset == dash length, the
+          // previous dash ends exactly at s=0 and its round cap pokes out
+          // as a 2px dot at the path start.
+          p.style.opacity = "0";
+        });
+        const tl = gsap.timeline({
+          scrollTrigger: { trigger: w, start: "top top", end: endValue, scrub: 1, invalidateOnRefresh: true },
+        });
+        const tSplit = len[2] / SPEED;
+        tl.set([paths[0], paths[1], paths[2]], { opacity: 1 }, 0.001)
+          .to(paths[0], { strokeDashoffset: 0, duration: len[0] / SPEED, ease: "none" }, 0.001)
+          .to(paths[1], { strokeDashoffset: 0, duration: len[1] / SPEED, ease: "none" }, 0.001)
+          .to(paths[2], { strokeDashoffset: 0, duration: len[2] / SPEED, ease: "none" }, 0.001)
+          .set([paths[3], paths[4]], { opacity: 1 }, tSplit)
+          .to(paths[3], { strokeDashoffset: 0, duration: len[3] / SPEED, ease: "none" }, tSplit)
+          .to(paths[4], { strokeDashoffset: 0, duration: len[4] / SPEED, ease: "none" }, tSplit);
+      }
 
       gsap.utils.toArray<HTMLElement>(".step-panel").forEach((panel) => {
         gsap.fromTo(
@@ -497,7 +539,7 @@ function HorizontalSteps() {
     <section id="methode" ref={wrap} className="overflow-hidden bg-white">
       <div
         ref={track}
-        className="flex flex-col gap-6 px-4 py-16 md:h-screen md:flex-row md:flex-nowrap md:items-center md:gap-0 md:py-0 md:pl-[7vw]"
+        className="relative flex flex-col gap-6 px-4 py-16 md:h-screen md:flex-row md:flex-nowrap md:items-center md:gap-0 md:py-0 md:pl-[7vw]"
       >
         {/* Intro panel — the thread starts under the scribble. */}
         <div className="relative md:flex md:h-[70vh] md:min-w-[30vw] md:items-center md:pr-[4vw]">
@@ -522,20 +564,6 @@ function HorizontalSteps() {
 
         {/* ——— Étape 1 : 3 questions → convergence → 30 s ——— */}
         <StepShell tint={PEACH} accent="#8A6B3F" num="01" title="Diagnostic flash" body="Trois questions, une fourchette immédiate — sans email.">
-          <ThreadSvg
-            paths={[
-              // three entry lines to the question circles
-              "M 0 240 H 200",
-              "M 0 330 H 200",
-              "M 0 420 H 200",
-              // convergence into the 30s node
-              "M 255 240 C 400 240, 470 330, 580 330",
-              "M 255 330 H 580",
-              "M 255 420 C 400 420, 470 330, 580 330",
-              // exit
-              "M 730 330 H 1000",
-            ]}
-          />
           {/* question circles + chips — mobile: simple wrapped row */}
           <div className="relative z-20 mt-6 flex flex-wrap items-center gap-3 md:static md:mt-0 md:block">
             {[
@@ -562,22 +590,6 @@ function HorizontalSteps() {
 
         {/* ——— Étape 2 : le fil diverge à travers les balises du foyer ——— */}
         <StepShell tint={LILAC} accent="#4A4F8C" num="02" title="Simulateur foyer" body="Le fil passe par tout ce que les autres ignorent — plafonds légaux inclus.">
-          <ThreadSvg
-            paths={[
-              "M 0 330 H 100",
-              // diverge
-              "M 100 330 C 180 330, 200 230, 290 230",
-              "M 100 330 C 180 330, 200 440, 290 440",
-              // top branch through 2 waypoints
-              "M 290 230 H 700",
-              // bottom branch through 2 waypoints
-              "M 290 440 H 700",
-              // reconverge
-              "M 700 230 C 800 230, 820 330, 890 330",
-              "M 700 440 C 800 440, 820 330, 890 330",
-              "M 890 330 H 1000",
-            ]}
-          />
           <div className="relative z-20 mt-6 flex flex-wrap items-center gap-2 md:static md:mt-0 md:block">
             <ThreadChip left="36%" top="38.3%" accent="#4A4F8C">Situation familiale</ThreadChip>
             <ThreadChip left="58%" top="38.3%" accent="#4A4F8C">Garde alternée</ThreadChip>
@@ -589,13 +601,6 @@ function HorizontalSteps() {
 
         {/* ——— Étape 3 : le fil passe par Ridha puis la signature ——— */}
         <StepShell tint={MINT} accent="#2F6B4F" num="03" title="Diagnostic 30 min" body="Vous validez votre chiffre avec le fondateur — proposition ferme à la clé.">
-          <ThreadSvg
-            paths={[
-              "M 0 330 H 300",
-              "M 420 330 H 600",
-              "M 760 330 H 930",
-            ]}
-          />
           <div className="relative z-20 mt-6 flex flex-wrap items-center gap-3 md:static md:mt-0 md:block">
             {/* Ridha node — the human waypoint. */}
             <span className="step-anim z-20 flex flex-col items-center gap-1.5 md:absolute md:left-[36%] md:top-[55%] md:-translate-x-1/2 md:-translate-y-1/2">
@@ -614,6 +619,11 @@ function HorizontalSteps() {
 
         {/* End spacer — dwell room so card 3 settles before the unpin. */}
         <div className="hidden md:block md:min-w-[16vw]" />
+
+        {/* The single continuous thread — populated at runtime from the
+            measured card rects, drawn left → right by the scrubbed timeline.
+            Chips (z-20) ride above it; card backgrounds sit below. */}
+        <svg ref={svgRef} className="pointer-events-none absolute inset-0 z-[15] hidden md:block" aria-hidden />
       </div>
     </section>
   );
