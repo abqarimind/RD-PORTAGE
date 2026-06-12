@@ -10,6 +10,8 @@ const config: Config = {
     colors: {
       transparent: "transparent",
       current: "currentColor",
+      white: "#FFFFFF",
+      black: "#000000",
       nuit: "#0E1B33", // primary background
       laiton: "#B08D57", // accents, secondary CTAs, rules
       creme: "#F4EFE6", // light backgrounds, text on nuit
