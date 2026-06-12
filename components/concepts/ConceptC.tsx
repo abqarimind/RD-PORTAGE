@@ -453,15 +453,25 @@ function HorizontalSteps() {
       });
 
       // ——— ONE continuous thread over the whole track, built from the
-      // measured card rects. Normalized card coords: y 0.55 = the main line.
+      // measured card rects (normalized coords: y 0.55 = the main line).
+      // REBUILT on resize: a stale pixel viewBox stretched by inset-0 made
+      // the lines drift away from the %-anchored chips on smaller screens.
       const svg = svgRef.current!;
-      while (svg.firstChild) svg.removeChild(svg.firstChild);
-      const tr = t.getBoundingClientRect();
-      const rects = gsap.utils.toArray<HTMLElement>(".step-panel").map((p) => {
-        const r = p.getBoundingClientRect();
-        return { l: r.left - tr.left, t: r.top - tr.top, w: r.width, h: r.height };
-      });
-      if (rects.length === 3) {
+      let tl: gsap.core.Timeline | null = null;
+
+      const buildThread = () => {
+        tl?.scrollTrigger?.kill();
+        tl?.kill();
+        tl = null;
+        while (svg.firstChild) svg.removeChild(svg.firstChild);
+        // Panels and track are measured in the same frame, so the pin's
+        // translateX cancels out in the relative coordinates.
+        const tr = t.getBoundingClientRect();
+        const rects = gsap.utils.toArray<HTMLElement>(".step-panel").map((p) => {
+          const r = p.getBoundingClientRect();
+          return { l: r.left - tr.left, t: r.top - tr.top, w: r.width, h: r.height };
+        });
+        if (rects.length !== 3) return;
         const X = (i: number, nx: number) => (rects[i].l + nx * rects[i].w).toFixed(1);
         const Y = (i: number, ny: number) => (rects[i].t + ny * rects[i].h).toFixed(1);
         const y55 = Y(0, 0.55);
@@ -504,7 +514,7 @@ function HorizontalSteps() {
           // as a 2px dot at the path start.
           p.style.opacity = "0";
         });
-        const tl = gsap.timeline({
+        tl = gsap.timeline({
           scrollTrigger: { trigger: w, start: "top top", end: endValue, scrub: 1, invalidateOnRefresh: true },
         });
         const tSplit = len[2] / SPEED;
@@ -515,7 +525,17 @@ function HorizontalSteps() {
           .set([paths[3], paths[4]], { opacity: 1 }, tSplit)
           .to(paths[3], { strokeDashoffset: 0, duration: len[3] / SPEED, ease: "none" }, tSplit)
           .to(paths[4], { strokeDashoffset: 0, duration: len[4] / SPEED, ease: "none" }, tSplit);
-      }
+      };
+
+      buildThread();
+      // Rebuild geometry + draw timeline on resize (debounced) so the thread
+      // always matches the %-anchored chips, whatever the viewport.
+      let resizeTimer: ReturnType<typeof setTimeout>;
+      const onResize = () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(buildThread, 250);
+      };
+      window.addEventListener("resize", onResize);
 
       gsap.utils.toArray<HTMLElement>(".step-panel").forEach((panel) => {
         gsap.fromTo(
@@ -531,6 +551,11 @@ function HorizontalSteps() {
           },
         );
       });
+
+      return () => {
+        window.removeEventListener("resize", onResize);
+        clearTimeout(resizeTimer);
+      };
     });
     return () => mm.revert();
   }, []);
@@ -567,9 +592,11 @@ function HorizontalSteps() {
           {/* question circles + chips — mobile: simple wrapped row */}
           <div className="relative z-20 mt-6 flex flex-wrap items-center gap-3 md:static md:mt-0 md:block">
             {[
-              ["Statut ?", "20%", "40%"],
-              ["TJM ?", "20%", "55%"],
-              ["Foyer ?", "20%", "70%"],
+              // The "?" lives in the circle only — repeating it in the label
+              // pill read as two different questions.
+              ["Statut", "20%", "40%"],
+              ["TJM", "20%", "55%"],
+              ["Foyer", "20%", "70%"],
             ].map(([label, left, top]) => (
               <span
                 key={label}
