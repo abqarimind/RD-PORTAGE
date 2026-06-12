@@ -398,7 +398,6 @@ function StepShell({
   num,
   title,
   body,
-  bridge,
   children,
 }: {
   tint: string;
@@ -406,13 +405,10 @@ function StepShell({
   num: string;
   title: string;
   body: string;
-  bridge: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className="relative md:flex md:h-[70vh] md:items-center md:pr-[4vw]">
-      {/* bridge between cards — the thread continues across the gap (55% = thread line) */}
-      {bridge && <span className="absolute right-0 top-[55%] z-0 hidden h-[4px] w-[4vw] -translate-y-1/2 rounded bg-[#B08D57] md:block" />}
       <div
         className="step-panel group relative overflow-hidden rounded-3xl p-6 transition-shadow duration-300 hover:shadow-2xl md:h-[70vh] md:min-w-[52vw] md:p-10"
         style={{ backgroundColor: tint }}
@@ -519,11 +515,10 @@ function HorizontalSteps() {
               </svg>
             </p>
           </Reveal>
-          <span className="absolute right-0 top-[55%] hidden h-[4px] w-[4vw] -translate-y-1/2 rounded bg-[#B08D57] md:block" />
         </div>
 
         {/* ——— Étape 1 : 3 questions → convergence → 30 s ——— */}
-        <StepShell tint={PEACH} accent="#8A6B3F" num="01" title="Diagnostic flash" body="Trois questions, une fourchette immédiate — sans email." bridge>
+        <StepShell tint={PEACH} accent="#8A6B3F" num="01" title="Diagnostic flash" body="Trois questions, une fourchette immédiate — sans email.">
           <ThreadSvg
             paths={[
               // three entry lines to the question circles
@@ -539,7 +534,7 @@ function HorizontalSteps() {
             ]}
           />
           {/* question circles + chips — mobile: simple wrapped row */}
-          <div className="relative z-20 mt-6 flex flex-wrap items-center gap-3 md:mt-0 md:block">
+          <div className="relative z-20 mt-6 flex flex-wrap items-center gap-3 md:static md:mt-0 md:block">
             {[
               ["Statut ?", "20%", "40%"],
               ["TJM ?", "20%", "55%"],
@@ -563,7 +558,7 @@ function HorizontalSteps() {
         </StepShell>
 
         {/* ——— Étape 2 : le fil diverge à travers les balises du foyer ——— */}
-        <StepShell tint={LILAC} accent="#4A4F8C" num="02" title="Simulateur foyer" body="Le fil passe par tout ce que les autres ignorent — plafonds légaux inclus." bridge>
+        <StepShell tint={LILAC} accent="#4A4F8C" num="02" title="Simulateur foyer" body="Le fil passe par tout ce que les autres ignorent — plafonds légaux inclus.">
           <ThreadSvg
             paths={[
               "M 0 330 H 100",
@@ -580,7 +575,7 @@ function HorizontalSteps() {
               "M 890 330 H 1000",
             ]}
           />
-          <div className="relative z-20 mt-6 flex flex-wrap items-center gap-2 md:mt-0 md:block">
+          <div className="relative z-20 mt-6 flex flex-wrap items-center gap-2 md:static md:mt-0 md:block">
             <ThreadChip left="36%" top="38.3%" accent="#4A4F8C">Situation familiale</ThreadChip>
             <ThreadChip left="58%" top="38.3%" accent="#4A4F8C">Garde alternée</ThreadChip>
             <ThreadChip left="36%" top="73.3%" accent="#4A4F8C">Frais réels</ThreadChip>
@@ -590,7 +585,7 @@ function HorizontalSteps() {
         </StepShell>
 
         {/* ——— Étape 3 : le fil passe par Ridha puis la signature ——— */}
-        <StepShell tint={MINT} accent="#2F6B4F" num="03" title="Diagnostic 30 min" body="Vous validez votre chiffre avec le fondateur — proposition ferme à la clé." bridge={false}>
+        <StepShell tint={MINT} accent="#2F6B4F" num="03" title="Diagnostic 30 min" body="Vous validez votre chiffre avec le fondateur — proposition ferme à la clé.">
           <ThreadSvg
             paths={[
               "M 0 330 H 300",
@@ -598,7 +593,7 @@ function HorizontalSteps() {
               "M 760 330 H 930",
             ]}
           />
-          <div className="relative z-20 mt-6 flex flex-wrap items-center gap-3 md:mt-0 md:block">
+          <div className="relative z-20 mt-6 flex flex-wrap items-center gap-3 md:static md:mt-0 md:block">
             {/* Ridha node — the human waypoint. */}
             <span className="step-anim z-20 flex flex-col items-center gap-1.5 md:absolute md:left-[36%] md:top-[55%] md:-translate-x-1/2 md:-translate-y-1/2">
               <Image src="/ridha.png" alt="Ridha Chammam" width={76} height={76} className="rounded-full shadow-lg ring-4 ring-white" />
