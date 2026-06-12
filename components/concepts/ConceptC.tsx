@@ -115,7 +115,7 @@ function Pill({ children, dark = false, href = "/simulateur" }: { children: Reac
 
 function Scribble() {
   return (
-    <svg viewBox="0 0 220 14" className="absolute -bottom-2 left-0 w-full" aria-hidden>
+    <svg viewBox="0 0 220 14" preserveAspectRatio="none" className="absolute -bottom-3 left-0 h-3 w-full" aria-hidden>
       <path d="M4 9 C 60 2, 150 2, 216 7" fill="none" stroke={BRASS} strokeWidth="5" strokeLinecap="round" />
     </svg>
   );
@@ -142,7 +142,10 @@ function IconPen() {
 /* ————————————————— slot-machine digits ————————————————— */
 
 function Digit({ d, run, delay }: { d: number; run: boolean; delay: number }) {
-  const start = useRef(Math.floor(Math.random() * 10));
+  // Deterministic pseudo-random start so server and client render the same
+  // HTML (Math.random here caused a hydration mismatch → React #423 in prod,
+  // which re-rendered the tree and broke the GSAP pin).
+  const start = useRef((d * 7 + Math.floor(delay / 110) * 3) % 10);
   return (
     <span className="inline-block overflow-hidden align-bottom" style={{ height: "1em" }}>
       <span
@@ -548,7 +551,7 @@ function HorizontalSteps() {
                 <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-lg font-extrabold shadow-md" style={{ color: "#8A6B3F" }}>
                   ?
                 </span>
-                <span className="text-[11px] font-bold text-[#8A6B3F]">{label}</span>
+                <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold shadow-sm" style={{ color: "#8A6B3F" }}>{label}</span>
               </span>
             ))}
             <ThreadChip left="65.5%" top="55%" accent="#8A6B3F" icon={<IconClock />}>
