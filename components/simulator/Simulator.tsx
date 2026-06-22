@@ -7,10 +7,21 @@
  * The range result is FREE; the detailed 3-scenario table + printable
  * summary require the email gate (explicit, unticked GDPR consent).
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { simulate, type CurrentStatus, type SimulationInput } from "@/lib/fiscal/scenarios";
 import { trackEvent, setLeadId } from "@/lib/tracking/events";
 import { deriveLeadSource, deviceType, getAttribution } from "@/lib/tracking/utm";
+import {
+  ensureMetaInit,
+  metaContact,
+  metaLead,
+  metaSchedule,
+  metaSimulateurComplete,
+  metaSimulateurStart,
+  newEventId,
+} from "@/lib/tracking/meta";
+
+const META_LEAD_EVENT_ID_KEY = "rdp_meta_lead_eid";
 
 const eur = (n: number) => Math.round(n).toLocaleString("fr-FR");
 const POLICY_VERSION = "privacy-2026-06";
@@ -63,6 +74,13 @@ export function Simulator() {
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
+  // Meta SimulateurStart fires once on mount (the canonical start of ACTE
+  // CONSIDÉRATION); the LP flash CTA only fires the internal sim_started.
+  useEffect(() => {
+    ensureMetaInit();
+    metaSimulateurStart();
+  }, []);
+
   const simInput: SimulationInput = useMemo(
     () => ({
       status: form.status,
@@ -86,7 +104,10 @@ export function Simulator() {
 
   const next = () => {
     trackEvent(`sim_step_${step}_completed` as "sim_step_1_completed");
-    if (step === 3) trackEvent("sim_completed");
+    if (step === 3) {
+      trackEvent("sim_completed");
+      metaSimulateurComplete();
+    }
     setStep((s) => Math.min(s + 1, 4));
     window.scrollTo({ top: 0 });
   };
@@ -95,12 +116,16 @@ export function Simulator() {
     if (!result) return;
     setSubmitting(true);
     setSubmitError(null);
+    // Shared Meta event_id: sent to the API (server CAPI Lead) AND used for
+    // the browser Pixel Lead below → deduplicated by Meta.
+    const metaEventId = newEventId();
     try {
       const attribution = getAttribution();
       const res = await fetch("/api/lead", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          meta_event_id: metaEventId,
           identity: { email: identity.email, first_name: identity.firstName, phone: identity.phone || undefined },
           profile: {
             statut_actuel: form.status,
@@ -130,6 +155,13 @@ export function Simulator() {
       const { leadId } = (await res.json()) as { leadId: string };
       setLeadId(leadId);
       trackEvent("lead_submitted");
+      // Browser Pixel Lead (CAPI copy already sent by /api/lead, same id).
+      metaLead(metaEventId, { email: identity.email, phone: identity.phone });
+      try {
+        localStorage.setItem(META_LEAD_EVENT_ID_KEY, metaEventId);
+      } catch {
+        /* non-blocking */
+      }
       setUnlocked(true);
     } catch (err) {
       console.error(err);
@@ -445,7 +477,12 @@ function Results({
             </button>
             <a
               href={RDV_URL}
-              onClick={() => trackEvent("rdv_clicked", { from: "sim_result" })}
+              onClick={() => {
+                trackEvent("rdv_clicked", { from: "sim_result" });
+                // tel: link → Contact; a real booking URL → Schedule.
+                if (RDV_URL.startsWith("tel:")) metaContact({ from: "sim_result" });
+                else metaSchedule({ from: "sim_result" });
+              }}
               className="rounded border border-nuit px-6 py-3 text-center font-sans text-base text-nuit transition hover:bg-nuit hover:text-creme"
             >
               Valider ce chiffre — appeler Ridha (Diagnostic 30 min)

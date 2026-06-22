@@ -19,13 +19,15 @@ npm run report:weekly  # rapport KPI Markdown
 
 | Dossier | Contenu |
 |---|---|
-| `app/` | Next.js App Router : landing, `/simulateur`, API routes lead/event/export |
+| `app/` | Next.js App Router : landing, `/simulateur`, `/lp/[angle]` (ads Meta), `/merci`, API routes lead/event/export/capi |
+| `app/lp/` | Landings payantes mobile-first (3 angles de hero, sans navigation) — dérivées de `/concept-c` |
 | `lib/fiscal/` | Moteur IR + paie portage + 3 scénarios, tests Vitest, `AUDIT.md` du proto Manus |
 | `lib/crm/` | `lead_schema_v1` (Zod), interface CRMAdapter, Brevo/Airtable + stubs, file + journal NDJSON |
-| `lib/tracking/` | UTM first/last touch, événements funnel (Plausible, GA4 en option) |
+| `lib/tracking/` | UTM first/last touch + fbclid, événements funnel (Plausible), bridge Meta Pixel/CAPI + consentement |
+| `lib/server/capi.ts` | Conversions API serveur (hash SHA-256, dédup par `event_id`) |
 | `content/claims.ts` | Tous les chiffres Atarhib/Targhib avec source obligatoire |
 | `content/emails/` | 6 emails (J0→J14) en HTML + texte, objets A/B |
-| `docs/` | Convention UTM, schéma lead, branchement CRM, bascule, procédure Linda, comparatif |
+| `docs/` | Convention UTM, schéma lead, branchement CRM, **landing-conversion.md** (système ads Meta), etc. |
 
 ## Variables d'environnement
 

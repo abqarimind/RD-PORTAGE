@@ -46,6 +46,8 @@ function currentTouch(): Touch {
   };
 }
 
+const FBCLID_KEY = "rdp_fbclid";
+
 /** Call once per page load (Tracker component in app/layout.tsx). */
 export function captureUtm(): void {
   const touch = currentTouch();
@@ -53,6 +55,27 @@ export function captureUtm(): void {
     writeCookie(FIRST_COOKIE, JSON.stringify(touch), NINETY_DAYS);
   }
   writeCookie(LAST_COOKIE, JSON.stringify(touch), NINETY_DAYS);
+  // Mirror to localStorage so attribution survives even when third-party
+  // cookies are restricted, and keep the raw fbclid for Meta fbc rebuild.
+  try {
+    if (!localStorage.getItem(FIRST_COOKIE)) localStorage.setItem(FIRST_COOKIE, JSON.stringify(touch));
+    localStorage.setItem(LAST_COOKIE, JSON.stringify(touch));
+    if (touch.fbclid) localStorage.setItem(FBCLID_KEY, touch.fbclid);
+  } catch {
+    /* localStorage may be unavailable (private mode) — cookies are enough. */
+  }
+}
+
+/** Raw fbclid (current URL, else last stored) — used to rebuild Meta's _fbc. */
+export function getStoredFbclid(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const fromUrl = new URLSearchParams(window.location.search).get("fbclid");
+  if (fromUrl) return fromUrl;
+  try {
+    return localStorage.getItem(FBCLID_KEY) ?? undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function getAttribution(): { first_touch: Touch; last_touch: Touch } {
@@ -85,7 +108,9 @@ export function deriveLeadSource(first: Touch):
   if (src === "cooptation") return "chaud_cooptation";
   if (src === "linkedin") return "froid_linkedin";
   if (src === "youtube") return "froid_youtube";
-  if (medium === "cpc" || first.gclid) return "froid_ads";
+  // Meta (Facebook/Instagram) paid traffic folds into froid_ads (closed enum).
+  if (src === "facebook" || src === "instagram" || src === "meta" || first.fbclid) return "froid_ads";
+  if (medium === "cpc" || medium === "paid_social" || first.gclid) return "froid_ads";
   if (medium === "organic" || first.referrer?.includes("google.")) return "froid_seo";
   return "direct";
 }
