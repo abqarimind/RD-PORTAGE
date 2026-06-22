@@ -32,6 +32,8 @@ export interface IrInput {
   fraisReels?: number;
   /** Net property income (already after micro-foncier 30% or real regime). */
   revenusFonciers?: number;
+  /** Other household net taxable income (e.g. spouse), added to the RNI. */
+  autresRevenus?: number;
   /** PER contributions paid during the year (deduction is capped). */
   versementsPER?: number;
   /** Donations to organisms helping people in need (75% then 66%). */
@@ -140,7 +142,10 @@ export function computeIr(input: IrInput): IrResult {
     : input.salaryTaxable;
   const netSalary = salaryAfterExpenses(salaryBase, input.fraisReels);
   const per = perDeduction(input.versementsPER ?? 0, netSalary);
-  const taxableIncome = Math.max(netSalary + (input.revenusFonciers ?? 0) - per, 0);
+  const taxableIncome = Math.max(
+    netSalary + (input.revenusFonciers ?? 0) + (input.autresRevenus ?? 0) - per,
+    0,
+  );
 
   // Family-quotient cap: tax with full parts cannot beat tax with base parts
   // minus the legal cap on the advantage.

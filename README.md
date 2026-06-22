@@ -21,7 +21,8 @@ npm run report:weekly  # rapport KPI Markdown
 |---|---|
 | `app/` | Next.js App Router : landing, `/simulateur`, `/lp/[angle]` (ads Meta), `/merci`, API routes lead/event/export/capi |
 | `app/lp/` | Landings payantes mobile-first (3 angles de hero, sans navigation) — dérivées de `/concept-c` |
-| `lib/fiscal/` | Moteur IR + paie portage + 3 scénarios, tests Vitest, `AUDIT.md` du proto Manus |
+| `config/fiscal-2026.ts` | **Source unique** des taux/barèmes fiscaux & sociaux, datés + sourcés (spec simulateur §4) |
+| `lib/fiscal/` | Moteur A (portage) + Moteur B (IR foyer) + 3 scénarios, tests Vitest, `AUDIT.md` |
 | `lib/crm/` | `lead_schema_v1` (Zod), interface CRMAdapter, Brevo/Airtable + stubs, file + journal NDJSON |
 | `lib/tracking/` | UTM first/last touch + fbclid, événements funnel (Plausible), bridge Meta Pixel/CAPI + consentement |
 | `lib/server/capi.ts` | Conversions API serveur (hash SHA-256, dédup par `event_id`) |

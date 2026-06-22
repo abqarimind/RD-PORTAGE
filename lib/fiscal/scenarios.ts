@@ -7,7 +7,14 @@
  * All scenarios are ANNUAL and use simplified, documented assumptions
  * (see AUDIT.md §3) — the output is indicative, never tax advice.
  */
-import { MARKET_AVG_MANAGEMENT_FEE, MAY_2026, MICRO_BNC_2026, RD_PORTAGE_2026 } from "./constants";
+import {
+  cagnotteNet,
+  type CagnotteChoice,
+  MARKET_AVG_MANAGEMENT_FEE,
+  MAY_2026,
+  MICRO_BNC_2026,
+  RD_PORTAGE_2026,
+} from "./constants";
 import { computeIr, type HouseholdInput, type IrInput } from "./ir";
 import { computePortage } from "./portage";
 
@@ -26,6 +33,12 @@ export interface SimulationInput {
   dons?: number;
   revenusFonciers?: number;
   impatrie?: boolean;
+  /** Benefits wallet provider for scenario C (default: May reference). */
+  cagnotteChoice?: CagnotteChoice;
+  /** Gross monthly wallet funding before the provider's service fees. */
+  cagnotteMonthly?: number;
+  /** Spouse / other household net taxable income (annual), constant across scenarios. */
+  revenuConjoint?: number;
 }
 
 export interface ScenarioResult {
@@ -63,6 +76,7 @@ function irFor(input: SimulationInput, salaryTaxable: number, optimised: boolean
     household: input.household,
     salaryTaxable,
     revenusFonciers: input.revenusFonciers,
+    autresRevenus: input.revenuConjoint,
     impatrie: input.impatrie,
     ...(optimised
       ? { fraisReels: input.fraisReelsAnnual, versementsPER: input.versementsPER, dons: input.dons }
@@ -129,7 +143,12 @@ function currentScenario(input: SimulationInput): ScenarioResult {
   }
 
   // Current status: standard 10% deduction, no optimisation levers.
-  const ir = computeIr({ household: h, salaryTaxable: taxable, revenusFonciers: input.revenusFonciers });
+  const ir = computeIr({
+    household: h,
+    salaryTaxable: taxable,
+    revenusFonciers: input.revenusFonciers,
+    autresRevenus: input.revenuConjoint,
+  });
   return {
     id: "actuel",
     label: "Votre statut actuel",
@@ -155,7 +174,10 @@ function portageScenario(input: SimulationInput, optimised: boolean): ScenarioRe
   const days = input.status === "salarie_esn" ? 215 : input.daysPerYear;
 
   const ndf = optimised ? Math.min(input.fraisReelsAnnual ?? 0, annualFees * RD_PORTAGE_2026.ndfCapShareOfFees) : 0;
-  const cagnotte = optimised ? Math.min(MAY_2026.referenceMonthlyAmount * 12, annualFees * 0.2) : 0;
+  // Wallet net of the provider's service fees, capped at 20% of annual fees.
+  const cagnotteGrossMonthly = input.cagnotteMonthly ?? MAY_2026.referenceMonthlyAmount;
+  const cagnotteNetAnnual = cagnotteNet(input.cagnotteChoice ?? "may", cagnotteGrossMonthly) * 12;
+  const cagnotte = optimised ? Math.min(cagnotteNetAnnual, annualFees * 0.2) : 0;
 
   const p = computePortage({
     tjm: annualFees / Math.max(days, 1),
