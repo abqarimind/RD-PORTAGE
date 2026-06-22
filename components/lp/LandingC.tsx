@@ -56,18 +56,21 @@ interface HeroCopy {
   eyebrow: string;
   title: React.ReactNode;
   subtitle: React.ReactNode;
+  /** One short, sourced proof/objection line under the subhead. */
+  proof?: React.ReactNode;
   withFounder?: boolean;
 }
 
 function heroCopy(angle: Angle): HeroCopy {
   switch (angle) {
     case "a":
-      // ANGLE A — Warning.
+      // ANGLE A — Warning (framework PAS : Problème → Agitation → Solution).
+      // H1 = ancre de message-match avec l'annonce ; on ne la réécrit pas.
       // TODO: VALIDATION JURIDIQUE — la formulation « depuis 2024 / c'est toi »
       // est marquée à valider avant diffusion (cf. content/claims.ts →
       // redressement_personnel_2024.condition). Ne pas diffuser sans accord.
       return {
-        eyebrow: "Portage salarial — alerte 2024",
+        eyebrow: "Portage salarial — le risque qu'on ne te montre pas",
         title: (
           <>
             Depuis 2024, ce n&rsquo;est plus ta société de portage qui est{" "}
@@ -80,15 +83,17 @@ function heroCopy(angle: Angle): HeroCopy {
         ),
         subtitle: (
           <>
-            En cas de redressement URSSAF, la régularisation s&rsquo;impute sur la paie du salarié porté — pas seulement sur la
-            société. Calcule en 30 secondes ce qu&rsquo;un cadre 100 % légal te ferait gagner, sans zone grise.
+            Frais « gonflés », cagnotte opaque, avantages réservés à quelques-uns : quand l&rsquo;URSSAF requalifie, la société
+            paie l&rsquo;amende — mais c&rsquo;est <strong>ta rémunération</strong> qui est corrigée, jusqu&rsquo;à 3 ans en
+            arrière. Vois en 30 secondes ce qu&rsquo;un cadre 100 % légal te laisse vraiment.
           </>
         ),
+        proof: <>Chez RD : frais réels, justifiés, proportionnés. Zéro montage gris.</>,
       };
     case "c":
-      // ANGLE C — Founder.
+      // ANGLE C — Founder (autorité + preuve vécue, chiffres réels, zéro hype).
       return {
-        eyebrow: "RD Portage — par un ex-porté",
+        eyebrow: "RD Portage — par Ridha, ex-consultant porté",
         title: (
           <>
             J&rsquo;ai été porté avant de créer RD Portage. Calcule ce que tu touches{" "}
@@ -101,17 +106,19 @@ function heroCopy(angle: Angle): HeroCopy {
         ),
         subtitle: (
           <>
-            Ridha Chammam, fondateur et ancien consultant porté. Le seul simulateur qui calcule le taux d&rsquo;imposition réel de
-            ton foyer — enfants, garde alternée, frais réels, PER.
+            J&rsquo;ai vu de l&rsquo;intérieur les montages qui finissent en redressement et les simulateurs qui enjolivent le
+            net. J&rsquo;ai construit l&rsquo;inverse : un cadre 100 % légal et le seul simulateur qui calcule le vrai taux
+            d&rsquo;imposition de ton foyer — enfants, garde alternée, frais réels, PER.
           </>
         ),
+        proof: <>~30 consultants portés depuis 2021. 4 % de frais, tout compris.</>,
         withFounder: true,
       };
     case "b":
     default:
-      // ANGLE B — Vrai net (default, = concept-c locked promise).
+      // ANGLE B — Vrai net (défaut, promesse verrouillée de concept-c).
       return {
-        eyebrow: "Portage salarial 100 % légal",
+        eyebrow: "Portage salarial 100 % légal — 4 % de frais",
         title: (
           <>
             Vous payez{" "}
@@ -124,10 +131,12 @@ function heroCopy(angle: Angle): HeroCopy {
         ),
         subtitle: (
           <>
-            Calculez votre meilleur taux d&rsquo;imposition en 2 à 3 minutes. Gratuit, sans engagement. Chaque euro tracé, chaque
-            chiffre sourcé.
+            En portage classique, on ne récupère en moyenne que ~50 % de son CA — sans jamais connaître son vrai taux
+            d&rsquo;imposition. Le seul simulateur qui calcule le taux réel de votre foyer (enfants, garde alternée, frais réels,
+            PER) et ce que vous laissez sur la table. Gratuit, 2 à 3 minutes.
           </>
         ),
+        proof: <>4 % de frais tout compris, là où le marché facture souvent 5 à 10 %.</>,
       };
   }
 }
@@ -183,6 +192,15 @@ function Hero({ angle }: { angle: Angle }) {
             {copy.title}
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[#4A5061] md:mx-0">{copy.subtitle}</p>
+          {copy.proof && (
+            <p
+              className="mx-auto mt-4 flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold md:mx-0"
+              style={{ borderColor: "#E6DCC8", backgroundColor: "#FBF7EF", color: "#8A6B3F" }}
+            >
+              <span aria-hidden>✓</span>
+              {copy.proof}
+            </p>
+          )}
           <div className="mt-5 flex items-center justify-center gap-2 text-xs font-semibold text-[#7A8093] md:justify-start">
             <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: BRASS }} />
             ~30 consultants portés depuis 2021 · RCS Versailles 912 888 013

@@ -79,6 +79,26 @@ export const CLAIMS: Record<string, Claim> = {
     value: "4 %",
     source: { label: "Grille tarifaire RD Portage", checkedAt: "2026-06-11" },
   },
+  frais_marche_5_10: {
+    id: "frais_marche_5_10",
+    text: "Sur le marché, les frais de gestion en portage salarial se situent le plus souvent entre 5 et 10 % du CA.",
+    value: "5–10 %",
+    source: {
+      label: "Comparatifs marché du portage salarial (frais de gestion observés)",
+      url: "https://wise.com/fr/blog/freelance-vs-portage-salarial",
+      checkedAt: "2026-06-22",
+    },
+  },
+  net_marche_50: {
+    id: "net_marche_50",
+    text: "En portage classique, le net perçu représente en moyenne environ 50 % du montant facturé.",
+    value: "~50 %",
+    source: {
+      label: "Moyennes marché portage salarial (net perçu / CA)",
+      url: "https://www.mon-salaire-en-net.fr/blog/portage-salarial-avantages-et-inconvenients-pour-un-freelance/",
+      checkedAt: "2026-06-22",
+    },
+  },
   ca_optimise_40: {
     id: "ca_optimise_40",
     text:
