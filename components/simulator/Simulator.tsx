@@ -40,8 +40,9 @@ const MINT = "#E7F6EE";
 const INK = "#0B0D12";
 const BRASS = "#B08D57";
 const VALIDE = "#2F6B4F";
-const SERIF = "'Source Serif 4', Georgia, serif";
+// Client préfère un seul niveau typographique (pas de serif).
 const SANS = "'Manrope','IBM Plex Sans',sans-serif";
+const SERIF = SANS;
 
 const eur = (n: number) => Math.round(n).toLocaleString("fr-FR");
 const pct = (n: number) => `${(n * 100).toFixed(1)} %`;

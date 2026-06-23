@@ -18,7 +18,8 @@ import { metaDiagnosticComplete, metaDiagnosticStart } from "@/lib/tracking/meta
 import { CountUp } from "./CountUp";
 
 const BRASS = "#B08D57";
-const SERIF = "'Source Serif 4', Georgia, serif";
+// Client préfère un seul niveau typographique (pas de serif).
+const SERIF = "'Manrope','IBM Plex Sans',sans-serif";
 
 type Q1 = { label: string; status: CurrentStatus };
 type Q2 = { label: string; tjm: number; monthlyGross: number };

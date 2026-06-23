@@ -5,12 +5,13 @@
  * (light fintech + brass "fil doré") but rebuilt mobile-first and
  * instrumented for paid Meta traffic:
  *  - 3 hero angles (message match), only the above-the-fold block changes;
+ *  - two layout variants: "flash" (diagnostic form) and "vsl" (video);
  *  - optional navigation (hidden on paid traffic via the /lp ads layout);
  *  - interactive flash diagnostic (no email) feeding the full simulator;
  *  - Meta ViewContent on mount.
  *
- * Authority signals re-injected per brief: editorial serif on key titles,
- * brass on the important figures. Honesty guardrails: every unvalidated
+ * Single typographic level (Manrope, no serif — client preference); brass on
+ * the important figures. Honesty guardrails: every unvalidated
  * figure/testimonial is a marked placeholder, never shipped as fact.
  */
 import Image from "next/image";
@@ -30,8 +31,9 @@ const LILAC = "#EFF0FB";
 const MINT = "#E7F6EE";
 const INK = "#0B0D12";
 const BRASS = "#B08D57";
-const SERIF = "'Source Serif 4', Georgia, serif";
+// Client préfère un seul niveau typographique (pas de serif) : SERIF = Manrope.
 const SANS = "'Manrope','IBM Plex Sans',sans-serif";
+const SERIF = SANS;
 
 const PHONE = "+33632988723";
 const PHONE_LABEL = "06 32 98 87 23";
@@ -173,7 +175,7 @@ function Header({ showNav }: { showNav: boolean }) {
   );
 }
 
-function Hero({ angle }: { angle: Angle }) {
+function HeroFlash({ angle }: { angle: Angle }) {
   const copy = heroCopy(angle);
   return (
     <section className="mx-auto max-w-page px-4 pb-12 pt-8 md:pt-12">
@@ -410,20 +412,145 @@ function Footer() {
   );
 }
 
+/* —————————————————————————— VSL variant —————————————————————————— */
+
+const PRIMARY_BTN =
+  "w-full rounded-full bg-[#0B0D12] px-6 py-3 text-sm font-bold text-white transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg sm:w-auto";
+const OUTLINE_BTN =
+  "w-full rounded-full border border-[#D8DCE6] bg-white px-6 py-3 text-sm font-bold text-[#0B0D12] transition-colors hover:border-[#B08D57] sm:w-auto";
+
+/** Responsive 16:9 VSL frame. Plays NEXT_PUBLIC_VSL_URL when set, otherwise a
+ *  clearly-marked placeholder that nudges to the diagnostic. */
+function VslPlayer() {
+  const url = process.env.NEXT_PUBLIC_VSL_URL;
+  return (
+    <div className="mx-auto mt-8 w-full max-w-3xl">
+      <div
+        className="relative aspect-video w-full overflow-hidden rounded-3xl shadow-xl ring-1 ring-[#ECEEF3]"
+        style={{ background: "linear-gradient(135deg,#FFF1DE,#EFF0FB)" }}
+      >
+        {url ? (
+          <iframe
+            src={url}
+            title="Vidéo RD Portage"
+            className="absolute inset-0 h-full w-full"
+            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+            allowFullScreen
+          />
+        ) : (
+          <a href="#diagnostic" className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-lg transition-transform duration-200 hover:scale-110">
+              <svg width="20" height="22" viewBox="0 0 20 22" aria-hidden>
+                <path d="M2 2l16 9-16 9z" fill="#0B0D12" />
+              </svg>
+            </span>
+            <span className="rounded-full bg-white/85 px-3 py-1 text-xs font-bold text-[#4A5061]">Votre VSL ici — aperçu</span>
+          </a>
+        )}
+      </div>
+      {!url && (
+        // TODO: DONNÉE RÉELLE — en attente Ridha : vidéo VSL (définir NEXT_PUBLIC_VSL_URL).
+        <p className="mt-2 text-center text-xs text-[#9aa0b0]">Emplacement vidéo — la VSL de Ridha s&rsquo;intègre ici.</p>
+      )}
+    </div>
+  );
+}
+
+function HeroVsl({ angle }: { angle: Angle }) {
+  const copy = heroCopy(angle);
+  return (
+    <section className="mx-auto max-w-4xl px-4 pb-10 pt-8 text-center md:pt-12">
+      {copy.withFounder && (
+        <span className="mx-auto mb-4 flex w-fit items-center gap-3 rounded-full bg-[#F6F7FA] py-1.5 pl-1.5 pr-4">
+          <Image src="/ridha.png" alt="Ridha Chammam" width={36} height={36} className="rounded-full" />
+          <span className="text-xs font-bold text-[#4A5061]">Ridha Chammam — fondateur</span>
+        </span>
+      )}
+      <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BRASS }}>
+        {copy.eyebrow}
+      </p>
+      <h1 className="mx-auto mt-3 max-w-3xl text-3xl font-extrabold leading-tight tracking-tight md:text-5xl">{copy.title}</h1>
+      <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-[#4A5061]">{copy.subtitle}</p>
+      <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <a href="#diagnostic" className={PRIMARY_BTN}>
+          Calculer mon vrai taux
+        </a>
+        <a
+          href={`tel:${PHONE}`}
+          onClick={() => {
+            trackEvent("rdv_clicked", { from: "lp_vsl_hero" });
+            metaContact({ from: "lp_vsl_hero" });
+          }}
+          className={OUTLINE_BTN}
+        >
+          Appeler Ridha
+        </a>
+      </div>
+      {copy.proof && (
+        <p
+          className="mx-auto mt-4 flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold"
+          style={{ borderColor: "#E6DCC8", backgroundColor: "#FBF7EF", color: "#8A6B3F" }}
+        >
+          <span aria-hidden>✓</span>
+          {copy.proof}
+        </p>
+      )}
+      <VslPlayer />
+      <div className="mt-6 flex items-center justify-center gap-2 text-xs font-semibold text-[#7A8093]">
+        <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: BRASS }} />
+        ~30 consultants portés depuis 2021 · RCS Versailles 912 888 013
+      </div>
+    </section>
+  );
+}
+
+/** Flash diagnostic as a standalone section (used below the VSL hero). */
+function DiagnosticSection({ angle }: { angle: Angle }) {
+  return (
+    <section className="mx-auto max-w-page px-4 pb-12">
+      <div className="rounded-3xl border border-[#ECEEF3] bg-[#FAFBFD] p-5 md:p-8">
+        <div className="grid items-center gap-6 md:grid-cols-2">
+          <div className="text-center md:text-left">
+            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BRASS }}>
+              30 secondes
+            </p>
+            <h2 className="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">Faites le diagnostic flash maintenant.</h2>
+            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[#4A5061] md:mx-0">
+              Trois questions, une fourchette immédiate — sans email. Puis le calcul précis de votre foyer en 2 à 3 minutes.
+            </p>
+          </div>
+          <FlashDiagnostic angle={angle} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* —————————————————————————— page —————————————————————————— */
 
-export function LandingC({ angle, showNav = false }: { angle: Angle; showNav?: boolean }) {
+export type LandingVariant = "flash" | "vsl";
+
+export function LandingC({
+  angle,
+  showNav = false,
+  variant = "flash",
+}: {
+  angle: Angle;
+  showNav?: boolean;
+  variant?: LandingVariant;
+}) {
   return (
     <main style={{ fontFamily: SANS, color: INK }} className="bg-white">
       <Header showNav={showNav} />
-      <Hero angle={angle} />
+      {variant === "vsl" ? <HeroVsl angle={angle} /> : <HeroFlash angle={angle} />}
       <StatChips />
+      {variant === "vsl" && <DiagnosticSection angle={angle} />}
       <Method />
       <Atarhib />
       <SocialProof />
       <PricingCta />
       <Footer />
-      <MetaViewContent contentName={`lp_${angle}`} />
+      <MetaViewContent contentName={`lp_${angle}_${variant}`} />
     </main>
   );
 }
