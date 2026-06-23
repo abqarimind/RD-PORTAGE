@@ -6,9 +6,10 @@
  * (3 scénarios + vrai taux + count-up + « comment c'est calculé ») ·
  * 4 Lead gate (avant le PDF détaillé).
  *
- * Two engines: lib/fiscal/portage.ts (CA→net) + lib/fiscal/ir.ts (IR foyer),
- * config in config/fiscal-2026.ts. The funnel wiring (internal events, lead
- * schema, Meta Pixel/CAPI) is preserved end-to-end.
+ * Design unifié avec les landings /lp (fintech clair + fil doré) : Manrope,
+ * serif éditoriale sur les titres clés, laiton sur les chiffres.
+ * Two engines: lib/fiscal/portage.ts + lib/fiscal/ir.ts, config in
+ * config/fiscal-2026.ts. Funnel wiring (events, lead schema, Meta) preserved.
  */
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -33,12 +34,26 @@ import {
 } from "@/lib/tracking/meta";
 import { CountUp } from "@/components/lp/CountUp";
 
+/* design tokens — shared with /lp (LandingC) */
+const PEACH = "#FFF1DE";
+const MINT = "#E7F6EE";
+const INK = "#0B0D12";
+const BRASS = "#B08D57";
+const VALIDE = "#2F6B4F";
+const SERIF = "'Source Serif 4', Georgia, serif";
+const SANS = "'Manrope','IBM Plex Sans',sans-serif";
+
 const eur = (n: number) => Math.round(n).toLocaleString("fr-FR");
 const pct = (n: number) => `${(n * 100).toFixed(1)} %`;
 const POLICY_VERSION = "privacy-2026-06";
 const RDV_URL = process.env.NEXT_PUBLIC_RDV_URL ?? "tel:+33632988723";
 const AUTOSAVE_KEY = "rdp_sim_state";
 const META_LEAD_EVENT_ID_KEY = "rdp_meta_lead_eid";
+
+const PRIMARY_BTN =
+  "rounded-full bg-[#0B0D12] px-6 py-3 text-center text-sm font-bold text-white transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60";
+const OUTLINE_BTN =
+  "rounded-full border border-[#D8DCE6] bg-white px-6 py-3 text-center text-sm font-bold text-[#0B0D12] transition-colors hover:border-[#B08D57]";
 
 /** Étape 0 — segmentation. Each profile maps to a lead-schema status. */
 const PROFILES: { value: CurrentStatus; impatrie?: boolean; label: string; hint: string }[] = [
@@ -96,13 +111,11 @@ export function Simulator() {
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }));
 
-  // Meta SimulateurStart fires once on mount (canonical start of CONSIDÉRATION).
   useEffect(() => {
     ensureMetaInit();
     metaSimulateurStart();
   }, []);
 
-  // Autosave (reprise) — restore form + step (never into the lead gate).
   useEffect(() => {
     try {
       const raw = localStorage.getItem(AUTOSAVE_KEY);
@@ -126,8 +139,6 @@ export function Simulator() {
   const cagnotteGross = form.cagnotte === "aucune" ? 0 : CAGNOTTE_PROVIDERS[form.cagnotte].defaultMonthly;
   const cagnotteNetMonthly = cagnotteNet(form.cagnotte, cagnotteGross);
 
-  // Live monthly portage (the step-1 "waouh"): valid for every profile as a
-  // target-TJM portage projection.
   const live = useMemo(
     () =>
       computePortage({
@@ -143,8 +154,6 @@ export function Simulator() {
   const simInput: SimulationInput = useMemo(
     () => ({
       status: form.status,
-      // ESN: derive a monthly gross from the target TJM so the "actuel"
-      // salaried baseline stays consistent with the TJM the user enters.
       tjmOrMonthlyGross: form.status === "salarie_esn" ? Math.round((form.tjm * form.days) / 1.25) : form.tjm,
       daysPerYear: form.days * 12,
       household: { maritalStatus: form.situation, children: form.enfants, childrenGardeAlternee: form.gardeAlternee },
@@ -226,13 +235,13 @@ export function Simulator() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
+    <div className="mx-auto max-w-2xl px-4 py-8" style={{ fontFamily: SANS, color: INK }}>
       <ProgressBar step={Math.min(step, 3)} />
 
       <div key={step} className="step-enter">
         {step === 0 && (
           <Screen title="Vous êtes…" subtitle="Une question à la fois, comme sur impots.gouv.fr — en plus rapide.">
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {PROFILES.map((p) => {
                 const active = form.status === p.value && form.impatrie === !!p.impatrie;
                 return (
@@ -244,12 +253,12 @@ export function Simulator() {
                       trackEvent("sim_started", { profile: p.value });
                       next();
                     }}
-                    className={`w-full rounded border px-4 py-3 text-left transition ${
-                      active ? "border-nuit bg-nuit text-creme" : "border-laiton/60 bg-transparent text-encre hover:bg-laiton/15"
+                    className={`w-full rounded-2xl border px-4 py-3.5 text-left transition-all duration-150 hover:-translate-y-0.5 ${
+                      active ? "border-transparent bg-[#0B0D12] text-white" : "border-[#E2E5EE] bg-white hover:border-[#B08D57]"
                     }`}
                   >
-                    <span className="block font-medium">{p.label}</span>
-                    <span className={`text-xs ${active ? "text-creme/80" : "text-encre/60"}`}>{p.hint}</span>
+                    <span className="block font-bold">{p.label}</span>
+                    <span className={`text-xs ${active ? "text-white/70" : "text-[#7A8093]"}`}>{p.hint}</span>
                   </button>
                 );
               })}
@@ -274,20 +283,14 @@ export function Simulator() {
         {step === 2 && (
           <Screen title="Votre foyer" subtitle="C'est ici que la plupart des simulateurs s'arrêtent. Pas celui-là.">
             <Field label="Votre situation">
-              <div className="grid grid-cols-2 gap-2">
-                {(["celibataire", "marie_pacse"] as const).map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => set("situation", s)}
-                    className={`rounded border px-4 py-3 text-sm transition ${
-                      form.situation === s ? "border-nuit bg-nuit text-creme" : "border-laiton/60 text-encre hover:bg-laiton/15"
-                    }`}
-                  >
-                    {s === "celibataire" ? "Célibataire / seul·e" : "Marié·e ou pacsé·e"}
-                  </button>
-                ))}
-              </div>
+              <Segmented
+                options={[
+                  { value: "celibataire", label: "Célibataire / seul·e" },
+                  { value: "marie_pacse", label: "Marié·e ou pacsé·e" },
+                ]}
+                value={form.situation}
+                onChange={(v) => set("situation", v as FormState["situation"])}
+              />
             </Field>
             {form.situation === "marie_pacse" && (
               <Slider label="Revenu net imposable annuel du conjoint (€)" hint="0 si le conjoint n'a pas de revenu imposable." min={0} max={150000} step={1000} value={form.revenuConjoint} onChange={(v) => set("revenuConjoint", v)} />
@@ -299,29 +302,20 @@ export function Simulator() {
               <Stepper value={form.gardeAlternee} max={form.enfants} onChange={(v) => set("gardeAlternee", v)} />
             </Field>
             <Field label="Frais réels ou abattement de 10 % ?" hint="Par défaut, l'abattement forfaitaire. Activez les frais réels s'ils sont supérieurs.">
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  [false, "Abattement 10 %"],
-                  [true, "Frais réels"],
-                ].map(([v, label]) => (
-                  <button
-                    key={String(v)}
-                    type="button"
-                    onClick={() => set("useFraisReels", v as boolean)}
-                    className={`rounded border px-4 py-3 text-sm transition ${
-                      form.useFraisReels === v ? "border-nuit bg-nuit text-creme" : "border-laiton/60 text-encre hover:bg-laiton/15"
-                    }`}
-                  >
-                    {label as string}
-                  </button>
-                ))}
-              </div>
+              <Segmented
+                options={[
+                  { value: "no", label: "Abattement 10 %" },
+                  { value: "yes", label: "Frais réels" },
+                ]}
+                value={form.useFraisReels ? "yes" : "no"}
+                onChange={(v) => set("useFraisReels", v === "yes")}
+              />
             </Field>
             {form.useFraisReels && (
               <Slider label="Frais réels professionnels par an (€)" min={0} max={30000} step={500} value={form.fraisReels} onChange={(v) => set("fraisReels", v)} />
             )}
             <details className="mt-2 text-sm">
-              <summary className="cursor-pointer text-encre/70">Autres leviers (PER, foncier, dons)</summary>
+              <summary className="cursor-pointer font-semibold text-[#7A8093]">Autres leviers (PER, foncier, dons)</summary>
               <div className="mt-3 space-y-4">
                 <Slider label="Versements PER prévus par an (€)" hint="Déductibles jusqu'à 10 % des revenus pro (plafond 37 680 €)." min={0} max={37680} step={500} value={form.per} onChange={(v) => set("per", v)} />
                 <Slider label="Revenus fonciers nets par an (€)" min={0} max={60000} step={500} value={form.foncier} onChange={(v) => set("foncier", v)} />
@@ -332,9 +326,7 @@ export function Simulator() {
           </Screen>
         )}
 
-        {step === 3 && result && (
-          <Results result={result} live={live} form={form} onContinue={() => goTo(4)} onRdv={onRdv} />
-        )}
+        {step === 3 && result && <Results result={result} live={live} form={form} onContinue={() => goTo(4)} onRdv={onRdv} />}
 
         {step === 4 && result && (
           <LeadGate
@@ -349,7 +341,7 @@ export function Simulator() {
         )}
       </div>
 
-      <p className="mt-10 text-center text-xs text-encre/50">
+      <p className="mt-10 text-center text-xs text-[#9aa0b0]">
         Simulation à valeur indicative — ne constitue pas un conseil fiscal personnalisé. Barème IR 2026 (revenus 2025), cagnottes
         affichées nettes de frais de service.
       </p>
@@ -384,30 +376,34 @@ function CagnotteSelect({ value, onChange, net }: { value: CagnotteChoice; onCha
             key={o.id}
             type="button"
             onClick={() => onChange(o.id)}
-            className={`rounded border px-3 py-2.5 text-sm transition ${
-              value === o.id ? "border-nuit bg-nuit text-creme" : "border-laiton/60 text-encre hover:bg-laiton/15"
+            className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all ${
+              value === o.id ? "border-transparent bg-[#0B0D12] text-white" : "border-[#E2E5EE] bg-white text-[#0B0D12] hover:border-[#B08D57]"
             }`}
           >
             {o.label}
           </button>
         ))}
       </div>
-      {value !== "aucune" && <p className="mt-1.5 text-xs text-encre/60 tnum">Net reçu estimé : {eur(net)} €/mois.</p>}
+      {value !== "aucune" && <p className="mt-1.5 text-xs tabular-nums text-[#7A8093]">Net reçu estimé : {eur(net)} €/mois.</p>}
     </Field>
   );
 }
 
 function LiveFeedback({ netPercu, restitution }: { netPercu: number; restitution: number }) {
   return (
-    <div className="mt-2 rounded border border-laiton bg-creme p-4">
-      <p className="text-xs uppercase tracking-widest text-laiton">Aperçu immédiat — portage RD optimisé</p>
+    <div className="mt-2 rounded-2xl p-5" style={{ backgroundColor: MINT }}>
+      <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BRASS }}>
+        Aperçu immédiat — portage RD optimisé
+      </p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-        <p className="display text-2xl text-encre tnum md:text-3xl">
-          <CountUp value={netPercu} /> €<span className="text-base font-normal text-encre/60"> perçu net / mois</span>
+        <p className="text-3xl font-extrabold tabular-nums md:text-4xl" style={{ fontFamily: SERIF }}>
+          <CountUp value={netPercu} /> €<span className="text-base font-medium text-[#4A5061]"> perçu net / mois</span>
         </p>
-        <p className="text-sm font-medium text-valide tnum">{pct(restitution)} du CA restitué</p>
+        <p className="text-sm font-bold tabular-nums" style={{ color: VALIDE }}>
+          {pct(restitution)} du CA restitué
+        </p>
       </div>
-      <p className="mt-1 text-xs text-encre/55">Avantages inclus. Le détail foyer (votre vrai taux d'imposition) arrive à l'étape suivante.</p>
+      <p className="mt-1 text-xs text-[#4A5061]">Avantages inclus. Le détail foyer (votre vrai taux d'imposition) arrive à l'étape suivante.</p>
     </div>
   );
 }
@@ -430,34 +426,31 @@ function Results({
   const [actuel, portage, optimise] = result.scenarios;
   return (
     <section>
-      <p className="text-xs uppercase tracking-widest text-laiton">Votre résultat</p>
-      <h1 className="display mt-2 text-3xl leading-tight text-encre md:text-4xl">
-        Votre vrai taux d&rsquo;imposition du foyer : <span className="text-valide tnum">{pct(optimise.averageTaxRate)}</span>
+      <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BRASS }}>
+        Votre résultat
+      </p>
+      <h1 className="mt-2 text-3xl font-extrabold leading-tight tracking-tight md:text-4xl" style={{ fontFamily: SERIF }}>
+        Votre vrai taux d&rsquo;imposition du foyer : <span style={{ color: VALIDE }}>{pct(optimise.averageTaxRate)}</span>
       </h1>
-      <p className="mt-3 text-lg text-encre/80">
+      <p className="mt-3 text-lg text-[#4A5061]">
         Vous laissez{" "}
-        <span className="display text-valide">
+        <span className="text-2xl font-extrabold tabular-nums" style={{ color: VALIDE, fontFamily: SERIF }}>
           <CountUp value={result.economieAnnuelleEur} /> €
         </span>{" "}
         par an sur la table.
       </p>
-      <p className="mt-1 text-sm text-encre/60 tnum">
-        Tranche marginale (TMI) : {(optimise.marginalRate * 100).toFixed(0)} % · écart calculé entre portage classique et RD optimisé.
+      <p className="mt-1 text-sm tabular-nums text-[#7A8093]">
+        Tranche marginale (TMI) : {(optimise.marginalRate * 100).toFixed(0)} % · écart entre portage classique et RD optimisé.
       </p>
 
-      <ScenarioTable actuel={actuel} portage={portage} optimise={optimise} />
-
+      <ScenarioTable rows={[actuel, portage, optimise]} />
       <CommentCalcule live={live} optimise={optimise} form={form} />
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <button type="button" className="cta-primary" onClick={onContinue}>
+        <button type="button" className={PRIMARY_BTN} onClick={onContinue}>
           Recevoir le détail + le PDF
         </button>
-        <a
-          href={RDV_URL}
-          onClick={() => onRdv("sim_result")}
-          className="rounded border border-nuit px-6 py-3 text-center font-sans text-base text-nuit transition hover:bg-nuit hover:text-creme"
-        >
+        <a href={RDV_URL} onClick={() => onRdv("sim_result")} className={OUTLINE_BTN}>
           Valider ce chiffre — appeler Ridha
         </a>
       </div>
@@ -465,39 +458,35 @@ function Results({
   );
 }
 
-function ScenarioTable({
-  actuel,
-  portage,
-  optimise,
-}: {
-  actuel: ReturnType<typeof simulate>["scenarios"][number];
-  portage: ReturnType<typeof simulate>["scenarios"][number];
-  optimise: ReturnType<typeof simulate>["scenarios"][number];
-}) {
-  const rows = [actuel, portage, optimise];
+function ScenarioTable({ rows }: { rows: ReturnType<typeof simulate>["scenarios"] }) {
   return (
-    <table className="mt-6 w-full border-collapse text-left text-sm">
-      <thead>
-        <tr className="border-b border-laiton text-xs uppercase tracking-wide text-encre/60">
-          <th className="py-2 pr-2 font-medium">Scénario</th>
-          <th className="py-2 pr-2 font-medium">Net perçu</th>
-          <th className="py-2 pr-2 font-medium">Avantages</th>
-          <th className="py-2 pr-2 font-medium">Impôt foyer</th>
-          <th className="py-2 font-medium">Disponible / an</th>
-        </tr>
-      </thead>
-      <tbody className="tnum">
-        {rows.map((s) => (
-          <tr key={s.id} className={`border-b border-laiton/40 ${s.id === "portage_rd_optimise" ? "font-medium text-valide" : "text-encre/85"}`}>
-            <td className="py-3 pr-2 font-sans">{s.label}</td>
-            <td className="py-3 pr-2">{eur(s.netPerceived)} €</td>
-            <td className="py-3 pr-2">{eur(s.benefits)} €</td>
-            <td className="py-3 pr-2">−{eur(s.tax)} €</td>
-            <td className="py-3">{eur(s.disposable)} €</td>
+    <div className="mt-6 overflow-x-auto">
+      <table className="w-full border-collapse text-left text-sm">
+        <thead>
+          <tr className="border-b-2 text-xs uppercase tracking-wide text-[#7A8093]" style={{ borderColor: BRASS }}>
+            <th className="py-2 pr-2 font-bold">Scénario</th>
+            <th className="py-2 pr-2 font-bold">Net perçu</th>
+            <th className="py-2 pr-2 font-bold">Avantages</th>
+            <th className="py-2 pr-2 font-bold">Impôt foyer</th>
+            <th className="py-2 font-bold">Dispo / an</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody className="tabular-nums">
+          {rows.map((s) => {
+            const best = s.id === "portage_rd_optimise";
+            return (
+              <tr key={s.id} className="border-b border-[#ECEEF3]" style={best ? { color: VALIDE, fontWeight: 700 } : { color: "#4A5061" }}>
+                <td className="py-3 pr-2">{s.label}</td>
+                <td className="py-3 pr-2">{eur(s.netPerceived)} €</td>
+                <td className="py-3 pr-2">{eur(s.benefits)} €</td>
+                <td className="py-3 pr-2">−{eur(s.tax)} €</td>
+                <td className="py-3">{eur(s.disposable)} €</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -523,26 +512,28 @@ function CommentCalcule({
     ["Perçu net + avantages (rém. globale)", `${eur(live.globalCompensation)} €`],
   ];
   return (
-    <details className="mt-6 rounded border border-laiton/50 bg-creme/60 p-4 text-sm">
-      <summary className="cursor-pointer font-medium text-encre">Comment c&rsquo;est calculé</summary>
-      <div className="mt-3 grid gap-1 tnum">
+    <details className="mt-6 rounded-2xl border border-[#ECEEF3] bg-[#FAFBFD] p-4 text-sm">
+      <summary className="cursor-pointer font-bold text-[#0B0D12]">Comment c&rsquo;est calculé</summary>
+      <div className="mt-3 grid gap-1 tabular-nums">
         {lines.map(([l, v]) => (
-          <div key={l} className="flex justify-between border-b border-laiton/20 py-1">
-            <span className="text-encre/70">{l}</span>
-            <span className="font-medium">{v}</span>
+          <div key={l} className="flex justify-between border-b border-[#ECEEF3] py-1">
+            <span className="text-[#7A8093]">{l}</span>
+            <span className="font-semibold">{v}</span>
           </div>
         ))}
         <div className="mt-2 flex justify-between py-1">
-          <span className="text-encre/70">Taux de restitution réel</span>
-          <span className="font-medium text-valide">{pct(live.restitutionRate)}</span>
+          <span className="text-[#7A8093]">Taux de restitution réel</span>
+          <span className="font-bold" style={{ color: VALIDE }}>
+            {pct(live.restitutionRate)}
+          </span>
         </div>
       </div>
-      <p className="mt-3 text-xs leading-relaxed text-encre/60">
-        IR foyer : {optimise.details ? "barème progressif" : ""} {BAREME_IR_2026.version.replace("_", " ")}, quotient familial
-        (plafonné à 1 807 €/demi-part), décote et abattement 10 % / frais réels appliqués. Taux moyen {pct(optimise.averageTaxRate)},
-        TMI {(optimise.marginalRate * 100).toFixed(0)} %.
+      <p className="mt-3 text-xs leading-relaxed text-[#7A8093]">
+        IR foyer : barème progressif {BAREME_IR_2026.version.replace(/_/g, " ")}, quotient familial (plafonné à 1 807 €/demi-part),
+        décote et abattement 10 % / frais réels appliqués. Taux moyen {pct(optimise.averageTaxRate)}, TMI{" "}
+        {(optimise.marginalRate * 100).toFixed(0)} %.
       </p>
-      <p className="mt-2 text-xs text-encre/50">
+      <p className="mt-2 text-xs text-[#9aa0b0]">
         Sources : barème IR 2026 (service-public.gouv.fr), cascade portage (Excel RD « Simul Honoraires »), URSSAF / impots.gouv.fr.
         {form.cagnotte !== "aucune" && ` Cagnotte ${CAGNOTTE_PROVIDERS[form.cagnotte].label} affichée nette de frais.`}
       </p>
@@ -578,17 +569,19 @@ function LeadGate({
     const optimise = result.scenarios[2];
     return (
       <section>
-        <p className="display text-xl text-valide tnum">Économie estimée : {eur(economie)} €/an</p>
-        <p className="mt-2 text-sm text-encre/70">
+        <p className="text-xl font-extrabold tabular-nums" style={{ color: VALIDE, fontFamily: SERIF }}>
+          Économie estimée : {eur(economie)} €/an
+        </p>
+        <p className="mt-2 text-sm text-[#4A5061]">
           Votre récapitulatif détaillé arrive par email. Dernière étape : validez votre chiffre avec Ridha.
         </p>
-        <p className="mt-3 text-sm text-encre/70 tnum">
+        <p className="mt-3 text-sm tabular-nums text-[#7A8093]">
           Taux moyen foyer optimisé : {pct(optimise.averageTaxRate)} · TMI {(optimise.marginalRate * 100).toFixed(0)} %.
         </p>
         <div className="no-print mt-6 flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
-            className="cta-primary"
+            className={PRIMARY_BTN}
             onClick={() => {
               trackEvent("pdf_downloaded");
               window.print();
@@ -596,28 +589,28 @@ function LeadGate({
           >
             Télécharger le récapitulatif (PDF)
           </button>
-          <a
-            href={RDV_URL}
-            onClick={() => onRdv("sim_unlocked")}
-            className="rounded border border-nuit px-6 py-3 text-center font-sans text-base text-nuit transition hover:bg-nuit hover:text-creme"
-          >
+          <a href={RDV_URL} onClick={() => onRdv("sim_unlocked")} className={OUTLINE_BTN}>
             Valider ce chiffre — Diagnostic 30 min
           </a>
         </div>
-        <p className="mt-3 text-xs text-encre/60">Diagnostic mené par Ridha (fondateur, ex-porté). Proposition ferme, signature possible sous 48 h.</p>
+        <p className="mt-3 text-xs text-[#7A8093]">Diagnostic mené par Ridha (fondateur, ex-porté). Proposition ferme, signature possible sous 48 h.</p>
       </section>
     );
   }
 
   return (
     <section>
-      <p className="text-xs uppercase tracking-widest text-laiton">Dernière étape</p>
-      <h1 className="display mt-2 text-2xl text-encre md:text-3xl">Recevez le détail + le PDF</h1>
-      <p className="mt-2 text-sm text-encre/70">
+      <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BRASS }}>
+        Dernière étape
+      </p>
+      <h1 className="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl" style={{ fontFamily: SERIF }}>
+        Recevez le détail + le PDF
+      </h1>
+      <p className="mt-2 text-sm text-[#4A5061]">
         Le détail des 3 scénarios et votre récapitulatif imprimable, calculés sur votre foyer réel.
       </p>
       <form
-        className="note-juridique mt-6 space-y-4"
+        className="mt-6 space-y-4 rounded-2xl border border-[#ECEEF3] bg-white p-5 shadow-sm"
         onFocus={() => trackEvent("email_gate_viewed")}
         onSubmit={(e) => {
           e.preventDefault();
@@ -633,16 +626,15 @@ function LeadGate({
         <Field label="Votre téléphone (optionnel)" hint="Uniquement si vous souhaitez être rappelé·e pour le Diagnostic 30 min.">
           <input className="input" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </Field>
-        <label className="flex items-start gap-2 text-sm text-encre/90">
-          {/* GDPR: explicit consent, NEVER pre-ticked. */}
+        <label className="flex items-start gap-2 text-sm text-[#4A5061]">
           <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} required />
           <span>
             J&rsquo;accepte de recevoir ma simulation détaillée et les conseils d&rsquo;optimisation de RD Portage (6 emails sur
             14 jours, désinscription en un clic). Politique de confidentialité version {POLICY_VERSION}.
           </span>
         </label>
-        {submitError && <p className="text-sm text-encre">{submitError}</p>}
-        <button type="submit" disabled={submitting} className="cta-primary w-full disabled:opacity-60 sm:w-auto">
+        {submitError && <p className="text-sm text-[#b3261e]">{submitError}</p>}
+        <button type="submit" disabled={submitting} className={`${PRIMARY_BTN} w-full sm:w-auto`}>
           {submitting ? "Envoi en cours…" : "Recevoir ma simulation détaillée"}
         </button>
       </form>
@@ -655,15 +647,15 @@ function LeadGate({
 function ProgressBar({ step }: { step: number }) {
   return (
     <div className="mb-8">
-      <div className="flex justify-between text-xs text-encre/60">
+      <div className="flex justify-between text-xs text-[#7A8093]">
         {STEP_LABELS.map((l, i) => (
-          <span key={l} className={i <= step ? "font-medium text-encre" : ""}>
+          <span key={l} className={i <= step ? "font-bold text-[#0B0D12]" : ""}>
             {l}
           </span>
         ))}
       </div>
-      <div className="mt-2 h-1 w-full bg-laiton/30">
-        <div className="h-1 bg-laiton transition-[width] duration-300" style={{ width: `${((step + 1) / 4) * 100}%` }} />
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#F0F1F5]">
+        <div className="h-1.5 rounded-full transition-[width] duration-300" style={{ width: `${((step + 1) / 4) * 100}%`, backgroundColor: BRASS }} />
       </div>
     </div>
   );
@@ -672,8 +664,10 @@ function ProgressBar({ step }: { step: number }) {
 function Screen({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
     <section>
-      <h1 className="display text-2xl text-encre md:text-3xl">{title}</h1>
-      <p className="mt-1 text-sm text-encre/70">{subtitle}</p>
+      <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl" style={{ fontFamily: SERIF }}>
+        {title}
+      </h1>
+      <p className="mt-1 text-sm text-[#7A8093]">{subtitle}</p>
       <div className="mt-6 space-y-5">{children}</div>
     </section>
   );
@@ -682,9 +676,28 @@ function Screen({ title, subtitle, children }: { title: string; subtitle: string
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block font-sans text-base font-medium text-encre">{label}</label>
-      {hint && <p className="mb-2 mt-0.5 text-xs text-encre/60">{hint}</p>}
+      <label className="block text-base font-bold text-[#0B0D12]">{label}</label>
+      {hint && <p className="mb-2 mt-0.5 text-xs text-[#7A8093]">{hint}</p>}
       <div className={hint ? "" : "mt-2"}>{children}</div>
+    </div>
+  );
+}
+
+function Segmented({ options, value, onChange }: { options: { value: string; label: string }[]; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          onClick={() => onChange(o.value)}
+          className={`rounded-xl border px-4 py-3 text-sm font-semibold transition-all ${
+            value === o.value ? "border-transparent bg-[#0B0D12] text-white" : "border-[#E2E5EE] bg-white text-[#0B0D12] hover:border-[#B08D57]"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -711,7 +724,7 @@ function Slider({
     <Field label={label} hint={hint}>
       <div className="flex items-center gap-3">
         <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(clamp(Number(e.target.value)))} className="range flex-1" aria-label={label} />
-        <input type="number" inputMode="numeric" className="input tnum w-24 text-right" value={value} min={min} max={max} onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+        <input type="number" inputMode="numeric" className="input w-24 text-right tabular-nums" value={value} min={min} max={max} onChange={(e) => onChange(clamp(Number(e.target.value)))} />
       </div>
     </Field>
   );
@@ -720,11 +733,11 @@ function Slider({
 function Stepper({ value, onChange, max = 12 }: { value: number; onChange: (v: number) => void; max?: number }) {
   return (
     <div className="flex items-center gap-3">
-      <button type="button" className="h-11 w-11 rounded border border-laiton/60 text-lg" onClick={() => onChange(Math.max(0, value - 1))} aria-label="moins">
+      <button type="button" className="h-11 w-11 rounded-full border border-[#E2E5EE] text-lg transition-colors hover:border-[#B08D57]" onClick={() => onChange(Math.max(0, value - 1))} aria-label="moins">
         −
       </button>
-      <span className="display w-8 text-center text-xl tnum">{value}</span>
-      <button type="button" className="h-11 w-11 rounded border border-laiton/60 text-lg" onClick={() => onChange(Math.min(max, value + 1))} aria-label="plus">
+      <span className="w-8 text-center text-xl font-extrabold tabular-nums">{value}</span>
+      <button type="button" className="h-11 w-11 rounded-full border border-[#E2E5EE] text-lg transition-colors hover:border-[#B08D57]" onClick={() => onChange(Math.min(max, value + 1))} aria-label="plus">
         +
       </button>
     </div>
@@ -733,7 +746,7 @@ function Stepper({ value, onChange, max = 12 }: { value: number; onChange: (v: n
 
 function NextButton({ onClick, label = "Continuer" }: { onClick: () => void; label?: string }) {
   return (
-    <button type="button" onClick={onClick} className="cta-primary w-full sm:w-auto">
+    <button type="button" onClick={onClick} className={`${PRIMARY_BTN} w-full sm:w-auto`}>
       {label}
     </button>
   );
@@ -744,23 +757,24 @@ function Styles() {
     <style jsx global>{`
       .input {
         width: 100%;
-        border: 1px solid rgba(176, 141, 87, 0.6);
-        border-radius: 2px;
+        border: 1px solid #e2e5ee;
+        border-radius: 12px;
         background: #fff;
-        padding: 0.85rem 1rem;
+        padding: 0.8rem 1rem;
         font-size: 1.05rem;
-        color: #1a1a1a;
+        color: #0b0d12;
       }
       .input:focus {
-        outline: 2px solid #0e1b33;
-        outline-offset: 0;
+        outline: none;
+        border-color: #b08d57;
+        box-shadow: 0 0 0 3px rgba(176, 141, 87, 0.15);
       }
       .range {
         -webkit-appearance: none;
         appearance: none;
         height: 6px;
         border-radius: 999px;
-        background: rgba(176, 141, 87, 0.3);
+        background: #ede3d2;
         outline: none;
       }
       .range::-webkit-slider-thumb {
@@ -769,7 +783,7 @@ function Styles() {
         width: 26px;
         height: 26px;
         border-radius: 50%;
-        background: #0e1b33;
+        background: #0b0d12;
         border: 3px solid #fff;
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
         cursor: pointer;
@@ -778,7 +792,7 @@ function Styles() {
         width: 26px;
         height: 26px;
         border-radius: 50%;
-        background: #0e1b33;
+        background: #0b0d12;
         border: 3px solid #fff;
         cursor: pointer;
       }
