@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { Tracker } from "@/components/Tracker";
+import { MetaRouteTracker } from "@/components/MetaRouteTracker";
+import { ConsentBanner } from "@/components/ConsentBanner";
 
 export const metadata: Metadata = {
   title: "RD Portage — Calculez votre meilleur taux d'imposition",
@@ -34,7 +36,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <Tracker />
+        <MetaRouteTracker />
         {children}
+        <ConsentBanner />
       </body>
     </html>
   );

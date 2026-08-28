@@ -51,17 +51,15 @@ describe("computeIr — 10 hand-computed cases", () => {
   });
 
   // Case 3 — QF cap binding: couple, 2 children, salary 164 556 €; the 10%
-  // deduction (16 455 €) is CAPPED at 14 556 € → taxable 150 000.
-  // Full parts: 3 × tax(50 000)=3×8 103.99=24 311.97. Base: 2×tax(75 000)=
-  // 2×15 603.99=31 207.98. Advantage 6 896.01 > cap 3 614 → 31 207.98−3 614
-  // = 27 593.98 → 27 594.
+  // deduction (16 455 €) is CAPPED at 14 555 € (max officiel 2025) → taxable
+  // 150 001. Advantage > cap 3 614 → tax = base − 3 614 ≈ 27 594.
   it("3. plafonnement du quotient familial + plafond abattement 10%", () => {
     const r = computeIr({
       household: { maritalStatus: "marie_pacse", children: 2, childrenGardeAlternee: 0 },
       salaryTaxable: 164_556,
       ...noOpt,
     });
-    expect(r.taxableIncome).toBe(150_000);
+    expect(r.taxableIncome).toBe(150_001);
     expect(r.tax).toBe(27_594);
   });
 

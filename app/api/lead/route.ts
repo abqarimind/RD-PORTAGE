@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { crm } from "@/lib/crm";
 import { leadSchema, type Lead } from "@/lib/crm/schema";
+import { sendCapiEvent } from "@/lib/server/capi";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,9 @@ const payloadSchema = leadSchema
   .omit({ lead_id: true, created_at: true, schema_version: true, funnel_stage: true, funnel_events: true })
   .extend({
     consent: leadSchema.shape.consent.omit({ ip_hash: true }),
+    // Optional: browser-generated Meta event_id so the CAPI Lead below
+    // deduplicates against the Pixel Lead fired client-side.
+    meta_event_id: z.string().optional(),
   });
 
 export async function POST(req: NextRequest) {
@@ -47,5 +51,26 @@ export async function POST(req: NextRequest) {
     await crm.triggerSequence(lead.lead_id, SEQUENCE_ID);
   }
 
-  return NextResponse.json({ leadId: lead.lead_id });
+  // Server-side Meta CAPI Lead — fires only when marketing consent was given
+  // (the Pixel is consent-gated too) and Meta keys are configured. The
+  // event_id is shared with the browser Pixel Lead for deduplication.
+  const metaEventId = parsed.meta_event_id ?? randomUUID();
+  if (lead.consent.marketing_optin) {
+    void sendCapiEvent({
+      eventName: "Lead",
+      eventId: metaEventId,
+      eventSourceUrl: req.headers.get("referer") ?? undefined,
+      customData: { value: lead.simulation.economie_annuelle_eur, currency: "EUR", content_name: "simulateur" },
+      userData: {
+        email: lead.identity.email,
+        phone: lead.identity.phone,
+        fbp: req.cookies.get("_fbp")?.value,
+        fbc: req.cookies.get("_fbc")?.value,
+        clientIp: ip,
+        userAgent: req.headers.get("user-agent") ?? undefined,
+      },
+    }).catch(() => {});
+  }
+
+  return NextResponse.json({ leadId: lead.lead_id, metaEventId });
 }
