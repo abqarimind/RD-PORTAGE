@@ -121,22 +121,20 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
   }
 
   /**
-   * E3 + E4 — finalisation de l'inscription (§5.1).
+   * E3 + E4 — DEMANDE DE DIAGNOSTIC (§4.1).
    *
-   * Le tunnel déployé ne comporte qu'un seul point de soumission : « fin de
-   * simulation » et « finalisation de l'inscription » y sont le même instant.
-   * Pour ne pas envoyer quatre emails d'un coup, E3/E4 partent sur
-   * l'engagement explicite qui suit le lead gate — le clic vers le Diagnostic
-   * 30 min — c'est-à-dire au moment où le lead devient actionnable
-   * commercialement. Envoi au plus une fois par simulation, et sans jamais
-   * retarder la navigation de l'utilisateur.
+   * Le clic vers le Diagnostic 30 min est une demande de rendez-vous : un
+   * acte plus fort que l'inscription, qui est déjà couverte par E1/E2. Ce
+   * couple signale donc un lead plus chaud, il ne doublonne rien, et aucun
+   * lead n'est perdu si ce clic n'a pas lieu. Envoi au plus une fois par
+   * simulation, sans jamais retarder la navigation de l'utilisateur.
    */
-  const inscriptionSent = useRef(false);
-  function notifyInscription() {
-    if (inscriptionSent.current || !state.leadId) return;
-    inscriptionSent.current = true;
+  const diagnosticSent = useRef(false);
+  function notifyDemandeDiagnostic() {
+    if (diagnosticSent.current || !state.leadId) return;
+    diagnosticSent.current = true;
     const attribution = getAttribution();
-    void fetch("/api/inscription", {
+    void fetch("/api/demande-diagnostic", {
       method: "POST",
       headers: { "content-type": "application/json" },
       keepalive: true,
@@ -153,7 +151,7 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
           device: deviceType(),
         },
       }),
-    }).catch((err) => console.error("[inscription] notification non envoyée", err));
+    }).catch((err) => console.error("[demande-diagnostic] notification non envoyée", err));
   }
 
   /* ————— après soumission : accès au dossier ————— */
@@ -185,7 +183,7 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
             href={RDV_URL}
             onClick={() => {
               onRdv("sim_unlocked");
-              notifyInscription();
+              notifyDemandeDiagnostic();
             }}
             className={OUTLINE_BTN}
           >

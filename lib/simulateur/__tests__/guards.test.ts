@@ -14,7 +14,14 @@ import { computePortage } from "@/lib/fiscal/portage";
 import { simulate } from "@/lib/fiscal/scenarios";
 import { TJM_BRACKETS } from "@/lib/simulateur/brackets";
 
-const form = (patch: Partial<FormState>): FormState => ({ ...DEFAULT_FORM, ...patch });
+// Le profil n'a plus de défaut (§4.3) : ces cas testent les AUTRES entrées,
+// on en fixe donc un explicitement. Son absence est testée à part.
+const form = (patch: Partial<FormState> = {}): FormState => ({
+  ...DEFAULT_FORM,
+  status: "freelance_micro",
+  ...patch,
+});
+const statusOf = (f: FormState) => f.status ?? "freelance_micro";
 
 describe("entrées insuffisantes : refusées, jamais affichées à 0 €", () => {
   const cas: [string, FormState][] = [
@@ -39,6 +46,23 @@ describe("entrées insuffisantes : refusées, jamais affichées à 0 €", () =>
   }
 });
 
+describe("§4.3 — le profil n'a plus de valeur par défaut", () => {
+  it("DEFAULT_FORM ne présélectionne aucun profil", () => {
+    expect(DEFAULT_FORM.status).toBeNull();
+  });
+
+  it("un parcours sans profil est refusé et renvoie à l'étape Profil", () => {
+    const missing = validateInputs({ ...DEFAULT_FORM });
+    const profil = missing.find((m) => m.step === "profil");
+    expect(profil).toBeDefined();
+    expect(profil!.cta).toContain("profil");
+  });
+
+  it("le profil renseigné, le parcours par défaut redevient calculable", () => {
+    expect(validateInputs(form())).toHaveLength(0);
+  });
+});
+
 describe("entrées valides : un résultat fini, jamais NaN", () => {
   it("chaque fourchette produit un résultat calculable", () => {
     for (const b of TJM_BRACKETS) {
@@ -50,7 +74,7 @@ describe("entrées valides : un résultat fini, jamais NaN", () => {
       expect(live.netPerceived).toBeGreaterThan(0);
 
       const result = simulate({
-        status: f.status,
+        status: statusOf(f),
         tjmOrMonthlyGross: tjm,
         daysPerYear: f.days * 12,
         household: { maritalStatus: f.situation, children: f.enfants, childrenGardeAlternee: f.gardeAlternee },
@@ -60,7 +84,7 @@ describe("entrées valides : un résultat fini, jamais NaN", () => {
   });
 
   it("tous les profils produisent un résultat plausible à tous les paliers de TJM", () => {
-    const profils: FormState["status"][] = ["salarie_esn", "freelance_micro", "freelance_sasu", "porte_ailleurs", "transition"];
+    const profils = ["salarie_esn", "freelance_micro", "freelance_sasu", "porte_ailleurs", "transition"] as const;
     for (const status of profils) {
       for (const b of TJM_BRACKETS) {
         const f = form({ status, tjmMode: "fourchette", tjmBracketId: b.id });

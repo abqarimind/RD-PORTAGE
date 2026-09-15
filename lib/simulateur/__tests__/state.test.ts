@@ -98,6 +98,56 @@ describe("BUG-02 — le mode de saisie du TJM est mémorisé et réversible", ()
   });
 });
 
+describe("§3.2 — relais du diagnostic flash", () => {
+  const relais = { segment: "porte", tjmBracketId: "500-650", dejaCalcule: "non" };
+
+  it("préremplit le profil et la fourchette, et les marque comme repris", () => {
+    const s = reducer(initial(), { type: "apply_diagnostic", answers: relais });
+    expect(s.form.status).toBe("porte_ailleurs");
+    expect(s.form.tjmMode).toBe("fourchette");
+    expect(s.form.tjmBracketId).toBe("500-650");
+    expect(resolvedTjm(s.form)).toBe(575);
+    expect(s.prefilled).toEqual({ status: true, tjm: true });
+    // La 3e réponse est conservée mais n'entre dans aucun calcul.
+    expect(s.dejaCalcule).toBe("non");
+  });
+
+  it("préremplir n'est pas verrouiller : tout reste modifiable", () => {
+    let s = reducer(initial(), { type: "apply_diagnostic", answers: relais });
+    s = reducer(s, { type: "set_profile", status: "salarie_esn", impatrie: false });
+    s = reducer(s, { type: "set_tjm_exact", value: 810 });
+    expect(s.form.status).toBe("salarie_esn");
+    expect(s.form.tjmMode).toBe("exact");
+    expect(resolvedTjm(s.form)).toBe(810);
+    // Choisir soi-même lève la marque « repris du diagnostic ».
+    expect(s.prefilled).toEqual({ status: false, tjm: false });
+  });
+
+  it("un relais partiel ne préremplit que ce qu'il porte", () => {
+    const s = reducer(initial(), {
+      type: "apply_diagnostic",
+      answers: { segment: null, tjmBracketId: "lt350", dejaCalcule: null },
+    });
+    expect(s.form.status).toBeNull();
+    expect(s.prefilled).toEqual({ status: false, tjm: true });
+  });
+
+  it("un relais entièrement invalide laisse l'état intact", () => {
+    const base = initial();
+    const s = reducer(base, { type: "apply_diagnostic", answers: { segment: null, tjmBracketId: null, dejaCalcule: null } });
+    expect(s.form).toEqual(base.form);
+    expect(s.prefilled).toEqual({ status: false, tjm: false });
+  });
+
+  it("« Nouvelle simulation » efface aussi les marques de préremplissage", () => {
+    let s = reducer(initial(), { type: "apply_diagnostic", answers: relais });
+    s = reducer(s, { type: "reset", simulationId: "sim-neuf" });
+    expect(s.prefilled).toEqual({ status: false, tjm: false });
+    expect(s.dejaCalcule).toBeNull();
+    expect(s.form.status).toBeNull();
+  });
+});
+
 describe("BUG-03 — « Nouvelle simulation » repart d'un état vide", () => {
   it("remet le formulaire, l'étape, le déverrouillage et l'identifiant à zéro", () => {
     const s = apply(
