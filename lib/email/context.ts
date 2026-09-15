@@ -84,5 +84,7 @@ export function baseUrlFrom(req: Request): string {
   if (configured) return configured.replace(/\/$/, "");
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
   const proto = req.headers.get("x-forwarded-proto") ?? "https";
-  return host ? `${proto}://${host}` : "https://rd-portage.vercel.app";
+  // Dernier repli seulement : en pratique NEXT_PUBLIC_SITE_URL ou l'en-tête
+  // Host répondent toujours.
+  return host ? `${proto}://${host}` : "https://simulateur.rdportage.com";
 }

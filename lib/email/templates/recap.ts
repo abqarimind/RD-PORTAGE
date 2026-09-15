@@ -9,7 +9,7 @@
  * échoue (§5.1).
  */
 import type { SimulationResultPayload } from "@/types/simulation-result";
-import { button, esc, eur, eurSigned, h2, layout, pct, row, table, MUTED } from "./layout";
+import { button, esc, eur, eurSigned, h2, layout, pct, row, siteDomain, table, MUTED } from "./layout";
 import { rawBlock } from "./diagnostic";
 
 /** Corps partagé E1 / E2 — une seule rédaction, deux destinataires. */
@@ -206,7 +206,7 @@ function texte(p: SimulationResultPayload): string {
 function piedLead(p: SimulationResultPayload, unsubscribeUrl?: string): string {
   return [
     esc(p.meta.mentions.valeurIndicative),
-    `Vous recevez cet email parce que vous avez demandé votre simulation sur rd-portage.vercel.app. Vos données servent uniquement à établir cette simulation et à vous recontacter à ce sujet.`,
+    `Vous recevez cet email parce que vous avez demandé votre simulation sur ${esc(siteDomain(p.meta.mentions.politiqueConfidentialiteUrl))}. Vos données servent uniquement à établir cette simulation et à vous recontacter à ce sujet.`,
     `<a href="${esc(p.meta.mentions.politiqueConfidentialiteUrl)}" style="color:${MUTED};">Politique de confidentialité</a> · <a href="${esc(
       p.meta.mentions.mentionsLegalesUrl,
     )}" style="color:${MUTED};">Mentions légales</a>${

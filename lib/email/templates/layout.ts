@@ -95,6 +95,20 @@ export function table(rows: string): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 16px 0;">${rows}</table>`;
 }
 
+/**
+ * Domaine affiché dans les pieds d'email. Déduit des URLs déjà construites à
+ * partir de `baseUrl`, pour qu'un changement de domaine (par exemple le
+ * passage à simulateur.rdportage.com) ne tienne qu'à une seule variable
+ * d'environnement et ne laisse pas d'adresse périmée dans les mentions.
+ */
+export function siteDomain(mentionsUrl: string): string {
+  try {
+    return new URL(mentionsUrl).host;
+  } catch {
+    return "rdportage.com";
+  }
+}
+
 export function h2(text: string): string {
   return `<p style="margin:24px 0 4px 0;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;color:${BRASS};">${esc(text)}</p>`;
 }

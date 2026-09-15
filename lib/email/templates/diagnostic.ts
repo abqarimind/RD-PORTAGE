@@ -12,7 +12,7 @@
  * même si E3 échoue.
  */
 import type { SimulationResultPayload } from "@/types/simulation-result";
-import { button, esc, eur, eurSigned, h2, layout, pct, row, table, MUTED } from "./layout";
+import { button, esc, eur, eurSigned, h2, layout, pct, row, siteDomain, table, MUTED } from "./layout";
 
 const PHONE_LABEL = "06 32 98 87 23";
 /** Engagement de rappel affiché au lead — tenu par Ridha. */
@@ -42,7 +42,7 @@ ${p.meta.dossierUrl ? button(p.meta.dossierUrl, "Revoir mon dossier") : ""}
 
   const footer = [
     esc(p.meta.mentions.valeurIndicative),
-    `Vous recevez cet email à la suite de votre demande de diagnostic sur rd-portage.vercel.app.`,
+    `Vous recevez cet email à la suite de votre demande de diagnostic sur ${esc(siteDomain(p.meta.mentions.politiqueConfidentialiteUrl))}.`,
     `<a href="${esc(p.meta.mentions.politiqueConfidentialiteUrl)}" style="color:${MUTED};">Politique de confidentialité</a> · <a href="${esc(
       p.meta.mentions.mentionsLegalesUrl,
     )}" style="color:${MUTED};">Mentions légales</a>${
