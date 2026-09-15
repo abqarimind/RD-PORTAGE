@@ -1,18 +1,20 @@
 /**
  * CRM facade used by the app. Provider chosen via CRM_PROVIDER
- * (mock | brevo | airtable | google-sheet | custom), default mock.
+ * (mock | resend | brevo | airtable | google-sheet | custom), default mock.
  * Every write goes through the reliable queue (journal + 3 retries).
  */
 import type { CRMAdapter } from "./adapter";
 import { airtableAdapter } from "./airtable";
 import { brevoAdapter } from "./brevo";
 import { mockAdapter } from "./mock";
+import { resendAdapter } from "./resend";
 import { reliableWrite } from "./queue";
 import type { FunnelEvent, Lead } from "./schema";
 import { customCrmAdapter, googleSheetAdapter } from "./stubs";
 
 const ADAPTERS: Record<string, CRMAdapter> = {
   mock: mockAdapter,
+  resend: resendAdapter,
   brevo: brevoAdapter,
   airtable: airtableAdapter,
   "google-sheet": googleSheetAdapter,
@@ -35,7 +37,8 @@ function warnIfNotDurable(provider: string): void {
   console.error(
     "[crm] CONFIGURATION NON DURABLE — CRM_PROVIDER=mock en production : " +
       "les leads ne sont conservés NULLE PART (Map en mémoire + système de fichiers éphémère). " +
-      "Définir CRM_PROVIDER=airtable (AIRTABLE_API_KEY, AIRTABLE_BASE_ID) ou CRM_PROVIDER=brevo.",
+      "Définir CRM_PROVIDER=resend (la clé RESEND_API_KEY est déjà là pour le transactionnel), " +
+      "ou CRM_PROVIDER=airtable (AIRTABLE_API_KEY, AIRTABLE_BASE_ID), ou CRM_PROVIDER=brevo.",
   );
 }
 

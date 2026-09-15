@@ -23,6 +23,21 @@ L'argument principal en faveur de Brevo tombe donc, et la recommandation
 change. Le reste de la note (facturation électronique, ERP portage, avis sur
 le CRM sur mesure, tunnel) reste valable.
 
+**Deux précisions ajoutées depuis, en relisant les types du SDK plutôt que la
+documentation publiée :**
+
+- **Les « Audiences » sont devenues des Segments.** Les contacts sont
+  désormais globaux au compte : une même adresse est UN contact, qu'elle
+  appartienne à zéro, un ou plusieurs segments. Le paramètre `audienceId` est
+  marqué déprécié dans le SDK v6 et n'est plus requis pour créer un contact.
+- **Une Automation se déclenche sur un événement nommé**, pas sur l'entrée
+  dans une liste. C'est l'inverse du branchement Brevo, où l'appartenance à
+  une liste sert de déclencheur.
+
+**Statut : implémenté.** L'adaptateur `CRM_PROVIDER=resend` existe
+(`lib/crm/resend.ts`), couvert par 8 tests. Il reste à poser la variable dans
+Vercel pour l'activer.
+
 ---
 
 ## 1. La question n'est pas « quel CRM »
@@ -82,7 +97,7 @@ Resend couvre les trois besoins email **et** peut stocker les contacts :
 |---|---|
 | Emails transactionnels | Déjà en place et testé |
 | Séquence J0→J14 | Automations, 10 000 exécutions/mois incluses |
-| Stockage des contacts | Audiences, création et mise à jour par API, propriétés personnalisées, import CSV |
+| Stockage des contacts | Contacts globaux au compte, création et mise à jour par API, propriétés personnalisées, import CSV |
 
 **Avantages décisifs :** aucun nouveau compte, aucune nouvelle clé, aucun
 nouveau domaine à vérifier, et une intégration qui existe déjà. Le branchement
@@ -91,10 +106,14 @@ soit environ une demi-journée.
 
 ### Les trois limites à connaître avant de trancher
 
-1. **Les propriétés personnalisées des contacts sont des paires clé/valeur en
-   chaînes de caractères.** On peut y porter le TJM, le taux moyen, le profil,
-   le téléphone — pas le détail complet de la simulation. Suffisant pour
-   qu'un commercial rappelle quelqu'un, insuffisant comme archive.
+1. **Les propriétés personnalisées ne portent pas la simulation complète.**
+   On y met le TJM, l'économie annuelle, le profil, le téléphone, l'étape du
+   parcours : de quoi rappeler quelqu'un en connaissance de cause, pas de quoi
+   rouvrir une simulation vieille de six mois. *(Correction : la version
+   précédente de cette note affirmait que ces propriétés étaient limitées à
+   des chaînes de caractères. C'est faux — elles acceptent `string | number |
+   null`, donc les montants restent des nombres, filtrables tels quels. Source
+   : les types du SDK `resend` v6.)*
 2. **Ce n'est pas un CRM.** Pas de pipeline, pas de notes, pas de relance, pas
    d'assignation. C'est une liste de contacts. Ridha ne pourra pas
    « travailler » ses leads dedans.
@@ -125,7 +144,7 @@ Quand ce moment viendra, le choix se fera sur le besoin réel :
 
 Une seule raison de brancher Airtable en plus de Resend : **l'adaptateur
 existant y stocke le payload complet de chaque simulation** dans un champ
-`raw_json`, là où Resend ne retiendra que quelques propriétés en chaînes. Si
+`raw_json`, là où Resend ne retiendra qu'une douzaine de propriétés. Si
 Ridha veut pouvoir rouvrir une simulation vieille de six mois, Airtable le
 permet et Resend non. L'adaptateur est déjà écrit et fonctionne intégralement
 en serverless, donc le coût est nul.
@@ -262,7 +281,7 @@ seul verrou qui reste.
 
 ## 7. Ce que je recommande, dans l'ordre
 
-1. **Cette semaine** — brancher les leads sur **Resend Audiences**
+1. **Cette semaine** — brancher les leads sur **les contacts Resend**
    (½ journée, aucun nouveau compte), poser `RESEND_API_KEY` et vérifier qu'un
    lead de test arrive bien. Sans cela, pas de budget média. Poser au passage
    la question au support Resend sur le palier applicable aux emails envoyés
@@ -290,7 +309,7 @@ engagement contractuel.
 - Comparatifs CRM PME 2026 — [lelab0](https://lelab0.com/blog/comparatif-crm-pme-france-2026-pipedrive-hubspot-salesforce-sellsy/), [Publish IT](https://publish-it.fr/comparatif-crm-b2b-2026/), [Pragmatik](https://www.agencepragmatik.com/radar/meilleur-crm-pme-entrepreneurs-2026-comparatif)
 - Tarifs HubSpot 2026 — [Resonate](https://www.resonatehq.com/hubspot-pricing), [EngageBay](https://www.engagebay.com/blog/hubspot-pricing/)
 - Tarifs Airtable et Brevo 2026 — [TinyCommand](https://tinycommand.com/blogs/airtable-pricing-explained), [SaaS CRM Review](https://saascrmreview.com/brevo-pricing/)
-- **Resend Automations** (source primaire, avril 2026) — [annonce](https://resend.com/blog/introducing-automations), [Audiences & Contacts](https://resend.com/docs/dashboard/audiences/introduction), [tarifs](https://resend.com/pricing)
+- **Resend Automations** (source primaire, avril 2026) — [annonce](https://resend.com/blog/introducing-automations), [Audiences devenues Segments](https://resend.com/docs/dashboard/segments/migrating-from-audiences-to-segments), [tarifs](https://resend.com/pricing)
 - TJM développeurs freelances France 2026 — [RLN Consulting](https://rln-consulting.com/blog/tarifs-developpeur-freelance-2026), [La Fabrique du Net](https://www.lafabriquedunet.fr/agences/tendances/tarifs-des-developpeurs-freelances-dans-les-grandes-villes-de-france)
 - Coût d'un CRM sur mesure — [Sokeo](https://sokeo.fr/cout-crm-entreprise-investissement-rentabilite/), [NoCode Factory](https://www.nocodefactory.fr/blog/combien-coute-developpement-outil-metier-sur-mesure)
 - ERP portage salarial — [VSPortage](https://vsportage.com/fonctionnalites/metiers/portage-salarial/), [LAYA](https://www.laya.fr/logiciel-gestion-portage-salarial.html), [comparatif](https://www.lafabriquedunet.fr/logiciels/gestion/portage-salarial)
