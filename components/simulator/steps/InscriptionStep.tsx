@@ -119,6 +119,42 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
     }
   }
 
+  /**
+   * E3 + E4 — finalisation de l'inscription (§5.1).
+   *
+   * Le tunnel déployé ne comporte qu'un seul point de soumission : « fin de
+   * simulation » et « finalisation de l'inscription » y sont le même instant.
+   * Pour ne pas envoyer quatre emails d'un coup, E3/E4 partent sur
+   * l'engagement explicite qui suit le lead gate — le clic vers le Diagnostic
+   * 30 min — c'est-à-dire au moment où le lead devient actionnable
+   * commercialement. Envoi au plus une fois par simulation, et sans jamais
+   * retarder la navigation de l'utilisateur.
+   */
+  const inscriptionSent = useRef(false);
+  function notifyInscription() {
+    if (inscriptionSent.current || !state.leadId) return;
+    inscriptionSent.current = true;
+    const attribution = getAttribution();
+    void fetch("/api/inscription", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({
+        lead_id: state.leadId,
+        simulation_id: state.simulationId,
+        identity: { first_name: firstName, email, phone: phone || undefined },
+        form: state.form,
+        source: {
+          utmSource: attribution.first_touch?.utm_source,
+          utmMedium: attribution.first_touch?.utm_medium,
+          utmCampaign: attribution.first_touch?.utm_campaign,
+          leadSource: deriveLeadSource(attribution.first_touch),
+          device: deviceType(),
+        },
+      }),
+    }).catch((err) => console.error("[inscription] notification non envoyée", err));
+  }
+
   /* ————— après soumission : accès au dossier ————— */
   if (state.unlocked) {
     return (
@@ -144,7 +180,14 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
           >
             Ouvrir mon dossier
           </a>
-          <a href={RDV_URL} onClick={() => onRdv("sim_unlocked")} className={OUTLINE_BTN}>
+          <a
+            href={RDV_URL}
+            onClick={() => {
+              onRdv("sim_unlocked");
+              notifyInscription();
+            }}
+            className={OUTLINE_BTN}
+          >
             Valider ce chiffre — Diagnostic 30 min
           </a>
         </div>
