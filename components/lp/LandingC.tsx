@@ -153,13 +153,17 @@ function Header({ showNav }: { showNav: boolean }) {
       <div className="mx-auto flex max-w-page items-center justify-between px-4 py-3">
         <p className="text-lg font-extrabold tracking-tight">RD&nbsp;Portage</p>
         {showNav && (
-          <nav className="hidden gap-8 text-sm font-medium text-[#4A5061] md:flex">
+          <nav className="hidden gap-2 text-sm font-medium text-[#4A5061] md:flex">
             {[
               ["Méthode", "#methode"],
               ["Preuves", "#preuves"],
               ["Tarif", "#tarif"],
             ].map(([label, href]) => (
-              <a key={label} href={href} className="transition-colors hover:text-[#0B0D12]">
+              <a
+                key={label}
+                href={href}
+                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center px-3 transition-colors hover:text-[#0B0D12]"
+              >
                 {label}
               </a>
             ))}
@@ -168,7 +172,7 @@ function Header({ showNav }: { showNav: boolean }) {
         {/* Single primary CTA — scrolls to the in-hero diagnostic. */}
         <a
           href="#diagnostic"
-          className="rounded-full bg-[#0B0D12] px-5 py-2.5 text-sm font-bold text-white transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.97]"
+          className="inline-flex min-h-[44px] items-center rounded-full bg-[#0B0D12] px-5 py-2.5 text-sm font-bold text-white transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.97]"
         >
           Calculer mon vrai taux
         </a>
@@ -180,12 +184,14 @@ function Header({ showNav }: { showNav: boolean }) {
 function HeroFlash({ angle }: { angle: Angle }) {
   const copy = heroCopy(angle);
   return (
-    <section className="relative isolate mx-auto max-w-page px-4 pb-12 pt-8 md:pt-12">
+    <section className="relative isolate mx-auto max-w-page px-4 pb-section pt-8 md:pt-section-md">
       <div className="dotgrid pointer-events-none absolute inset-x-0 top-0 -z-10 h-[460px]" aria-hidden />
-      <div className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
-        <div className="text-center md:text-left">
+      {/* La bascule en deux colonnes attend 1024 px : à 768 chaque colonne ne
+          faisait que 344 px, trop étroit pour porter le titre et le texte. */}
+      <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
+        <div className="text-center lg:text-left">
           {copy.withFounder && (
-            <span className="mx-auto mb-4 flex w-fit items-center gap-3 rounded-full bg-[#F6F7FA] py-1.5 pl-1.5 pr-4 md:mx-0">
+            <span className="mx-auto mb-4 flex w-fit items-center gap-3 rounded-full bg-[#F6F7FA] py-1.5 pl-1.5 pr-4 lg:mx-0">
               <Image src="/ridha.png" alt="Ridha Chammam" width={36} height={36} className="rounded-full" />
               <span className="text-xs font-bold text-[#4A5061]">Ridha Chammam — fondateur</span>
             </span>
@@ -193,20 +199,20 @@ function HeroFlash({ angle }: { angle: Angle }) {
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BRASS }}>
             {copy.eyebrow}
           </p>
-          <h1 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight md:text-5xl" style={{ fontFamily: SERIF }}>
+          <h1 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight md:text-4xl lg:text-5xl" style={{ fontFamily: SERIF }}>
             {copy.title}
           </h1>
-          <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[#4A5061] md:mx-0">{copy.subtitle}</p>
+          <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[#4A5061] lg:mx-0">{copy.subtitle}</p>
           {copy.proof && (
             <p
-              className="mx-auto mt-4 flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold md:mx-0"
+              className="mx-auto mt-4 flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold lg:mx-0"
               style={{ borderColor: "#E6DCC8", backgroundColor: "#FBF7EF", color: "#8A6B3F" }}
             >
               <span aria-hidden>✓</span>
               {copy.proof}
             </p>
           )}
-          <div className="mt-5 flex items-center justify-center gap-2 text-xs font-semibold text-[#7A8093] md:justify-start">
+          <div className="mt-5 flex items-center justify-center gap-2 text-xs font-semibold text-[#7A8093] lg:justify-start">
             <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: BRASS }} />
             ~30 consultants portés depuis 2021 · RCS Versailles 912 888 013
           </div>
@@ -233,11 +239,13 @@ function StatChips() {
     { num: 18000, fmt: (n) => `${eur(Math.round(n))} €/an`, small: "d'avantages légaux possibles" },
   ];
   return (
-    <section className="mx-auto max-w-page px-4 pb-12">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <section className="mx-auto max-w-page px-4 pb-section">
+      {/* Deux colonnes jusqu'à 1024 : à 768, quatre colonnes ne laissaient que
+          175 px et les libellés cassaient sur trois lignes. */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {chips.map((c, i) => (
           <Reveal key={c.small} delayMs={i * 70}>
-            <SpotCard className="h-full rounded-2xl border border-[#ECEEF3] bg-white px-4 py-4 text-center transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md md:text-left">
+            <SpotCard className="h-full rounded-2xl border border-[#ECEEF3] bg-white px-4 py-4 text-center transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md lg:text-left">
               <p className="text-2xl font-extrabold tabular-nums" style={{ color: BRASS }}>
                 {"text" in c ? c.text : <CountUp value={c.num} format={c.fmt} />}
               </p>
@@ -258,7 +266,7 @@ function Method() {
   ];
   return (
     <section id="methode" className="border-y border-[#ECEEF3] bg-[#FAFBFD]">
-      <div className="mx-auto max-w-page px-4 py-14">
+      <div className="mx-auto max-w-page px-4 py-section md:py-section-md lg:py-section-lg">
         <Reveal>
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BRASS }}>
             La méthode
@@ -267,7 +275,9 @@ function Method() {
             Trois étapes, zéro zone grise.
           </h2>
         </Reveal>
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
+        {/* Deux colonnes à la tablette, trois seulement à partir de 1024 :
+            à 768, trois colonnes tombaient à 240 px. */}
+        <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {steps.map(([num, title, body, tint], i) => (
             <Reveal key={num} delayMs={i * 90} className="h-full">
               <SpotCard
@@ -290,7 +300,7 @@ function Method() {
 
 function Atarhib() {
   return (
-    <section id="preuves" className="mx-auto max-w-page px-4 py-14">
+    <section id="preuves" className="mx-auto max-w-page px-4 py-section md:py-section-md lg:py-section-lg">
       <div className="grid items-center gap-10 md:grid-cols-2">
         <div>
           <h2 className="text-2xl font-extrabold leading-tight tracking-tight md:text-4xl" style={{ fontFamily: SERIF }}>
@@ -348,7 +358,7 @@ function SocialProof() {
   ];
   return (
     <section className="border-y border-[#ECEEF3] bg-[#FAFBFD]">
-      <div className="mx-auto max-w-page px-4 py-14">
+      <div className="mx-auto max-w-page px-4 py-section md:py-section-md lg:py-section-lg">
         <Reveal>
           <p className="text-center text-xs font-bold uppercase tracking-widest text-[#7A8093]">
             {/* TODO: DONNÉE RÉELLE — en attente Ridha : logos clients + droits. */}
@@ -378,7 +388,7 @@ function SocialProof() {
 
 function PricingCta() {
   return (
-    <section id="tarif" className="mx-auto max-w-page px-4 py-16 text-center">
+    <section id="tarif" className="mx-auto max-w-page px-4 py-section md:py-section-md lg:py-section-lg text-center">
       <Reveal>
         <SpotCard className="rounded-3xl px-6 py-12 md:py-16" style={{ backgroundColor: PEACH }}>
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#8A6B3F" }}>
@@ -418,17 +428,15 @@ function Footer() {
     <footer className="border-t border-[#ECEEF3]">
       <div className="mx-auto max-w-page px-4 py-8 text-xs leading-relaxed text-[#7A8093]">
         <p>RD Portage — 1 rue George Stephenson, 78180 Montigny-le-Bretonneux · RCS Versailles 912 888 013 · +33 1 71 49 71 57</p>
-        <p className="mt-1">
-          <Link href="/mentions-legales" className="underline">
+        <p className="mt-1 flex flex-wrap items-center gap-x-3">
+          <Link href="/mentions-legales" className="inline-flex min-h-[44px] items-center underline">
             Mentions légales
           </Link>
-          {" · "}
-          <Link href="/confidentialite" className="underline">
+          <Link href="/confidentialite" className="inline-flex min-h-[44px] items-center underline">
             Confidentialité
           </Link>
-          {" · "}
-          Simulation à valeur indicative — ne constitue pas un conseil fiscal personnalisé.
         </p>
+        <p>Simulation à valeur indicative — ne constitue pas un conseil fiscal personnalisé.</p>
       </div>
     </footer>
   );
@@ -481,7 +489,7 @@ function VslPlayer() {
 function HeroVsl({ angle }: { angle: Angle }) {
   const copy = heroCopy(angle);
   return (
-    <section className="relative isolate mx-auto max-w-4xl px-4 pb-10 pt-8 text-center md:pt-12">
+    <section className="relative isolate mx-auto max-w-4xl px-4 pb-section pt-8 text-center md:pt-section-md">
       <div className="dotgrid pointer-events-none absolute inset-x-0 top-0 -z-10 h-[460px]" aria-hidden />
       {copy.withFounder && (
         <span className="mx-auto mb-4 flex w-fit items-center gap-3 rounded-full bg-[#F6F7FA] py-1.5 pl-1.5 pr-4">
@@ -492,7 +500,7 @@ function HeroVsl({ angle }: { angle: Angle }) {
       <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BRASS }}>
         {copy.eyebrow}
       </p>
-      <h1 className="mx-auto mt-3 max-w-3xl text-3xl font-extrabold leading-tight tracking-tight md:text-5xl">{copy.title}</h1>
+      <h1 className="mx-auto mt-3 max-w-3xl text-3xl font-extrabold leading-tight tracking-tight md:text-4xl lg:text-5xl">{copy.title}</h1>
       <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-[#4A5061]">{copy.subtitle}</p>
       <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
         <a href="#diagnostic" className={PRIMARY_BTN}>
@@ -532,15 +540,15 @@ function HeroVsl({ angle }: { angle: Angle }) {
 /** Flash diagnostic as a standalone section (used below the VSL hero). */
 function DiagnosticSection({ angle }: { angle: Angle }) {
   return (
-    <section className="mx-auto max-w-page px-4 pb-12">
+    <section className="mx-auto max-w-page px-4 pb-section">
       <div className="rounded-3xl border border-[#ECEEF3] bg-[#FAFBFD] p-5 md:p-8">
-        <div className="grid items-center gap-6 md:grid-cols-2">
-          <div className="text-center md:text-left">
+        <div className="grid items-center gap-6 lg:grid-cols-2">
+          <div className="text-center lg:text-left">
             <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BRASS }}>
               30 secondes
             </p>
             <h2 className="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">Faites le diagnostic flash maintenant.</h2>
-            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[#4A5061] md:mx-0">
+            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[#4A5061] lg:mx-0">
               Trois questions, une fourchette immédiate — sans email. Puis le calcul précis de votre foyer en 2 à 3 minutes.
             </p>
           </div>

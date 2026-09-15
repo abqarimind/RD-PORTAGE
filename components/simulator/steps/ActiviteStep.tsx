@@ -71,7 +71,7 @@ export function ActiviteStep() {
                   type="button"
                   aria-pressed={form.tjmBracketId === b.id}
                   onClick={() => dispatch({ type: "set_tjm_bracket", id: b.id })}
-                  className={`min-h-[48px] rounded-xl border px-3 py-3 text-sm font-semibold transition-all ${
+                  className={`min-h-[48px] rounded-xl border px-3 py-3 text-sm font-semibold transition-[background-color,border-color,color,transform,box-shadow] duration-150 ${
                     form.tjmBracketId === b.id
                       ? "border-transparent bg-[#0B0D12] text-white"
                       : "border-[#E2E5EE] bg-white text-[#0B0D12] hover:border-[#B08D57]"

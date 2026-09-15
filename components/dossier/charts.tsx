@@ -64,7 +64,7 @@ export function Cascade({ steps }: { steps: CascadeStep[] }) {
             <span className="col-span-2 text-sm text-[#7A8093] sm:col-span-1 sm:text-right">{b.label}</span>
             <div className="relative h-7 w-full overflow-hidden rounded bg-[#F7F8FB]">
               <div
-                className="absolute top-0 h-7 rounded transition-[width] duration-700"
+                className="absolute top-0 h-7 rounded"
                 style={{
                   left: `${left}%`,
                   width: `${width}%`,
@@ -114,7 +114,7 @@ export function ScenarioBars({ rows }: { rows: ScenarioBar[] }) {
           </div>
           <div className="mt-1.5 h-3 w-full overflow-hidden rounded-full" style={{ backgroundColor: "#F7F8FB" }}>
             <div
-              className="h-3 rounded-full transition-[width] duration-700"
+              className="h-3 rounded-full"
               style={{
                 width: `${(Math.abs(r.value) / max) * 100}%`,
                 backgroundColor: r.best ? VALIDE : BRASS,

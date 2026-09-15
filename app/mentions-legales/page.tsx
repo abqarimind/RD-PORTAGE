@@ -7,7 +7,7 @@ export default function MentionsLegales() {
   return (
     <main className="bg-creme">
       <div className="mx-auto max-w-2xl px-4 py-16">
-        <Link href="/" className="text-sm text-encre/60 underline">← Retour</Link>
+        <Link href="/" className="inline-flex min-h-[44px] items-center text-sm text-encre/60 underline">← Retour</Link>
         <h1 className="display mt-4 text-3xl text-encre">Mentions légales</h1>
         <div className="mt-6 space-y-4 text-sm leading-relaxed text-encre/90">
           <p>

@@ -34,18 +34,18 @@ export default function DossierPage({
   return (
     <main className="bg-[#FAFBFD]" style={{ fontFamily: SANS, color: "#0B0D12" }}>
       <header className="border-b border-[#ECEEF3] bg-white">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-          <Link href="/" className="text-lg font-extrabold tracking-tight">
+        <div className="mx-auto flex max-w-reading items-center justify-between px-4 py-3">
+          <Link href="/" className="inline-flex min-h-[44px] items-center text-lg font-extrabold tracking-tight">
             RD&nbsp;Portage
           </Link>
-          <Link href="/simulateur" className="text-sm font-semibold text-[#7A8093] underline underline-offset-4">
+          <Link href="/simulateur" className="inline-flex min-h-[44px] items-center text-sm font-semibold text-[#7A8093] underline underline-offset-4">
             Nouvelle simulation
           </Link>
         </div>
       </header>
 
       {lienFourniMaisInvalide && (
-        <div className="mx-auto max-w-3xl px-4 pt-6">
+        <div className="mx-auto max-w-reading px-4 pt-6">
           <p className="rounded-2xl border border-[#F0D9D6] bg-[#FDF6F5] p-4 text-sm text-[#B3261E]">
             Ce lien de dossier n&rsquo;est plus valable ou a été modifié. Nous affichons ci-dessous votre dernière simulation
             enregistrée sur cet appareil, si elle existe.
@@ -56,7 +56,7 @@ export default function DossierPage({
       {payload ? <DossierView payload={payload} /> : <DossierFromStorage />}
 
       <footer className="border-t border-[#ECEEF3] bg-white">
-        <div className="mx-auto max-w-3xl px-4 py-8 text-xs leading-relaxed text-[#7A8093]">
+        <div className="mx-auto max-w-reading px-4 py-8 text-xs leading-relaxed text-[#7A8093]">
           <p>RD Portage — 1 rue George Stephenson, 78180 Montigny-le-Bretonneux · RCS Versailles 912 888 013 · +33 1 71 49 71 57</p>
         </div>
       </footer>

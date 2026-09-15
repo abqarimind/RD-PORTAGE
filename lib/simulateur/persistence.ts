@@ -9,7 +9,7 @@
  *     (navigation privée, stockage bloqué, quota) : le simulateur doit
  *     fonctionner sans, simplement sans reprise.
  */
-import { createInitialState, DEFAULT_FORM, isStep, type FormState, type SimulatorState } from "./state";
+import { coerceFormState, createInitialState, isStep, type SimulatorState } from "./state";
 
 export const STORAGE_KEY = "rdp_sim_state_v2";
 /** L'ancienne clé v1 ne portait ni version, ni TTL, ni mode de saisie TJM. */
@@ -88,19 +88,10 @@ function sanitize(candidate: SimulatorState): SimulatorState | null {
   const base = createInitialState(
     typeof candidate.simulationId === "string" && candidate.simulationId ? candidate.simulationId : newSimulationId(),
   );
-  const form: FormState = { ...DEFAULT_FORM };
-
-  const saved = (candidate.form ?? {}) as unknown as Record<string, unknown>;
-  for (const key of Object.keys(DEFAULT_FORM) as (keyof FormState)[]) {
-    const value = saved[key];
-    if (typeof value === typeof DEFAULT_FORM[key] && value !== null && value !== undefined) {
-      // Les nombres non finis (NaN, Infinity) sont rejetés : ils sont la
-      // source silencieuse des écrans à « NaN € » (spec §4.2).
-      if (typeof value === "number" && !Number.isFinite(value)) continue;
-      (form[key] as unknown) = value;
-    }
-  }
-  form.gardeAlternee = Math.min(form.gardeAlternee, form.enfants);
+  // Validation champ par champ, partagée avec les routes d'API : les nombres
+  // non finis sont rejetés (source silencieuse des écrans à « NaN € », §4.2),
+  // et le profil n'est retenu que s'il appartient au domaine connu.
+  const form = coerceFormState(candidate.form);
 
   return {
     ...base,

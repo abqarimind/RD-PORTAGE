@@ -14,7 +14,6 @@
  * L'impression navigateur reste offerte en complément, jamais comme seul
  * moyen d'accès.
  */
-import { useEffect, useRef } from "react";
 import type { SimulationResultPayload } from "@/types/simulation-result";
 import { Cascade, RestitutionGauge, ScenarioBars, type CascadeStep } from "./charts";
 import { HeroAccent } from "./HeroAccent";
@@ -27,42 +26,6 @@ const eur = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`;
 const pct = (n: number) => `${(n * 100).toFixed(1).replace(".", ",")} %`;
 
 export function DossierView({ payload }: { payload: SimulationResultPayload }) {
-  const root = useRef<HTMLDivElement>(null);
-
-  /* Révélations GSAP — chargées à la demande, sans jamais retarder le contenu. */
-  useEffect(() => {
-    const el = root.current;
-    if (!el) return;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-
-    let ctx: { revert: () => void } | undefined;
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const { gsap } = await import("gsap");
-        if (cancelled) return;
-        ctx = gsap.context(() => {
-          gsap.from("[data-reveal]", {
-            opacity: 0,
-            y: 16,
-            duration: 0.5,
-            ease: "power2.out",
-            stagger: 0.07,
-            clearProps: "all",
-          });
-        }, el);
-      } catch {
-        /* sans GSAP, le dossier s'affiche simplement sans animation */
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      ctx?.revert();
-    };
-  }, []);
-
   const r = payload.resultats;
   const m = r.mensuel;
   const [actuel, portage, optimise] = r.scenarios;
@@ -81,7 +44,7 @@ export function DossierView({ payload }: { payload: SimulationResultPayload }) {
   ];
 
   return (
-    <div ref={root} className="mx-auto max-w-3xl px-4 py-10" style={{ fontFamily: SANS, color: "#0B0D12" }}>
+    <div className="mx-auto max-w-reading px-4 py-10" style={{ fontFamily: SANS, color: "#0B0D12" }}>
       {/* —————————————— en-tête —————————————— */}
       <header className="relative" data-reveal>
         <HeroAccent />
@@ -249,6 +212,8 @@ export function DossierView({ payload }: { payload: SimulationResultPayload }) {
         </div>
       </section>
 
+      <RevealStyles />
+
       <footer className="mt-8 text-xs leading-relaxed text-[#9aa0b0]">
         <p>{payload.meta.mentions.valeurIndicative}</p>
         <p className="mt-1">
@@ -263,6 +228,44 @@ export function DossierView({ payload }: { payload: SimulationResultPayload }) {
         </p>
       </footer>
     </div>
+  );
+}
+
+/**
+ * Révélation à l'arrivée, en CSS.
+ *
+ * Elle remplace une animation GSAP chargée par import différé : celle-ci
+ * s'exécutant APRÈS le premier rendu, le contenu s'affichait puis disparaissait
+ * pour réapparaître en fondu. Une animation CSS démarre au premier rendu, ne
+ * dépend d'aucun script, et n'anime que opacity et transform — aucun
+ * recalcul de mise en page, donc aucun décalage.
+ */
+function RevealStyles() {
+  return (
+    <style jsx global>{`
+      @media (prefers-reduced-motion: no-preference) {
+        [data-reveal] {
+          animation: dossierReveal 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        [data-reveal]:nth-child(2) { animation-delay: 70ms; }
+        [data-reveal]:nth-child(3) { animation-delay: 140ms; }
+        [data-reveal]:nth-child(4) { animation-delay: 210ms; }
+        [data-reveal]:nth-child(5) { animation-delay: 280ms; }
+        [data-reveal]:nth-child(6) { animation-delay: 350ms; }
+        [data-reveal]:nth-child(7) { animation-delay: 420ms; }
+        [data-reveal]:nth-child(n + 8) { animation-delay: 490ms; }
+      }
+      @keyframes dossierReveal {
+        from {
+          opacity: 0;
+          transform: translate3d(0, 16px, 0);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+    `}</style>
   );
 }
 

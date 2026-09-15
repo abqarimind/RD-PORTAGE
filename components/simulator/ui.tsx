@@ -209,7 +209,7 @@ export function Segmented({
           type="button"
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`min-h-[48px] rounded-xl border px-3 py-3 text-sm font-semibold transition-all ${
+          className={`min-h-[48px] rounded-xl border px-3 py-3 text-sm font-semibold transition-[background-color,border-color,color,transform,box-shadow] duration-150 ${
             value === o.value
               ? "border-transparent bg-[#0B0D12] text-white"
               : "border-[#E2E5EE] bg-white text-[#0B0D12] hover:border-[#B08D57]"

@@ -98,6 +98,58 @@ export const DEFAULT_FORM: FormState = {
 };
 
 /**
+ * VALIDATION D'UN FORMULAIRE VENU DE L'EXTÉRIEUR — source unique.
+ *
+ * Utilisée par la restauration localStorage ET par les routes d'API : les deux
+ * reçoivent un objet non fiable et doivent le ramener dans le domaine du
+ * valide, exactement de la même façon.
+ *
+ * Elle remplace une comparaison `typeof v === typeof DEFAULT_FORM[k]` qui
+ * paraissait générique mais était fausse : depuis que `status` n'a plus de
+ * valeur par défaut, `typeof DEFAULT_FORM.status` vaut "object" (typeof null),
+ * si bien qu'un profil transmis sous forme de chaîne était systématiquement
+ * rejeté. Conséquence : profil perdu au rechargement, et récapitulatif jugé
+ * non calculable côté serveur — donc aucun email ni lien de dossier.
+ * Une règle par champ, explicite, coûte quelques lignes et ne ment pas.
+ */
+const STATUTS: CurrentStatus[] = ["salarie_esn", "freelance_micro", "freelance_sasu", "porte_ailleurs", "transition"];
+
+export function coerceFormState(raw: unknown): FormState {
+  const form: FormState = { ...DEFAULT_FORM };
+  if (!raw || typeof raw !== "object") return form;
+  const src = raw as Record<string, unknown>;
+
+  const num = (v: unknown, fallback: number) => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
+  const bool = (v: unknown, fallback: boolean) => (typeof v === "boolean" ? v : fallback);
+  const oneOf = <T extends string>(v: unknown, allowed: readonly T[], fallback: T): T =>
+    typeof v === "string" && (allowed as readonly string[]).includes(v) ? (v as T) : fallback;
+
+  // Le profil est le seul champ nullable : absent ou inconnu, il reste nul, et
+  // l'invariant anti-zéro refusera le calcul en le nommant.
+  form.status = typeof src.status === "string" && (STATUTS as string[]).includes(src.status) ? (src.status as CurrentStatus) : null;
+  form.impatrie = bool(src.impatrie, DEFAULT_FORM.impatrie);
+  form.tjmMode = oneOf(src.tjmMode, ["exact", "fourchette"] as const, DEFAULT_FORM.tjmMode);
+  form.tjmExact = num(src.tjmExact, DEFAULT_FORM.tjmExact);
+  form.tjmBracketId = findBracket(typeof src.tjmBracketId === "string" ? src.tjmBracketId : null)?.id ?? DEFAULT_FORM.tjmBracketId;
+  form.days = num(src.days, DEFAULT_FORM.days);
+  form.fraisMensuels = num(src.fraisMensuels, DEFAULT_FORM.fraisMensuels);
+  form.cagnotte = oneOf(src.cagnotte, ["may", "wawashi", "aucune"] as const, DEFAULT_FORM.cagnotte);
+  form.titresResto = bool(src.titresResto, DEFAULT_FORM.titresResto);
+  form.situation = oneOf(src.situation, ["celibataire", "marie_pacse"] as const, DEFAULT_FORM.situation);
+  form.enfants = num(src.enfants, DEFAULT_FORM.enfants);
+  form.gardeAlternee = num(src.gardeAlternee, DEFAULT_FORM.gardeAlternee);
+  form.revenuConjoint = num(src.revenuConjoint, DEFAULT_FORM.revenuConjoint);
+  form.useFraisReels = bool(src.useFraisReels, DEFAULT_FORM.useFraisReels);
+  form.fraisReels = num(src.fraisReels, DEFAULT_FORM.fraisReels);
+  form.foncier = num(src.foncier, DEFAULT_FORM.foncier);
+  form.per = num(src.per, DEFAULT_FORM.per);
+  form.dons = num(src.dons, DEFAULT_FORM.dons);
+
+  form.gardeAlternee = Math.min(form.gardeAlternee, form.enfants);
+  return form;
+}
+
+/**
  * TJM de calcul — dérivé, jamais stocké en double.
  * En mode fourchette : la médiane (§9.1). En mode exact : la valeur saisie.
  * C'est la SEULE fonction autorisée à répondre « quel TJM utiliser ? ».
