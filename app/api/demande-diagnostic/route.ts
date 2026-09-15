@@ -1,24 +1,22 @@
 /**
- * Finalisation de l'inscription — emails E3 (confirmation au lead) et
- * E4 (notification de nouveau lead en interne), spec §5.1.
+ * DEMANDE DE DIAGNOSTIC — emails E3 (accusé au lead) et E4 (notification à
+ * l'équipe), spec §5.1.
  *
- * Note de cadrage, à arbitrer côté produit : le tunnel déployé ne comporte
- * aujourd'hui qu'UN SEUL point de soumission (le lead gate du simulateur).
- * « Fin de simulation » et « finalisation de l'inscription » y sont donc le
- * même instant. Pour éviter d'envoyer quatre emails d'un coup, E3/E4 sont
- * déclenchés par l'engagement explicite qui suit le lead gate — le clic sur
- * « Valider ce chiffre / Diagnostic 30 min » — qui est le moment où le lead
- * devient commercialement actionnable. Le jour où une étape d'inscription
- * distincte existera, il suffira d'appeler cette route à ce moment-là.
+ * Ces envois s'appelaient « confirmation d'inscription ». Le nom était faux :
+ * dans ce tunnel, l'inscription EST le lead gate, déjà couvert par E1/E2. Le
+ * clic sur « Valider ce chiffre — Diagnostic 30 min » est un acte différent
+ * et plus fort : une demande de rendez-vous. E3/E4 signalent donc un lead
+ * plus chaud, ils ne doublonnent pas E1/E2, et aucun lead n'est perdu si ce
+ * clic n'a pas lieu.
  *
  * Comme /api/lead : envoi serveur uniquement, idempotent, non bloquant.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { crm } from "@/lib/crm";
+import { crm, storageIsDurable } from "@/lib/crm";
 import { dossierUrl } from "@/lib/dossier/token";
 import { baseUrlFrom, buildServerPayload, coerceForm } from "@/lib/email/context";
-import { sendInscription } from "@/lib/email/send";
+import { sendDemandeDiagnostic } from "@/lib/email/send";
 
 export const runtime = "nodejs";
 
@@ -66,16 +64,18 @@ export async function POST(req: NextRequest) {
   });
 
   if (!payload) {
-    console.error("[inscription] récapitulatif non calculable", JSON.stringify({ simulationId: parsed.simulation_id }));
+    console.error("[demande-diagnostic] récapitulatif non calculable", JSON.stringify({ simulationId: parsed.simulation_id }));
     return NextResponse.json({ ok: false, reason: "simulation incomplète" }, { status: 422 });
   }
 
   payload.meta.dossierUrl = dossierUrl(payload, baseUrl);
 
-  const report = await sendInscription(payload);
+  const report = await sendDemandeDiagnostic(payload, {
+    alerteInterne: storageIsDurable() ? undefined : "CRM_PROVIDER=mock : ce lead n'est conservé nulle part côté serveur",
+  });
   if (!report.lead.ok || (report.interne && !report.interne.ok)) {
     console.error(
-      "[inscription] envoi email partiel ou échoué",
+      "[demande-diagnostic] envoi email partiel ou échoué",
       JSON.stringify({ simulationId: parsed.simulation_id, lead: report.lead, interne: report.interne }),
     );
   }

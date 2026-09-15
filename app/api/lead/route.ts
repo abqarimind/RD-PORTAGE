@@ -15,7 +15,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { crm } from "@/lib/crm";
+import { crm, storageIsDurable } from "@/lib/crm";
 import { leadSchema, type Lead } from "@/lib/crm/schema";
 import { sendCapiEvent } from "@/lib/server/capi";
 import { baseUrlFrom, buildServerPayload, coerceForm } from "@/lib/email/context";
@@ -61,9 +61,22 @@ export async function POST(req: NextRequest) {
     funnel_events: [{ event: "lead_submitted", timestamp: now }],
   });
 
-  await crm.upsertLead(lead);
+  /**
+   * L'écriture CRM n'interrompt JAMAIS le parcours (la file ne lève pas),
+   * mais un échec ne doit pas rester silencieux : il est journalisé ET
+   * signalé dans l'email interne, avec les données brutes du lead, pour que
+   * celui-ci reste récupérable à la main (§4.2).
+   */
+  const written = await crm.upsertLead(lead);
   if (lead.consent.marketing_optin) {
     await crm.triggerSequence(lead.lead_id, SEQUENCE_ID);
+  }
+
+  const alertes: string[] = [];
+  if (!written.ok) alertes.push("l'écriture dans le CRM a échoué après plusieurs tentatives");
+  if (!storageIsDurable()) alertes.push("CRM_PROVIDER=mock : ce lead n'est conservé nulle part côté serveur");
+  if (alertes.length > 0) {
+    console.error("[lead] lead non durablement enregistré", JSON.stringify({ leadId: lead.lead_id, alertes }));
   }
 
   // Server-side Meta CAPI Lead — fires only when marketing consent was given
@@ -120,7 +133,7 @@ export async function POST(req: NextRequest) {
       dossierLink = dossierUrl(payload, baseUrl);
       payload.meta.dossierUrl = dossierLink;
 
-      const report = await sendRecap(payload);
+      const report = await sendRecap(payload, { alerteInterne: alertes[0] });
       emailSent = report.lead.ok;
       if (!report.lead.ok || (report.interne && !report.interne.ok)) {
         console.error(

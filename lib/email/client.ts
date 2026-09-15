@@ -15,6 +15,7 @@
  *    backoff, puis journalisation.
  */
 import { Resend } from "resend";
+import { warnIfMailAddressesCollide } from "@/lib/env";
 
 export interface SendResult {
   ok: boolean;
@@ -23,6 +24,8 @@ export interface SendResult {
   error?: string;
   /** Vrai quand aucune clé n'est configurée : l'email est simulé, pas envoyé. */
   mocked?: boolean;
+  /** Vrai quand Resend refuse l'expéditeur faute de domaine vérifié. */
+  domainNotVerified?: boolean;
 }
 
 export interface SendArgs {
@@ -65,10 +68,23 @@ export function mailInternalTo(): string | null {
  * ce qui est transitoire.
  */
 function isTransient(message: string): boolean {
+  // Un domaine non vérifié ne le sera pas davantage au deuxième essai :
+  // réessayer masquerait la cause réelle derrière trois échecs identiques.
+  if (isDomainNotVerified(message)) return false;
   return /rate_limit|internal_server_error|application_error|timeout|ECONNRESET|ETIMEDOUT|fetch failed/i.test(message);
 }
 
+/**
+ * Tant que les enregistrements DNS ne sont pas posés, Resend refuse tout
+ * envoi depuis @rdportage.com. C'est une erreur de CONFIGURATION, pas un
+ * incident : elle doit être nommée pour ce qu'elle est, avec le remède.
+ */
+function isDomainNotVerified(message: string): boolean {
+  return /not verified|domain.*verif|invalid_from_address|verify a domain/i.test(message);
+}
+
 export async function sendEmail(args: SendArgs): Promise<SendResult> {
+  warnIfMailAddressesCollide();
   const resend = getClient();
 
   // Mode simulé : sans clé, le parcours reste testable de bout en bout et
@@ -109,6 +125,16 @@ export async function sendEmail(args: SendArgs): Promise<SendResult> {
   }
 
   // Observabilité (§4.5) : un email perdu ne doit jamais l'être en silence.
+  if (isDomainNotVerified(lastError)) {
+    console.error(
+      "[email] DOMAINE NON VÉRIFIÉ CHEZ RESEND — aucun email ne partira depuis cet expéditeur. " +
+        `Expéditeur refusé : ${mailFrom()}. ` +
+        "Poser les enregistrements DNS (voir rapport-maintenance.md §4), ou repasser MAIL_FROM sur le domaine de test " +
+        "Resend (RD Portage <onboarding@resend.dev>) le temps de la propagation. " +
+        JSON.stringify({ to: args.to, idempotencyKey: args.idempotencyKey, error: lastError }),
+    );
+    return { ok: false, error: lastError, domainNotVerified: true };
+  }
   console.error(
     "[email] échec d'envoi après retries",
     JSON.stringify({ to: args.to, subject: args.subject, idempotencyKey: args.idempotencyKey, error: lastError }),

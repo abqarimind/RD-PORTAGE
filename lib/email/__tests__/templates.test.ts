@@ -7,7 +7,7 @@
  * jusque dans l'email (BUG-04).
  */
 import { describe, expect, it } from "vitest";
-import { emailInscriptionInterne, emailInscriptionLead } from "@/lib/email/templates/inscription";
+import { emailDemandeDiagnosticInterne, emailDemandeDiagnosticLead } from "@/lib/email/templates/diagnostic";
 import { emailRecapInterne, emailRecapLead } from "@/lib/email/templates/recap";
 import { makePayload } from "./fixtures";
 
@@ -16,8 +16,8 @@ const tousLesEmails = () => {
   return [
     ["E1 récapitulatif lead", emailRecapLead(p)],
     ["E2 copie interne", emailRecapInterne(p)],
-    ["E3 inscription lead", emailInscriptionLead(p)],
-    ["E4 notification interne", emailInscriptionInterne(p)],
+    ["E3 demande de diagnostic — lead", emailDemandeDiagnosticLead(p)],
+    ["E4 demande de diagnostic — interne", emailDemandeDiagnosticInterne(p)],
   ] as const;
 };
 
@@ -142,8 +142,8 @@ describe("E2 et E4 — copies internes distinctes", () => {
 
   it("E4 porte les coordonnées et les données clés", () => {
     const p = makePayload();
-    const interne = emailInscriptionInterne(p);
-    expect(interne.subject).toContain("[Inscription]");
+    const interne = emailDemandeDiagnosticInterne(p);
+    expect(interne.subject).toContain("[Diagnostic]");
     expect(interne.html).toContain(p.identite.email);
     expect(interne.html).toContain(p.identite.telephone!);
     expect(interne.html).toContain("Taux de restitution");
@@ -152,6 +152,6 @@ describe("E2 et E4 — copies internes distinctes", () => {
   it("les sujets internes et lead sont distincts, pour rester filtrables", () => {
     const p = makePayload();
     expect(emailRecapInterne(p).subject).not.toBe(emailRecapLead(p).subject);
-    expect(emailInscriptionInterne(p).subject).not.toBe(emailInscriptionLead(p).subject);
+    expect(emailDemandeDiagnosticInterne(p).subject).not.toBe(emailDemandeDiagnosticLead(p).subject);
   });
 });

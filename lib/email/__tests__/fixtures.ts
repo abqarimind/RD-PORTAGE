@@ -7,7 +7,10 @@ import type { SimulationResultPayload } from "@/types/simulation-result";
 import { CAGNOTTE_PROVIDERS, cagnotteNet } from "@/config/fiscal-2026";
 
 export function makePayload(patch: Partial<FormState> = {}): SimulationResultPayload {
-  const form: FormState = { ...DEFAULT_FORM, ...patch };
+  // Le profil n'a plus de valeur par défaut (§4.3) : un parcours réel en
+  // choisit toujours un, la fixture fait de même.
+  const form: FormState = { ...DEFAULT_FORM, status: "freelance_micro", ...patch };
+  const status = form.status ?? "freelance_micro";
   const tjm = resolvedTjm(form);
   const cagnotteGross = form.cagnotte === "aucune" ? 0 : CAGNOTTE_PROVIDERS[form.cagnotte].defaultMonthly;
 
@@ -19,8 +22,8 @@ export function makePayload(patch: Partial<FormState> = {}): SimulationResultPay
     mealVouchers: form.titresResto,
   });
   const result = simulate({
-    status: form.status,
-    tjmOrMonthlyGross: form.status === "salarie_esn" ? Math.round((tjm * form.days) / 1.25) : tjm,
+    status,
+    tjmOrMonthlyGross: status === "salarie_esn" ? Math.round((tjm * form.days) / 1.25) : tjm,
     daysPerYear: form.days * 12,
     household: { maritalStatus: form.situation, children: form.enfants, childrenGardeAlternee: form.gardeAlternee },
     cagnotteChoice: form.cagnotte,

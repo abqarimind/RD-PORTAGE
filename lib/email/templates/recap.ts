@@ -10,6 +10,7 @@
  */
 import type { SimulationResultPayload } from "@/types/simulation-result";
 import { button, esc, eur, eurSigned, h2, layout, pct, row, table, MUTED } from "./layout";
+import { rawBlock } from "./diagnostic";
 
 /** Corps partagé E1 / E2 — une seule rédaction, deux destinataires. */
 function corps(p: SimulationResultPayload, pourInterne: boolean): string {
@@ -25,7 +26,14 @@ function corps(p: SimulationResultPayload, pourInterne: boolean): string {
        </p>`
     : "";
 
-  const accroche = ecartPositif
+  // Profil sans situation actuelle : on présente le portage seul, sans
+  // comparatif inventé (§4.3). Le champ vient du contrat de données.
+  const accroche = !r.comparable
+    ? `<p style="margin:0 0 8px 0;font-size:22px;font-weight:bold;line-height:1.3;">Votre vrai taux d'imposition du foyer : ${esc(
+        pct(r.tauxMoyenImposition),
+      )}.</p>
+       <p style="margin:0 0 8px 0;font-size:14px;line-height:1.6;color:${MUTED};">Vous êtes en transition : il n'y a pas de situation actuelle à comparer, nous ne vous en inventons pas une. Voici ce que le portage RD optimisé vous rapporterait.</p>`
+    : ecartPositif
     ? `<p style="margin:0 0 8px 0;font-size:22px;font-weight:bold;line-height:1.3;">Vous laissez ${esc(
         eur(Math.abs(r.laisseSurLaTable)),
       )} par an sur la table.</p>`
@@ -100,13 +108,23 @@ ${table(
     row("Taux de restitution", pct(r.tauxRestitution), true),
 )}
 
-${h2("Les trois scénarios comparés")}
+${
+  r.comparable
+    ? `${h2("Les trois scénarios comparés")}
 ${table(
   row(actuel.label, `${eur(actuel.disponible)} / an`) +
     row(portage.label, `${eur(portage.disponible)} / an`) +
     row(optimise.label, `${eur(optimise.disponible)} / an`, true) +
     row("Écart (optimisé − actuel)", `${eurSigned(r.laisseSurLaTable)} / an`, true),
-)}
+)}`
+    : `${h2("Votre portage RD optimisé")}
+${table(
+  row("Net perçu", `${eur(optimise.netPercu)} / an`, true) +
+    row("Avantages", `${eur(optimise.avantages)} / an`) +
+    row("Impôt du foyer", `− ${eur(optimise.impotFoyer)} / an`) +
+    row("Disponible", `${eur(optimise.disponible)} / an`, true),
+)}`
+}
 
 ${h2("Votre impôt")}
 ${table(
@@ -128,7 +146,9 @@ function texte(p: SimulationResultPayload): string {
     ``,
     `Récapitulatif de votre simulation du ${p.meta.dateSimulationLabel}.`,
     ``,
-    r.laisseSurLaTableSens === "gain"
+    !r.comparable
+      ? `Votre vrai taux d'imposition du foyer : ${pct(r.tauxMoyenImposition)}. Vous êtes en transition : il n'y a pas de situation actuelle à comparer, nous ne vous en inventons pas une.`
+      : r.laisseSurLaTableSens === "gain"
       ? `Vous laissez ${eur(Math.abs(r.laisseSurLaTable))} par an sur la table.`
       : r.laisseSurLaTable < 0
         ? `À revenu égal, votre statut actuel vous laisse ${eur(Math.abs(r.laisseSurLaTable))} de plus par an que le portage optimisé. En contrepartie, le portage apporte le statut de salarié, l'assurance chômage, la retraite et la prévoyance, les congés payés et la sécurité juridique du contrat de travail.`
@@ -160,9 +180,18 @@ function texte(p: SimulationResultPayload): string {
     `- Rémunération globale : ${eur(r.mensuel.remunerationGlobale)}`,
     `- Taux de restitution : ${pct(r.tauxRestitution)}`,
     ``,
-    `LES TROIS SCÉNARIOS (disponible annuel)`,
-    ...r.scenarios.map((s) => `- ${s.label} : ${eur(s.disponible)}`),
-    `- Écart (optimisé − actuel) : ${eurSigned(r.laisseSurLaTable)}`,
+    ...(r.comparable
+      ? [
+          `LES TROIS SCÉNARIOS (disponible annuel)`,
+          ...r.scenarios.map((s) => `- ${s.label} : ${eur(s.disponible)}`),
+          `- Écart (optimisé − actuel) : ${eurSigned(r.laisseSurLaTable)}`,
+        ]
+      : [
+          `VOTRE PORTAGE RD OPTIMISÉ (annuel)`,
+          `- Net perçu : ${eur(r.scenarios[2].netPercu)}`,
+          `- Disponible : ${eur(r.scenarios[2].disponible)}`,
+          `(Vous êtes en transition : pas de situation actuelle à comparer.)`,
+        ]),
     ``,
     p.meta.dossierUrl ? `Votre dossier complet : ${p.meta.dossierUrl}` : ``,
     ``,
@@ -193,7 +222,7 @@ export function emailRecapLead(p: SimulationResultPayload, unsubscribeUrl?: stri
     html: layout({
       title: "Votre simulation RD Portage",
       preheader:
-        p.resultats.laisseSurLaTableSens === "gain"
+        p.resultats.comparable && p.resultats.laisseSurLaTableSens === "gain"
           ? `Vous laissez ${eur(Math.abs(p.resultats.laisseSurLaTable))} par an sur la table.`
           : `Votre vrai taux d'imposition du foyer : ${pct(p.resultats.tauxMoyenImposition)}.`,
       body: corps(p, false),
@@ -203,17 +232,30 @@ export function emailRecapLead(p: SimulationResultPayload, unsubscribeUrl?: stri
   };
 }
 
-export function emailRecapInterne(p: SimulationResultPayload) {
+/**
+ * E2 — copie interne. `alerte` est renseignée quand une écriture CRM a
+ * échoué : l'email porte alors un bandeau visible et les données brutes du
+ * lead, pour qu'il reste récupérable à la main plutôt que perdu (§4.2).
+ */
+export function emailRecapInterne(p: SimulationResultPayload, alerte?: string) {
+  const bandeau = alerte
+    ? `<p style="margin:0 0 16px 0;padding:12px 14px;background-color:#FDF6F5;border-left:4px solid #B3261E;font-size:13px;line-height:1.6;color:#B3261E;"><strong>Alerte technique — ${esc(
+        alerte,
+      )}</strong><br>Les données brutes du lead figurent en fin d'email : elles restent récupérables à la main.</p>`
+    : "";
   return {
-    subject: `[Lead] Simulation — ${p.identite.prenom} (${p.identite.email})`,
+    subject: `${alerte ? "[ALERTE] " : ""}[Lead] Simulation — ${p.identite.prenom} (${p.identite.email})`,
     html: layout({
       title: "Copie interne — récapitulatif lead",
       preheader: `Copie du récapitulatif envoyé à ${p.identite.email}.`,
-      body: corps(p, true),
+      body: bandeau + corps(p, true) + (alerte ? rawBlock(p) : ""),
       footer: `Copie interne automatique — envoi séparé de l'email au lead (§5.1). Référence : ${esc(p.meta.simulationId)}.`,
     }),
-    text: `COPIE INTERNE — récapitulatif envoyé à ${p.identite.prenom} <${p.identite.email}>${
-      p.identite.telephone ? ` · ${p.identite.telephone}` : ""
-    }\n\n${texte(p)}`,
+    text:
+      (alerte ? `ALERTE TECHNIQUE — ${alerte}. Données brutes en fin d'email, récupérables à la main.\n\n` : "") +
+      `COPIE INTERNE — récapitulatif envoyé à ${p.identite.prenom} <${p.identite.email}>${
+        p.identite.telephone ? ` · ${p.identite.telephone}` : ""
+      }\n\n${texte(p)}` +
+      (alerte ? `\n\nDONNÉES BRUTES\n${JSON.stringify(p, null, 1)}` : ""),
   };
 }

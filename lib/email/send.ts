@@ -14,7 +14,7 @@
  */
 import type { SimulationResultPayload } from "@/types/simulation-result";
 import { mailInternalTo, sendEmail, type SendResult } from "./client";
-import { emailInscriptionInterne, emailInscriptionLead } from "./templates/inscription";
+import { emailDemandeDiagnosticInterne, emailDemandeDiagnosticLead } from "./templates/diagnostic";
 import { emailRecapInterne, emailRecapLead } from "./templates/recap";
 
 export interface DeliveryReport {
@@ -31,11 +31,10 @@ export interface DeliveryReport {
 const key = (kind: string, simulationId: string) => `rdp-${kind}-${simulationId}`;
 
 async function deliver(
-  kind: "recap" | "inscription",
+  kind: "recap" | "diagnostic",
   payload: SimulationResultPayload,
   lead: { subject: string; html: string; text: string },
   interne: { subject: string; html: string; text: string },
-  unsubscribeUrl?: string,
 ): Promise<DeliveryReport> {
   const internalTo = mailInternalTo();
 
@@ -77,18 +76,38 @@ async function deliver(
   return { lead: unwrap(leadResult), interne: internalTo ? unwrap(interneResult) : null };
 }
 
-/** E1 + E2 — fin de simulation, email renseigné. */
-export function sendRecap(payload: SimulationResultPayload, unsubscribeUrl?: string): Promise<DeliveryReport> {
-  return deliver("recap", payload, emailRecapLead(payload, unsubscribeUrl), emailRecapInterne(payload), unsubscribeUrl);
+export interface DeliveryOptions {
+  unsubscribeUrl?: string;
+  /**
+   * Message d'alerte à faire figurer dans l'email interne — typiquement
+   * l'échec d'une écriture CRM. L'email interne porte alors les données
+   * brutes du lead, qui reste récupérable à la main (§4.2).
+   */
+  alerteInterne?: string;
 }
 
-/** E3 + E4 — finalisation de l'inscription. */
-export function sendInscription(payload: SimulationResultPayload, unsubscribeUrl?: string): Promise<DeliveryReport> {
+/** E1 + E2 — fin de simulation, email renseigné. */
+export function sendRecap(payload: SimulationResultPayload, opts: DeliveryOptions = {}): Promise<DeliveryReport> {
   return deliver(
-    "inscription",
+    "recap",
     payload,
-    emailInscriptionLead(payload, unsubscribeUrl),
-    emailInscriptionInterne(payload),
-    unsubscribeUrl,
+    emailRecapLead(payload, opts.unsubscribeUrl),
+    emailRecapInterne(payload, opts.alerteInterne),
+  );
+}
+
+/**
+ * E3 + E4 — demande de diagnostic (§4.1).
+ * Ce couple s'appelait « confirmation d'inscription » : le nom était faux.
+ * Dans ce tunnel l'inscription EST le lead gate, déjà couvert par E1/E2 ;
+ * le clic vers le Diagnostic 30 min est une demande de rendez-vous, donc un
+ * signal plus fort, et non un doublon.
+ */
+export function sendDemandeDiagnostic(payload: SimulationResultPayload, opts: DeliveryOptions = {}): Promise<DeliveryReport> {
+  return deliver(
+    "diagnostic",
+    payload,
+    emailDemandeDiagnosticLead(payload, opts.unsubscribeUrl),
+    emailDemandeDiagnosticInterne(payload, opts.alerteInterne),
   );
 }

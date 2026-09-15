@@ -20,7 +20,7 @@ vi.mock("@/lib/email/client", () => ({
   },
 }));
 
-const { sendInscription, sendRecap } = await import("@/lib/email/send");
+const { sendDemandeDiagnostic, sendRecap } = await import("@/lib/email/send");
 const { makePayload } = await import("./fixtures");
 
 beforeEach(() => {
@@ -74,23 +74,23 @@ describe("E1 + E2", () => {
 
 describe("E3 + E4", () => {
   it("part également en deux envois, avec ses propres clés", async () => {
-    await sendInscription(makePayload());
+    await sendDemandeDiagnostic(makePayload());
     expect(envois).toHaveLength(2);
-    expect(envois[0].idempotencyKey).toBe("rdp-inscription-lead-sim-fixture-1");
-    expect(envois[1].idempotencyKey).toBe("rdp-inscription-interne-sim-fixture-1");
+    expect(envois[0].idempotencyKey).toBe("rdp-diagnostic-lead-sim-fixture-1");
+    expect(envois[1].idempotencyKey).toBe("rdp-diagnostic-interne-sim-fixture-1");
   });
 
-  it("les clés inscription ne collisionnent pas avec les clés récapitulatif", async () => {
+  it("les clés diagnostic ne collisionnent pas avec les clés récapitulatif", async () => {
     await sendRecap(makePayload());
     const recap = envois.map((e) => e.idempotencyKey);
     envois.length = 0;
-    await sendInscription(makePayload());
+    await sendDemandeDiagnostic(makePayload());
     const inscription = envois.map((e) => e.idempotencyKey);
     expect(recap.some((k) => inscription.includes(k))).toBe(false);
   });
 
   it("la notification interne permet de répondre directement au lead", async () => {
-    await sendInscription(makePayload());
+    await sendDemandeDiagnostic(makePayload());
     expect(envois[1].replyTo).toBe("camille@example.com");
   });
 });
