@@ -180,7 +180,8 @@ function Header({ showNav }: { showNav: boolean }) {
 function HeroFlash({ angle }: { angle: Angle }) {
   const copy = heroCopy(angle);
   return (
-    <section className="mx-auto max-w-page px-4 pb-12 pt-8 md:pt-12">
+    <section className="relative isolate mx-auto max-w-page px-4 pb-12 pt-8 md:pt-12">
+      <div className="dotgrid pointer-events-none absolute inset-x-0 top-0 -z-10 h-[460px]" aria-hidden />
       <div className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
         <div className="text-center md:text-left">
           {copy.withFounder && (
@@ -212,7 +213,9 @@ function HeroFlash({ angle }: { angle: Angle }) {
         </div>
         {/* Interactive flash diagnostic — the hero conversion mechanism. */}
         <Reveal delayMs={120}>
-          <FlashDiagnostic angle={angle} />
+          <div className="beam mx-auto w-full max-w-md rounded-3xl">
+            <FlashDiagnostic angle={angle} />
+          </div>
         </Reveal>
       </div>
     </section>
@@ -478,7 +481,8 @@ function VslPlayer() {
 function HeroVsl({ angle }: { angle: Angle }) {
   const copy = heroCopy(angle);
   return (
-    <section className="mx-auto max-w-4xl px-4 pb-10 pt-8 text-center md:pt-12">
+    <section className="relative isolate mx-auto max-w-4xl px-4 pb-10 pt-8 text-center md:pt-12">
+      <div className="dotgrid pointer-events-none absolute inset-x-0 top-0 -z-10 h-[460px]" aria-hidden />
       {copy.withFounder && (
         <span className="mx-auto mb-4 flex w-fit items-center gap-3 rounded-full bg-[#F6F7FA] py-1.5 pl-1.5 pr-4">
           <Image src="/ridha.png" alt="Ridha Chammam" width={36} height={36} className="rounded-full" />
@@ -636,6 +640,45 @@ function Styles() {
       .spotcard:hover::after {
         opacity: 1;
       }
+      /* Magic-UI style "border beam" — faisceau laiton sur la carte clé */
+      @property --beam-angle {
+        syntax: "<angle>";
+        initial-value: 0deg;
+        inherits: false;
+      }
+      .beam {
+        position: relative;
+      }
+      .beam::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        padding: 1.5px;
+        pointer-events: none;
+        background: conic-gradient(
+          from var(--beam-angle),
+          transparent 0 68%,
+          rgba(176, 141, 87, 0.85) 84%,
+          rgba(176, 141, 87, 0) 100%
+        );
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        animation: beamspin 6s linear infinite;
+      }
+      @keyframes beamspin {
+        to {
+          --beam-angle: 360deg;
+        }
+      }
+      /* texture de points sous le hero (aucune animation) */
+      .dotgrid {
+        background-image: radial-gradient(rgba(11, 13, 18, 0.07) 1px, transparent 1px);
+        background-size: 22px 22px;
+        -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 0%, #000 35%, transparent 100%);
+        mask-image: radial-gradient(ellipse 75% 70% at 50% 0%, #000 35%, transparent 100%);
+      }
       /* Show everything if JS is disabled (progressive enhancement) */
       @media (scripting: none) {
         .reveal {
@@ -654,6 +697,9 @@ function Styles() {
         .spotcard::before,
         .spotcard::after {
           display: none !important;
+        }
+        .beam::before {
+          animation: none !important;
         }
       }
     `}</style>
