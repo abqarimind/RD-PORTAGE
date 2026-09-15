@@ -15,8 +15,8 @@
  * moyen d'accès.
  */
 import type { SimulationResultPayload } from "@/types/simulation-result";
-import { Cascade, RestitutionGauge, ScenarioBars, type CascadeStep } from "./charts";
-import { HeroAccent } from "./HeroAccent";
+import { buildCascadeSteps, buildPartage } from "@/lib/dossier/breakdown";
+import { Cascade, PartageBar, RestitutionGauge, ScenarioBars } from "./charts";
 
 const BRASS = "#B08D57";
 const VALIDE = "#2F6B4F";
@@ -30,33 +30,22 @@ export function DossierView({ payload }: { payload: SimulationResultPayload }) {
   const m = r.mensuel;
   const [actuel, portage, optimise] = r.scenarios;
 
-  const cascade: CascadeStep[] = [
-    { label: "CA HT", delta: m.caHt, total: true },
-    { label: "Frais de gestion", delta: -m.fraisDeGestion },
-    { label: "Assurances & taxes", delta: -m.assurancesTaxes },
-    ...(m.fraisPro > 0 ? [{ label: "Frais professionnels", delta: -m.fraisPro }] : []),
-    ...(m.cagnotte > 0 ? [{ label: "Cagnotte avantages", delta: -m.cagnotte }] : []),
-    { label: "Disponible", delta: m.disponible, total: true },
-    { label: "Charges patronales", delta: -(m.disponible - m.brut) },
-    { label: "Cotisations salariales", delta: -m.cotisationsSalariales },
-    ...(payload.avantages.titresResto.inclus ? [{ label: "Titres-restaurant", delta: m.titresResto }] : []),
-    { label: "Perçu net", delta: m.percuNet, total: true },
-  ];
+  const cascade = buildCascadeSteps(payload);
+  const { parts: partage, hint: hintPartage } = buildPartage(payload);
 
   return (
     <div className="mx-auto max-w-reading px-4 py-10" style={{ fontFamily: SANS, color: "#0B0D12" }}>
       {/* —————————————— en-tête —————————————— */}
-      <header className="relative" data-reveal>
-        <HeroAccent />
+      <header data-reveal>
         <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BRASS }}>
           Votre dossier — {payload.meta.dateSimulationLabel}
         </p>
-        <h1 className="mt-2 max-w-xl text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
+        <h1 className="mt-2 max-w-2xl text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
           {payload.identite.prenom
             ? `Bonjour ${payload.identite.prenom}, voici ce que devient votre chiffre d'affaires.`
             : "Voici ce que devient votre chiffre d'affaires."}
         </h1>
-        <p className="mt-2 max-w-xl text-base text-[#4A5061]">
+        <p className="mt-2 text-base text-[#4A5061]">
           {payload.identite.profilLabel} ·{" "}
           {payload.activite.tjmMode === "fourchette" && payload.activite.tjmFourchette
             ? `fourchette ${payload.activite.tjmFourchette.label} (calcul sur ${eur(payload.activite.tjmFourchette.mediane)})`
@@ -83,11 +72,19 @@ export function DossierView({ payload }: { payload: SimulationResultPayload }) {
         </div>
       </section>
 
-      {/* —————————————— cascade —————————————— */}
+      {/* ——————— où va le CA : la lecture à une seconde, puis le détail ——————— */}
       <section className="mt-6 rounded-3xl border border-[#ECEEF3] bg-white p-6" data-reveal>
-        <h2 className="text-lg font-extrabold tracking-tight">Du chiffre d&rsquo;affaires au net perçu</h2>
-        <p className="mt-1 text-sm text-[#7A8093]">Chaque étape, en euros, pour un mois type. Rien n&rsquo;est arrondi en votre faveur.</p>
-        <Cascade steps={cascade} />
+        <h2 className="text-lg font-extrabold tracking-tight">Où vont vos {eur(m.caHt)} ?</h2>
+        <p className="mt-1 text-sm text-[#7A8093]">Trois blocs, pour un mois type.</p>
+        <PartageBar total={m.caHt} parts={partage} hint={hintPartage} />
+
+        <div className="mt-8 border-t border-[#ECEEF3] pt-6">
+          <h3 className="text-base font-extrabold tracking-tight">Le détail, étape par étape</h3>
+          <p className="mt-1 text-sm text-[#7A8093]">
+            Du chiffre d&rsquo;affaires au net perçu. Rien n&rsquo;est arrondi en votre faveur.
+          </p>
+          <Cascade steps={cascade} />
+        </div>
       </section>
 
       {/* —————————————— avantages —————————————— */}

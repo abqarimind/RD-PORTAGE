@@ -1,84 +1,225 @@
 "use client";
 
 /**
- * Visuels du dossier — SVG inline, sans dépendance de graphes.
+ * Visuels du dossier — SVG/CSS inline, sans dépendance de graphes.
  *
  * Choix de forme (dans l'ordre imposé par la méthode dataviz) :
  *  - le chiffre d'accroche n'est PAS un graphique mais une tuile de stat ;
- *  - la cascade de paie est un waterfall : elle montre comment un montant de
- *    départ est réduit jusqu'au net perçu — c'est un flux, pas une catégorie ;
- *  - la comparaison des 3 scénarios est une barre horizontale à SÉRIE UNIQUE
- *    (une seule mesure, le disponible annuel, sur 3 catégories) : pas de
- *    légende, le titre nomme la mesure.
+ *  - « où vont vos X € » est une part-à-tout, donc une barre empilée
+ *    horizontale, en EMPHASE : une seule marque porte l'accent (la part qui
+ *    revient à la personne), le reste est du contexte sur une rampe laiton.
+ *    C'est la lecture à une seconde ;
+ *  - le détail est une cascade (waterfall) avec connecteurs : elle montre
+ *    comment le montant de départ est réduit jusqu'au net perçu. Les
+ *    connecteurs sont ce qui rend l'escalier lisible — sans eux, les barres
+ *    flottantes ressemblent à des positions arbitraires ;
+ *  - la comparaison des 3 scénarios est une barre horizontale à SÉRIE UNIQUE.
  *
- * Couleurs : strictement celles de la charte existante (§6 interdit d'y
- * toucher). Le couple BRASS/VALIDE passe les contrôles de séparation
- * daltonienne (ΔE 14,9 protan) et de vision normale (ΔE 21,4), mais reste
- * sous le seuil de chroma du validateur — d'où l'encodage secondaire
- * systématique : chaque marque porte son libellé et sa valeur en clair, la
- * couleur ne porte jamais l'information seule.
+ * Couleurs : celles de la charte. Le validateur de palette refuse un
+ * troisième ton catégoriel (gris ↔ laiton : ΔE 12,8 en vision normale, sous
+ * le plancher de 15) — d'où le passage en emphase, avec le contexte sur deux
+ * pas de LUMINOSITÉ du même laiton plutôt que sur deux teintes concurrentes.
+ * Le couple accent/contexte passe les contrôles (ΔE 14,9 protan, 21,4 en
+ * vision normale) mais reste sous le plancher de chroma : l'encodage
+ * secondaire est donc systématique — chaque marque porte son libellé et sa
+ * valeur en clair, la couleur ne porte jamais l'information seule.
  */
 import { useEffect, useRef } from "react";
+import { buildCascadeBars, type CascadeStep, type PartagePart } from "@/lib/dossier/breakdown";
+
+export type { CascadeStep, PartagePart };
 
 const BRASS = "#B08D57";
+/** Pas clair de la MÊME rampe laiton — contexte secondaire, pas une teinte de plus. */
+const BRASS_LIGHT = "#DCCCB3";
 const VALIDE = "#2F6B4F";
 const INK = "#0B0D12";
 const MUTED = "#7A8093";
 const GRID = "#ECEEF3";
+const RAIL = "#D7DBE4";
 
 const eur = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`;
+const part = (n: number, total: number) => (total > 0 ? `${Math.round((n / total) * 100)} %` : "—");
+
+/* ————————————————— où va le CA (part-à-tout, en emphase) ————————————————— */
+
+/**
+ * Trame laiton — canal de secours d'accessibilité, pas une décoration.
+ *
+ * Le troisième bloc ne peut pas être un troisième ton : un laiton assez
+ * clair pour se distinguer du laiton plein tombe à 1,6:1 sur blanc, et un
+ * laiton assez foncé pour tenir le contraste ne se distingue plus du plein.
+ * La trame tranche le nœud : le contraste vient des traits pleins, la
+ * différence vient du motif, et elle reste lisible en daltonisme, à
+ * l'impression et en `forced-colors`.
+ */
+const TRAME = `repeating-linear-gradient(45deg, ${BRASS} 0 3px, #FFFFFF 3px 6px)`;
+
+function fondDePart(p: PartagePart, i: number, total: number) {
+  if (p.accent) return { backgroundColor: VALIDE };
+  // Le dernier bloc (le plus petit, les frais) porte la trame.
+  return i === total - 1 ? { backgroundImage: TRAME } : { backgroundColor: BRASS };
+}
+
+/**
+ * Barre empilée unique. Les parts DOIVENT totaliser `total` : c'est au
+ * composant appelant de garantir l'égalité (en calculant une part par
+ * différence), pas au graphe de la maquiller.
+ */
+export function PartageBar({ total, parts, hint }: { total: number; parts: PartagePart[]; hint?: string }) {
+  const somme = parts.reduce((acc, p) => acc + p.value, 0);
+
+  return (
+    <figure className="m-0 mt-5">
+      {/* `flex-grow` proportionnel plutôt que des largeurs en % : les 2 px de
+          respiration ne font alors pas déborder le total. */}
+      <div
+        className="flex h-11 w-full gap-[2px] overflow-hidden rounded-lg"
+        role="img"
+        aria-label={`Répartition de ${eur(total)} : ${parts.map((p) => `${p.label}, ${eur(p.value)}`).join(" ; ")}`}
+      >
+        {parts.map((p, i) => {
+          const share = somme > 0 ? p.value / somme : 0;
+          return (
+            <div
+              key={p.label}
+              className="relative flex h-11 min-w-[4px] items-center justify-center"
+              style={{ flexGrow: Math.max(p.value, 0), flexBasis: 0, ...fondDePart(p, i, parts.length) }}
+              title={`${p.label} — ${eur(p.value)} (${part(p.value, total)})`}
+            >
+              {/* Libellé intérieur réservé à la marque accentuée, et seulement
+                  si la place est franche : un libellé rogné est pire que pas
+                  de libellé (la légende ci-dessous porte toutes les valeurs). */}
+              {p.accent && share >= 0.28 && (
+                <span className="px-2 text-sm font-bold text-white sm:text-base">{eur(p.value)}</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Légende — canal d'identité fiable, indépendant de la couleur. */}
+      <figcaption className="mt-4 space-y-3">
+        {parts.map((p, i) => (
+          <div key={p.label} className="flex items-baseline justify-between gap-3">
+            <span className="flex min-w-0 items-baseline gap-2.5">
+              <span
+                aria-hidden="true"
+                className="h-3 w-3 shrink-0 self-center rounded-[3px] ring-1 ring-inset ring-black/10"
+                style={fondDePart(p, i, parts.length)}
+              />
+              <span className="min-w-0">
+                <span
+                  className={p.accent ? "text-sm font-bold" : "text-sm"}
+                  style={{ color: p.accent ? INK : "#4A5061" }}
+                >
+                  {p.label}
+                </span>
+                {p.note && <span className="block text-xs text-[#9aa0b0]">{p.note}</span>}
+              </span>
+            </span>
+            <span className="shrink-0 whitespace-nowrap text-right">
+              <span
+                className={`tabular-nums ${p.accent ? "text-base font-extrabold" : "text-sm font-semibold"}`}
+                style={{ color: p.accent ? INK : "#4A5061" }}
+              >
+                {eur(p.value)}
+              </span>
+              <span className="ml-2 text-xs tabular-nums text-[#9aa0b0]">{part(p.value, total)}</span>
+            </span>
+          </div>
+        ))}
+      </figcaption>
+
+      {hint && <p className="mt-4 border-t border-[#ECEEF3] pt-3 text-sm text-[#4A5061]">{hint}</p>}
+    </figure>
+  );
+}
 
 /* ————————————————————— cascade de paie (waterfall) ————————————————————— */
 
-export interface CascadeStep {
-  label: string;
-  /** Montant du pas. Négatif = prélèvement, positif = apport. */
-  delta: number;
-  /** Vrai pour les paliers (CA HT, disponible, perçu net) : barre pleine. */
-  total?: boolean;
-}
-
 export function Cascade({ steps }: { steps: CascadeStep[] }) {
-  // Position cumulée de chaque barre, calculée une fois.
-  const bars: { label: string; from: number; to: number; delta: number; total: boolean }[] = [];
-  let running = 0;
-  for (const s of steps) {
-    if (s.total) {
-      bars.push({ label: s.label, from: 0, to: s.delta, delta: s.delta, total: true });
-      running = s.delta;
-    } else {
-      const next = running + s.delta;
-      bars.push({ label: s.label, from: Math.min(running, next), to: Math.max(running, next), delta: s.delta, total: false });
-      running = next;
-    }
-  }
+  const { bars, ecarts } = buildCascadeBars(steps);
   const max = Math.max(...bars.map((b) => b.to), 1);
 
+  if (process.env.NODE_ENV !== "production" && ecarts.length > 0) {
+    console.error("[dossier] la cascade ne boucle pas :", ecarts.join(" ; "));
+  }
+
   return (
-    <div className="mt-4 space-y-2">
-      {bars.map((b) => {
+    <div className="mt-4">
+      {bars.map((b, i) => {
         const left = (b.from / max) * 100;
-        const width = Math.max(((b.to - b.from) / max) * 100, 0.6);
+        const width = Math.max(((b.to - b.from) / max) * 100, 0.5);
+        const epaisseur = b.total ? 22 : 14;
+        // Un palier ouvre une étape : filet de séparation, sans marge — une
+        // marge couperait les connecteurs, qui doivent rester continus.
+        const ouvreEtape = b.total && i > 0;
+
         return (
-          <div key={b.label} className="grid grid-cols-[1fr_auto] items-center gap-3 sm:grid-cols-[11rem_1fr_auto]">
-            <span className="col-span-2 text-sm text-[#7A8093] sm:col-span-1 sm:text-right">{b.label}</span>
-            <div className="relative h-7 w-full overflow-hidden rounded bg-[#F7F8FB]">
+          <div
+            key={`${b.label}-${i}`}
+            className={`grid grid-cols-[1fr_auto] gap-x-3 sm:grid-cols-[12rem_1fr_auto] ${
+              ouvreEtape ? "border-t border-[#ECEEF3]" : ""
+            }`}
+          >
+            {/* Libellé — le gras et la couleur d'encre distinguent le palier du pas. */}
+            <span
+              className={`col-span-2 self-center py-1.5 leading-tight sm:col-span-1 sm:py-0 sm:text-right ${
+                b.total ? "text-sm font-bold sm:text-[15px]" : "pl-3 text-sm sm:pl-0"
+              }`}
+              style={{ color: b.total ? INK : MUTED }}
+            >
+              {b.label}
+            </span>
+
+            {/* Zone de tracé. Elle s'étire sur toute la hauteur de la ligne
+                (`self-stretch` implicite) : les connecteurs de deux lignes
+                voisines se rejoignent alors exactement, même quand un libellé
+                passe à la ligne et fait grandir la ligne. */}
+            <div className={`relative w-full ${b.total ? "min-h-[3rem]" : "min-h-[2.25rem]"}`}>
+              {/* Rail de fond, discret, à la hauteur de la marque. */}
               <div
-                className="absolute top-0 h-7 rounded"
+                className="absolute inset-x-0 top-1/2 -translate-y-1/2 rounded"
+                style={{ height: epaisseur, backgroundColor: "#F7F8FB" }}
+              />
+              {/* Connecteurs : une moitié montante, une moitié descendante,
+                  chacune bornée à sa propre cellule. C'est ce qui rend
+                  l'escalier lisible — sans eux, les barres flottantes
+                  ressemblent à des positions arbitraires. */}
+              {i > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-0 h-1/2 w-px"
+                  style={{ left: `${(b.entree / max) * 100}%`, backgroundColor: RAIL }}
+                />
+              )}
+              {i < bars.length - 1 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-1/2 h-1/2 w-px"
+                  style={{ left: `${(b.running / max) * 100}%`, backgroundColor: RAIL }}
+                />
+              )}
+              <div
+                className="absolute top-1/2 -translate-y-1/2 rounded"
                 style={{
                   left: `${left}%`,
                   width: `${width}%`,
-                  // Palier = teinte pleine ; prélèvement = laiton ; apport = vert.
+                  height: epaisseur,
+                  // Palier = encre pleine ; prélèvement = laiton ; apport = vert.
                   backgroundColor: b.total ? INK : b.delta < 0 ? BRASS : VALIDE,
-                  // 2 px de respiration entre marques adjacentes.
-                  boxShadow: "0 0 0 2px #fff",
                 }}
               />
             </div>
-            {/* Encodage secondaire : la valeur est toujours écrite. */}
+
+            {/* Encodage secondaire : la valeur est toujours écrite, en jeton de
+                texte (jamais dans la couleur de la donnée). */}
             <span
-              className="text-sm font-semibold tabular-nums"
-              style={{ color: b.total ? INK : b.delta < 0 ? MUTED : VALIDE }}
+              className={`self-center whitespace-nowrap text-right tabular-nums ${
+                b.total ? "text-[15px] font-extrabold sm:text-base" : "text-sm font-semibold"
+              }`}
+              style={{ color: b.total ? INK : MUTED }}
             >
               {b.total ? eur(b.delta) : `${b.delta < 0 ? "−" : "+"}${eur(Math.abs(b.delta))}`}
             </span>
@@ -115,11 +256,7 @@ export function ScenarioBars({ rows }: { rows: ScenarioBar[] }) {
           <div className="mt-1.5 h-3 w-full overflow-hidden rounded-full" style={{ backgroundColor: "#F7F8FB" }}>
             <div
               className="h-3 rounded-full"
-              style={{
-                width: `${(Math.abs(r.value) / max) * 100}%`,
-                backgroundColor: r.best ? VALIDE : BRASS,
-                boxShadow: "0 0 0 2px #fff",
-              }}
+              style={{ width: `${(Math.abs(r.value) / max) * 100}%`, backgroundColor: r.best ? VALIDE : BRASS }}
             />
           </div>
         </div>
