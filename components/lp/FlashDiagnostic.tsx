@@ -201,12 +201,18 @@ function FlashResult({
       >
         Calculer mon vrai taux — 2 min
       </Link>
-      <p className="mt-2 text-center text-xs text-[#9aa0b0]">
-        Vos réponses sont conservées — vous reprenez à l&rsquo;étape 2.{" "}
-        <button type="button" className="underline underline-offset-2" onClick={() => setAnswer("segment", null)}>
-          Recommencer
+      <p className="mt-2 text-center text-xs text-[#9aa0b0]">Vos réponses sont conservées — vous reprenez à l&rsquo;étape 2.</p>
+      <div className="mt-1 flex justify-center">
+        <button
+          type="button"
+          // Cible tactile pleine hauteur : le libellé est petit, la zone
+          // cliquable ne doit pas l'être.
+          className="inline-flex min-h-[44px] items-center px-4 text-xs text-[#9aa0b0] underline underline-offset-2"
+          onClick={() => setAnswer("segment", null)}
+        >
+          Recommencer le diagnostic
         </button>
-      </p>
+      </div>
     </div>
   );
 }

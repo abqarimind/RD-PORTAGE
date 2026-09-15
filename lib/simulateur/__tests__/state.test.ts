@@ -7,6 +7,7 @@
  * (BUG-03).
  */
 import { describe, expect, it } from "vitest";
+import type { DiagnosticAnswers } from "@/lib/diagnostic/answers";
 import {
   activeBracket,
   createInitialState,
@@ -99,7 +100,7 @@ describe("BUG-02 — le mode de saisie du TJM est mémorisé et réversible", ()
 });
 
 describe("§3.2 — relais du diagnostic flash", () => {
-  const relais = { segment: "porte", tjmBracketId: "500-650", dejaCalcule: "non" };
+  const relais: DiagnosticAnswers = { segment: "porte", tjmBracketId: "500-650", dejaCalcule: "non" };
 
   it("préremplit le profil et la fourchette, et les marque comme repris", () => {
     const s = reducer(initial(), { type: "apply_diagnostic", answers: relais });

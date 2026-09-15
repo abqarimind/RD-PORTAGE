@@ -541,9 +541,10 @@ export function LandingC({
   variant?: LandingVariant;
 }) {
   return (
-    // Le diagnostic est monté deux fois sur cette page (hero + rappel en
-    // bas). Sans état partagé, répondre en haut laissait le bas vierge, et
-    // le lien de sortie du bas ne portait aucune réponse.
+    // Le diagnostic persiste ses réponses : un retour arrière depuis le
+    // simulateur doit retrouver la landing PRÉREMPLIE (§3.4), et les deux
+    // points de montage ci-dessous (hero « flash » / section « vsl », qui
+    // s'excluent) restent de toute façon synchronisés.
     <DiagnosticProvider>
       <main style={{ fontFamily: SANS, color: INK }} className="bg-white">
         <Header showNav={showNav} />

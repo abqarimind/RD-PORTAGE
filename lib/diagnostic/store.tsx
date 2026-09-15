@@ -3,14 +3,20 @@
 /**
  * État partagé du diagnostic flash.
  *
- * Nécessaire parce que le diagnostic est monté DEUX FOIS sur chaque landing
- * (hero, puis section de rappel en bas de page). Avec un useState par
- * instance, répondre en haut laissait le bas vierge et inversement — et le
- * lien de sortie du bas ne portait alors aucune réponse.
+ * L'état est persisté, et non simplement local au composant, pour deux
+ * raisons :
+ *  - le retour arrière depuis le simulateur doit retrouver le diagnostic
+ *    PRÉREMPLI, et non une landing vierge (§3.4) — c'est la contrepartie
+ *    directe de la cause racine de BUG-02 ;
+ *  - un rafraîchissement ne doit pas effacer les réponses, au même titre que
+ *    le reste de l'état du parcours (§4.1 de la session précédente).
  *
- * Persisté pour que le relais survive à un rafraîchissement et pour que le
- * retour arrière depuis la première étape du simulateur retrouve le
- * diagnostic prérempli (§3.4).
+ * Le provider existe par ailleurs pour que plusieurs instances de diagnostic
+ * sur une même page restent synchronisées. LandingC déclare aujourd'hui deux
+ * points de montage (hero en variante « flash », section dédiée en variante
+ * « vsl ») mais ils sont MUTUELLEMENT EXCLUSIFS : une seule instance est
+ * rendue à la fois. Le partage ne coûte rien et couvre le cas où une
+ * variante en afficherait deux.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { EMPTY_ANSWERS, sanitizeAnswers, type DiagnosticAnswers } from "./answers";
