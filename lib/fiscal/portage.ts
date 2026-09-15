@@ -55,7 +55,10 @@ export function computePortage(input: PortageInput): PortageResult {
   const ndf = Math.min(input.ndf ?? 0, fees * c.ndfCapShareOfFees);
   const cagnotteMay = input.cagnotteMay ?? 0;
 
-  const mealVoucherTotal = input.mealVouchers ? input.days * c.mealVoucher.dailyValue : 0;
+  // Garde anti-zéro (spec §4.2) : sans jour facturé ni honoraires, aucun
+  // titre-restaurant n'est émis. Sans cette garde, un TJM à 0 produisait un
+  // « net perçu » de 130 € sorti de nulle part.
+  const mealVoucherTotal = input.mealVouchers && fees > 0 && input.days > 0 ? input.days * c.mealVoucher.dailyValue : 0;
   const mealVoucherEmployee = mealVoucherTotal * c.mealVoucher.employeeShare;
 
   // The activity account funds gross salary + employer contributions.
