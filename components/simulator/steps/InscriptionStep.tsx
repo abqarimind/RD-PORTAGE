@@ -13,7 +13,7 @@
  * L'échec d'envoi n'est jamais bloquant (spec §5.2) : le dossier reste
  * accessible même si l'email part en erreur.
  */
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useSimulator } from "@/lib/simulateur/store";
 import { useSimulation } from "@/lib/simulateur/useSimulation";
 import { setLeadId, trackEvent } from "@/lib/tracking/events";
@@ -29,6 +29,7 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
   const { state, dispatch, goTo, reset } = useSimulator();
   const { result, live, simInput, missing } = useSimulation();
 
+  const ids = { prenom: useId(), email: useId(), tel: useId() };
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [phone, setPhone] = useState("");
@@ -217,8 +218,9 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
       </p>
 
       <form className="mt-6 space-y-4 rounded-2xl border border-[#ECEEF3] bg-white p-5 shadow-sm" onSubmit={submit}>
-        <Field label="Votre prénom">
+        <Field label="Votre prénom" htmlFor={ids.prenom}>
           <input
+            id={ids.prenom}
             className="sim-input"
             required
             autoComplete="given-name"
@@ -226,8 +228,9 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
             onChange={(e) => setFirstName(e.target.value)}
           />
         </Field>
-        <Field label="Votre email">
+        <Field label="Votre email" htmlFor={ids.email}>
           <input
+            id={ids.email}
             className="sim-input"
             type="email"
             inputMode="email"
@@ -237,8 +240,9 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
             onChange={(e) => setEmail(e.target.value)}
           />
         </Field>
-        <Field label="Votre téléphone (optionnel)" hint="Uniquement si vous souhaitez être rappelé·e pour le Diagnostic 30 min.">
+        <Field label="Votre téléphone (optionnel)" hint="Uniquement si vous souhaitez être rappelé·e pour le Diagnostic 30 min." htmlFor={ids.tel}>
           <input
+            id={ids.tel}
             className="sim-input"
             type="tel"
             inputMode="tel"

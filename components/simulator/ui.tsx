@@ -13,7 +13,7 @@
  *  - le curseur reste un moyen COMPLÉMENTAIRE d'ajustement, jamais le seul
  *    moyen de saisie.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 export const PEACH = "#FFF1DE";
 export const MINT = "#E7F6EE";
@@ -35,10 +35,29 @@ export const OUTLINE_BTN =
 export const GHOST_BTN =
   "inline-flex min-h-[44px] items-center justify-center rounded-full px-4 py-2 text-sm font-bold text-[#7A8093] underline underline-offset-4 transition-colors hover:text-[#0B0D12]";
 
-export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+/**
+ * `htmlFor` associe le libellé à son champ. Sans lui, un <label> reste
+ * décoratif : les lecteurs d'écran n'annoncent rien, le remplissage
+ * automatique iOS ne reconnaît pas le champ, et taper sur le libellé ne donne
+ * pas le focus. Les groupes de boutons (Segmented, Stepper) n'ont pas de
+ * champ unique à cibler et s'en passent légitimement.
+ */
+export function Field({
+  label,
+  hint,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  htmlFor?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
-      <label className="block text-base font-bold text-[#0B0D12]">{label}</label>
+      <label htmlFor={htmlFor} className="block text-base font-bold text-[#0B0D12]">
+        {label}
+      </label>
       {hint && <p className="mb-2 mt-0.5 text-sm leading-snug text-[#7A8093]">{hint}</p>}
       <div className={hint ? "" : "mt-2"}>{children}</div>
     </div>
@@ -99,6 +118,7 @@ export function AmountInput({
     setDraft(String(value));
   }, [value]);
 
+  const id = useId();
   const clamp = (v: number) => Math.min(Math.max(Number.isFinite(v) ? v : min, min), max);
 
   const commit = (raw: string) => {
@@ -113,11 +133,12 @@ export function AmountInput({
   };
 
   return (
-    <Field label={label} hint={hint}>
+    <Field label={label} hint={hint} htmlFor={id}>
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <input
             // JAMAIS type="number" : c'est lui qui déclenche molette + spinner.
+            id={id}
             type="text"
             inputMode="numeric"
             pattern="[0-9 .,]*"
