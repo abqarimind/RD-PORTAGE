@@ -19,11 +19,38 @@ const ADAPTERS: Record<string, CRMAdapter> = {
   custom: customCrmAdapter,
 };
 
+/**
+ * Un stockage non durable ne doit plus pouvoir passer inaperçu (§4.2).
+ *
+ * En production, l'adaptateur `mock` ne conserve RIEN : sa Map est vide à
+ * chaque invocation serverless et le journal NDJSON est écrit sur un système
+ * de fichiers éphémère. Du trafic payant arrivant dans cette configuration
+ * perdrait définitivement des leads. L'avertissement est émis une seule fois
+ * par processus pour rester lisible dans les logs.
+ */
+let mockWarned = false;
+function warnIfNotDurable(provider: string): void {
+  if (provider !== "mock" || process.env.NODE_ENV !== "production" || mockWarned) return;
+  mockWarned = true;
+  console.error(
+    "[crm] CONFIGURATION NON DURABLE — CRM_PROVIDER=mock en production : " +
+      "les leads ne sont conservés NULLE PART (Map en mémoire + système de fichiers éphémère). " +
+      "Définir CRM_PROVIDER=airtable (AIRTABLE_API_KEY, AIRTABLE_BASE_ID) ou CRM_PROVIDER=brevo.",
+  );
+}
+
 export function getAdapter(): CRMAdapter {
   const provider = process.env.CRM_PROVIDER ?? "mock";
   const adapter = ADAPTERS[provider];
   if (!adapter) throw new Error(`Unknown CRM_PROVIDER "${provider}"`);
+  warnIfNotDurable(provider);
   return adapter;
+}
+
+/** Vrai quand le stockage courant ne survit pas à la requête. */
+export function storageIsDurable(): boolean {
+  const provider = process.env.CRM_PROVIDER ?? "mock";
+  return provider !== "mock";
 }
 
 export const crm = {

@@ -202,13 +202,43 @@ describe("simulate — 3 scenarios", () => {
     expect(r.economieRange.low).toBeLessThan(r.economieRange.high);
   });
 
-  it("flash-range stays positive and ordered for a micro freelance", () => {
+  /**
+   * Ce test verrouillait auparavant `economieAnnuelleEur >= 0`, c'est-à-dire
+   * l'écrêtage qui produisait BUG-02 : un micro-entrepreneur voyait toujours
+   * « 0 € sur la table ». L'écart est désormais rendu signé — le test vérifie
+   * qu'il est EXACT et que la fourchette reste ordonnée, quel que soit le signe.
+   */
+  it("micro freelance: l'écart réel est négatif, exact, et la fourchette reste ordonnée", () => {
     const r = simulate({
       status: "freelance_micro",
       tjmOrMonthlyGross: 450,
       daysPerYear: 200,
       household: { maritalStatus: "celibataire", children: 0, childrenGardeAlternee: 0 },
     });
-    expect(r.economieAnnuelleEur).toBeGreaterThanOrEqual(0);
+    const [actuel, , optimise] = r.scenarios;
+    // À revenu égal, la micro reste plus favorable : l'écart est négatif.
+    expect(r.economieAnnuelleEur).toBeLessThan(0);
+    // Plus aucun écrêtage : la valeur est exactement la différence calculée.
+    expect(r.economieAnnuelleEur).toBe(optimise.disposable - actuel.disposable);
+    // La fourchette reste ordonnée même avec un écart négatif.
+    expect(r.economieRange.low).toBeLessThanOrEqual(r.economieRange.high);
+    expect(r.economieRange.low).toBeLessThan(0);
+  });
+
+  it("aucun scénario ne renvoie de valeur non finie sur des entrées dégradées", () => {
+    for (const [tjm, days] of [[0, 200], [450, 0], [0, 0]] as [number, number][]) {
+      const r = simulate({
+        status: "freelance_micro",
+        tjmOrMonthlyGross: tjm,
+        daysPerYear: days,
+        household: { maritalStatus: "celibataire", children: 0, childrenGardeAlternee: 0 },
+      });
+      for (const s of r.scenarios) {
+        expect(Number.isFinite(s.netPerceived)).toBe(true);
+        expect(Number.isFinite(s.disposable)).toBe(true);
+        expect(Number.isFinite(s.averageTaxRate)).toBe(true);
+      }
+      expect(Number.isFinite(r.economieAnnuelleEur)).toBe(true);
+    }
   });
 });

@@ -2,7 +2,7 @@
  * Three-scenario comparison — the simulator's signature output:
  * A. current declared status, B. RD portage without optimisation,
  * C. RD portage optimised (NDF + May + PER + frais réels).
- * "Vous laissez X €/an sur la table" = C.disposable − A.disposable.
+ * "Vous laissez X €/an sur la table" = C.disposable − A.disposable (signé).
  *
  * All scenarios are ANNUAL and use simplified, documented assumptions
  * (see AUDIT.md §3) — the output is indicative, never tax advice.
@@ -57,9 +57,14 @@ export interface ScenarioResult {
 
 export interface SimulationResult {
   scenarios: ScenarioResult[];
-  /** The signature figure: optimised RD portage vs current status. */
+  /**
+   * The signature figure: optimised RD portage vs current status.
+   * PEUT ÊTRE NÉGATIF — à revenu égal la micro-entreprise reste plus
+   * favorable que le portage. Tout consommateur de ce champ doit traiter les
+   * deux signes (voir types/simulation-result.ts → laisseSurLaTableSens).
+   */
   economieAnnuelleEur: number;
-  /** Quick-range output for the flash diagnostic (±15%). */
+  /** Quick-range output for the flash diagnostic (±15%), bornes ordonnées. */
   economieRange: { low: number; high: number };
 }
 
@@ -214,10 +219,22 @@ export function simulate(input: SimulationInput): SimulationResult {
   const actuel = currentScenario(input);
   const portage = portageScenario(input, false);
   const optimise = portageScenario(input, true);
-  const economie = Math.max(optimise.disposable - actuel.disposable, 0);
+
+  // L'écart est rendu TEL QUEL, signe compris. Il était auparavant écrêté par
+  // un Math.max(..., 0) : à revenu égal, la micro-entreprise reste plus
+  // favorable que le portage, et l'écrêtage transformait cet écart négatif en
+  // un « 0 € » affiché sans explication — le profil par défaut
+  // (freelance_micro) tombait systématiquement dessus (BUG-02).
+  // Décision client du 15/09 : afficher l'écart réel, même négatif, et le
+  // mettre en regard de ce que le portage apporte en plus (protection
+  // sociale, chômage, avantages). Aucun barème ni aucune cascade n'est
+  // modifié ici : seul l'écrêtage disparaît.
+  const economie = optimise.disposable - actuel.disposable;
+  const bounds = [Math.round(economie * 0.85), Math.round(economie * 1.15)];
   return {
     scenarios: [actuel, portage, optimise],
     economieAnnuelleEur: economie,
-    economieRange: { low: Math.round(economie * 0.85), high: Math.round(economie * 1.15) },
+    // min/max explicites : avec un écart négatif, ×1,15 est la borne BASSE.
+    economieRange: { low: Math.min(...bounds), high: Math.max(...bounds) },
   };
 }

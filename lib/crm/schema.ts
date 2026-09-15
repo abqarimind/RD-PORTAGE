@@ -22,10 +22,12 @@ export const FUNNEL_EVENTS = [
   "sim_step_2_completed",
   "sim_step_3_completed",
   "sim_completed",
+  "sim_restarted", // « Nouvelle simulation » (BUG-03)
   "email_gate_viewed",
   "lead_submitted",
   // ACTE 3 — DÉCISION
-  "pdf_downloaded",
+  "dossier_opened", // ouverture du dossier web (remplace pdf_downloaded)
+  "pdf_downloaded", // conservé : historique des leads déjà journalisés
   "email_opened",
   "email_clicked",
   "rdv_clicked",

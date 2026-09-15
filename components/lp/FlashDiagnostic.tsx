@@ -1,87 +1,96 @@
 "use client";
 
 /**
- * Interactive flash diagnostic — hero micro-engagement. Three taps, NO email,
- * an instant range (count-up), then a single benefit CTA into the full
- * simulator. Uses the SAME fiscal engine and buckets as the full simulator,
- * so the flash fourchette is consistent with /simulateur.
+ * Diagnostic flash — trois questions qui segmentent, préremplissent et
+ * réveillent (§3.1).
  *
- * Events: diag_started / diag_q{1,2,3}_answered / diag_completed (internal)
- * and DiagnosticStart / DiagnosticComplete (Meta).
+ * Ce n'est plus une version dégradée du simulateur : les réponses sont
+ * transmises au simulateur, qui ne redemande rien. Le lien de sortie porte
+ * les réponses en clair (lib/diagnostic/answers.ts), et l'état est partagé
+ * entre les deux instances montées sur une même landing.
+ *
+ * La 3e question n'alimente aucun calcul. Elle installe le manque que le
+ * simulateur vient combler — « personne ne t'avait jamais calculé ton vrai
+ * taux de foyer » — et c'est elle qui porte le Aha.
+ *
+ * SORTIE CHIFFRÉE — changement assumé, documenté dans le rapport : le
+ * diagnostic annonçait jusqu'ici une fourchette de « laissé sur la table ».
+ * Depuis la suppression de l'écrêtage (BUG-02), cette valeur peut être
+ * NÉGATIVE pour un micro-entrepreneur : l'afficher en accroche de landing
+ * était intenable. La sortie est donc une fourchette de NET PERÇU, positive
+ * pour tous les segments, calculée sur les bornes de la fourchette choisie et
+ * volontairement CONSERVATRICE (sans avantages, sans frais professionnels) :
+ * le simulateur ne peut que faire mieux, jamais contredire.
  */
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import type { HouseholdInput } from "@/lib/fiscal/ir";
-import { simulate, type CurrentStatus } from "@/lib/fiscal/scenarios";
+import {
+  answeredCount,
+  answersBracket,
+  DEJA_CALCULE_OPTIONS,
+  DIAGNOSTIC_SEGMENTS,
+  isComplete,
+  simulateurHref,
+  type DejaCalcule,
+} from "@/lib/diagnostic/answers";
+import { useDiagnostic } from "@/lib/diagnostic/store";
+import { computePortage } from "@/lib/fiscal/portage";
 import { trackEvent } from "@/lib/tracking/events";
 import { metaDiagnosticComplete, metaDiagnosticStart } from "@/lib/tracking/meta";
 import { CountUp } from "./CountUp";
 
 const BRASS = "#B08D57";
-// Client préfère un seul niveau typographique (pas de serif).
-const SERIF = "'Manrope','IBM Plex Sans',sans-serif";
+const VALIDE = "#2F6B4F";
+const SANS = "'Manrope','IBM Plex Sans',sans-serif";
 
-type Q1 = { label: string; status: CurrentStatus };
-type Q2 = { label: string; tjm: number; monthlyGross: number };
-type Q3 = { label: string; household: HouseholdInput };
+/** Hypothèses conservatrices de l'estimation flash — sans avantages. */
+const FLASH_DAYS = 20;
 
-const Q1_OPTIONS: Q1[] = [
-  { label: "Salarié ESN", status: "salarie_esn" },
-  { label: "Freelance (micro ou SASU)", status: "freelance_micro" },
-  { label: "Porté ailleurs", status: "porte_ailleurs" },
-  { label: "En transition", status: "transition" },
-];
+export function FlashDiagnostic({ angle, simulateurHref: base = "/simulateur" }: { angle: string; simulateurHref?: string }) {
+  const { answers, setAnswer, hydrating } = useDiagnostic();
 
-const Q2_OPTIONS: Q2[] = [
-  { label: "Moins de 350 € / 3 500 €", tjm: 300, monthlyGross: 3_000 },
-  { label: "350 à 500 € / 3 500 à 5 000 €", tjm: 425, monthlyGross: 4_250 },
-  { label: "500 à 650 € / 5 000 à 6 500 €", tjm: 575, monthlyGross: 5_750 },
-  { label: "Plus de 650 € / 6 500 €", tjm: 700, monthlyGross: 7_000 },
-];
+  const netRange = useMemo(() => {
+    if (!answers.tjmBracketId) return null;
+    const b = answersBracket(answers);
+    const net = (tjm: number) => computePortage({ tjm, days: FLASH_DAYS, mealVouchers: false }).netPerceived;
+    return { low: net(b.min), high: net(b.max) };
+  }, [answers]);
 
-const Q3_OPTIONS: Q3[] = [
-  { label: "Célibataire", household: { maritalStatus: "celibataire", children: 0, childrenGardeAlternee: 0 } },
-  { label: "Marié·Pacsé", household: { maritalStatus: "marie_pacse", children: 0, childrenGardeAlternee: 0 } },
-  { label: "Enfants à charge", household: { maritalStatus: "marie_pacse", children: 2, childrenGardeAlternee: 0 } },
-  { label: "Garde alternée", household: { maritalStatus: "celibataire", children: 0, childrenGardeAlternee: 1 } },
-];
+  const step = !answers.segment ? 1 : !answers.tjmBracketId ? 2 : !answers.dejaCalcule ? 3 : 4;
 
-export function FlashDiagnostic({ angle, simulateurHref = "/simulateur" }: { angle: string; simulateurHref?: string }) {
-  const [q1, setQ1] = useState<Q1 | null>(null);
-  const [q2, setQ2] = useState<Q2 | null>(null);
-  const [q3, setQ3] = useState<Q3 | null>(null);
+  function answer<K extends "segment" | "tjmBracketId" | "dejaCalcule">(
+    key: K,
+    value: string,
+    event: "diag_q1_answered" | "diag_q2_answered" | "diag_q3_answered",
+  ) {
+    if (event === "diag_q1_answered" && answeredCount(answers) === 0) {
+      trackEvent("diag_started");
+      metaDiagnosticStart(angle);
+    }
+    setAnswer(key, value as never);
+    trackEvent(event);
+    if (event === "diag_q3_answered") trackEvent("diag_completed");
+  }
 
-  const range = useMemo(() => {
-    if (!q1 || !q2 || !q3) return null;
-    return simulate({
-      status: q1.status,
-      tjmOrMonthlyGross: q1.status === "salarie_esn" ? q2.monthlyGross : q2.tjm,
-      daysPerYear: 210,
-      household: q3.household,
-      // Typical optimisation levers for the flash estimate only.
-      fraisReelsAnnual: 4_800,
-      versementsPER: 4_000,
-    }).economieRange;
-  }, [q1, q2, q3]);
-
-  const answer =
-    <T,>(set: (v: T) => void, event: "diag_q1_answered" | "diag_q2_answered" | "diag_q3_answered") =>
-    (v: T) => {
-      if (event === "diag_q1_answered" && !q1) {
-        trackEvent("diag_started");
-        metaDiagnosticStart(angle);
-      }
-      set(v);
-      trackEvent(event);
-      if (event === "diag_q3_answered") {
-        trackEvent("diag_completed");
-      }
-    };
-
-  const step = !q1 ? 1 : !q2 ? 2 : !q3 ? 3 : 4;
+  if (hydrating) {
+    return (
+      <div className="mx-auto w-full max-w-md rounded-3xl bg-white p-5 shadow-xl ring-1 ring-[#ECEEF3] md:p-6" style={{ fontFamily: SANS }}>
+        <div className="h-4 w-32 animate-pulse rounded bg-[#F0F1F5]" />
+        <div className="mt-4 space-y-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-12 animate-pulse rounded-xl bg-[#F5F6F9]" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div id="diagnostic" className="mx-auto w-full max-w-md rounded-3xl bg-white p-5 text-left shadow-xl ring-1 ring-[#ECEEF3] md:p-6">
+    <div
+      id="diagnostic"
+      className="mx-auto w-full max-w-md rounded-3xl bg-white p-5 text-left shadow-xl ring-1 ring-[#ECEEF3] md:p-6"
+      style={{ fontFamily: SANS, color: "#0B0D12" }}
+    >
       {step <= 3 ? (
         <>
           <div className="flex items-center justify-between">
@@ -90,50 +99,75 @@ export function FlashDiagnostic({ angle, simulateurHref = "/simulateur" }: { ang
             </p>
             <p className="text-xs font-bold tabular-nums text-[#7A8093]">{step} / 3</p>
           </div>
-          {/* progress — width only animates on the bar, transform-friendly */}
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#F0F1F5]">
-            <div
-              className="h-1.5 rounded-full transition-[width] duration-300"
-              style={{ width: `${(step / 3) * 100}%`, backgroundColor: BRASS }}
-            />
+            <div className="h-1.5 rounded-full transition-[width] duration-300" style={{ width: `${(step / 3) * 100}%`, backgroundColor: BRASS }} />
           </div>
-          {step === 1 && <Choices title="Votre statut aujourd'hui ?" options={Q1_OPTIONS} onPick={answer(setQ1, "diag_q1_answered")} />}
-          {step === 2 && (
-            <Choices title="Votre TJM (ou salaire brut mensuel) ?" options={Q2_OPTIONS} onPick={answer(setQ2, "diag_q2_answered")} />
+
+          {step === 1 && (
+            <Choices
+              title="Aujourd'hui, vous êtes…"
+              options={DIAGNOSTIC_SEGMENTS.map((s) => ({ id: s.id, label: s.label }))}
+              onPick={(id) => answer("segment", id, "diag_q1_answered")}
+            />
           )}
-          {step === 3 && <Choices title="Votre foyer ?" options={Q3_OPTIONS} onPick={answer(setQ3, "diag_q3_answered")} />}
+          {step === 2 && (
+            <Choices
+              title="Votre TJM, approximativement"
+              options={TJM_CHOICES}
+              onPick={(id) => answer("tjmBracketId", id, "diag_q2_answered")}
+            />
+          )}
+          {step === 3 && (
+            <Choices
+              title="Avez-vous déjà fait calculer votre taux d'imposition réel de foyer ?"
+              options={DEJA_CALCULE_OPTIONS.map((o) => ({ id: o.id, label: o.label }))}
+              onPick={(id) => answer("dejaCalcule", id as DejaCalcule, "diag_q3_answered")}
+            />
+          )}
+
           <p className="mt-4 text-[11px] leading-relaxed text-[#9aa0b0]">
             Sans email, sans engagement. Réponse immédiate à la 3ᵉ question.
           </p>
         </>
       ) : (
-        range && <FlashResult low={range.low} high={range.high} simulateurHref={simulateurHref} angle={angle} />
+        netRange && <FlashResult low={netRange.low} high={netRange.high} answers={answers} base={base} angle={angle} />
       )}
     </div>
   );
 }
 
+const TJM_CHOICES = [
+  { id: "lt350", label: "Moins de 350 €" },
+  { id: "350-500", label: "350 à 500 €" },
+  { id: "500-650", label: "500 à 650 €" },
+  { id: "gt650", label: "Plus de 650 €" },
+];
+
 function FlashResult({
   low,
   high,
-  simulateurHref,
+  answers,
+  base,
   angle,
 }: {
   low: number;
   high: number;
-  simulateurHref: string;
+  answers: ReturnType<typeof useDiagnostic>["answers"];
+  base: string;
   angle: string;
 }) {
-  // Fire DiagnosticComplete once when the result mounts.
   useEffect(() => {
     metaDiagnosticComplete({ low, high, angle });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const { setAnswer } = useDiagnostic();
+
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-widest text-[#7A8093]">Estimation immédiate</p>
-      <p className="mt-2 text-sm text-[#4A5061]">Vous laissez probablement chaque année, sur la table :</p>
-      <p className="mt-1 leading-none" style={{ fontFamily: SERIF }}>
+      <p className="mt-2 text-sm text-[#4A5061]">En portage RD, vous percevriez chaque mois, net :</p>
+      <p className="mt-1 leading-none">
         <CountUp value={low} className="text-3xl font-bold tabular-nums md:text-4xl" />
         <span className="mx-1 text-2xl font-bold text-[#7A8093]">–</span>
         <CountUp value={high} className="text-4xl font-extrabold tabular-nums md:text-5xl" />
@@ -141,46 +175,74 @@ function FlashResult({
           €
         </span>
       </p>
-      <p className="mt-3 text-xs leading-relaxed text-[#7A8093]">
-        Fourchette indicative. Le calcul précis — foyer complet, frais réels, PER, dispositifs légaux — prend 2 à 3 minutes.
+      <p className="mt-2 text-xs leading-relaxed text-[#7A8093]">
+        Estimation prudente, sur 20 jours facturés et sans vos avantages — le calcul complet ne peut que faire mieux.
       </p>
+
+      {/* La 3e réponse porte le Aha : c'est elle qui installe la suite. */}
+      <p className="mt-4 rounded-2xl p-4 text-sm leading-relaxed" style={{ backgroundColor: "#E7F6EE", color: "#0B0D12" }}>
+        {answers.dejaCalcule === "oui" ? (
+          <>
+            Vous l&rsquo;avez déjà fait calculer. Vérifions-le : <strong>votre vrai taux d&rsquo;imposition de foyer</strong> —
+            situation familiale, frais réels, PER — s&rsquo;obtient à l&rsquo;étape suivante.
+          </>
+        ) : (
+          <>
+            Ce chiffre ne dit rien de votre impôt. <strong>Votre vrai taux d&rsquo;imposition de foyer</strong> — celui que
+            personne ne vous a jamais calculé — s&rsquo;obtient à l&rsquo;étape suivante.
+          </>
+        )}
+      </p>
+
       <Link
-        href={simulateurHref}
+        href={simulateurHref(answers, base)}
         onClick={() => trackEvent("sim_started", { from: "flash", angle })}
-        className="mt-4 block rounded-full bg-[#0B0D12] px-6 py-3 text-center text-sm font-bold text-white transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+        className="mt-4 flex min-h-[48px] items-center justify-center rounded-full bg-[#0B0D12] px-6 py-3 text-center text-base font-bold text-white transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg"
       >
-        Calculer mon vrai taux — 2 à 3 min
+        Calculer mon vrai taux — 2 min
       </Link>
+      <p className="mt-2 text-center text-xs text-[#9aa0b0]">Vos réponses sont conservées — vous reprenez à l&rsquo;étape 2.</p>
+      <div className="mt-1 flex justify-center">
+        <button
+          type="button"
+          // Cible tactile pleine hauteur : le libellé est petit, la zone
+          // cliquable ne doit pas l'être.
+          className="inline-flex min-h-[44px] items-center px-4 text-xs text-[#9aa0b0] underline underline-offset-2"
+          onClick={() => setAnswer("segment", null)}
+        >
+          Recommencer le diagnostic
+        </button>
+      </div>
     </div>
   );
 }
 
-function Choices<T extends { label: string }>({
+function Choices({
   title,
   options,
   onPick,
 }: {
   title: string;
-  options: T[];
-  onPick: (option: T) => void;
+  options: { id: string; label: string }[];
+  onPick: (id: string) => void;
 }) {
   return (
     <fieldset className="mt-4">
-      <legend className="text-lg font-extrabold tracking-tight" style={{ fontFamily: SERIF }}>
-        {title}
-      </legend>
+      <legend className="text-lg font-extrabold tracking-tight">{title}</legend>
       <div className="mt-3 grid grid-cols-1 gap-2">
-        {options.map((option) => (
+        {options.map((o) => (
           <button
-            key={option.label}
+            key={o.id}
             type="button"
-            onClick={() => onPick(option)}
-            className="rounded-xl border border-[#E2E5EE] bg-white px-4 py-3 text-left text-sm font-semibold text-[#0B0D12] transition-all duration-150 hover:-translate-y-0.5 hover:border-[#B08D57] hover:shadow-sm"
+            onClick={() => onPick(o.id)}
+            className="min-h-[48px] rounded-xl border border-[#E2E5EE] bg-white px-4 py-3 text-left text-base font-semibold text-[#0B0D12] transition-all duration-150 hover:-translate-y-0.5 hover:border-[#B08D57] hover:shadow-sm"
           >
-            {option.label}
+            {o.label}
           </button>
         ))}
       </div>
     </fieldset>
   );
 }
+
+export { isComplete };
