@@ -23,7 +23,7 @@ import { DiagnosticProvider } from "@/lib/diagnostic/store";
 import { CountUp } from "./CountUp";
 import { FlashDiagnostic } from "./FlashDiagnostic";
 import { MetaViewContent } from "./MetaViewContent";
-import { Reveal, SpotCard } from "./motion";
+import { Beam, Reveal, SpotCard } from "./motion";
 
 export type Angle = "a" | "b" | "c";
 
@@ -219,9 +219,9 @@ function HeroFlash({ angle }: { angle: Angle }) {
         </div>
         {/* Interactive flash diagnostic — the hero conversion mechanism. */}
         <Reveal delayMs={120}>
-          <div className="beam mx-auto w-full max-w-md rounded-3xl">
+          <Beam className="mx-auto w-full max-w-md rounded-3xl">
             <FlashDiagnostic angle={angle} />
-          </div>
+          </Beam>
         </Reveal>
       </div>
     </section>
@@ -445,9 +445,9 @@ function Footer() {
 /* —————————————————————————— VSL variant —————————————————————————— */
 
 const PRIMARY_BTN =
-  "w-full rounded-full bg-[#0B0D12] px-6 py-3 text-sm font-bold text-white transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.97] sm:w-auto";
+  "inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-[#0B0D12] px-6 py-3 text-sm font-bold text-white transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.97] sm:w-auto";
 const OUTLINE_BTN =
-  "w-full rounded-full border border-[#D8DCE6] bg-white px-6 py-3 text-sm font-bold text-[#0B0D12] transition-[transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#B08D57] active:scale-[0.97] sm:w-auto";
+  "inline-flex min-h-[44px] w-full items-center justify-center rounded-full border border-[#D8DCE6] bg-white px-6 py-3 text-sm font-bold text-[#0B0D12] transition-[transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#B08D57] active:scale-[0.97] sm:w-auto";
 
 /** Responsive 16:9 VSL frame. Plays NEXT_PUBLIC_VSL_URL when set, otherwise a
  *  clearly-marked placeholder that nudges to the diagnostic. */
@@ -674,6 +674,10 @@ function Styles() {
         -webkit-mask-composite: xor;
         mask-composite: exclude;
         animation: beamspin 6s linear infinite;
+      }
+      /* Pause hors écran et onglet masqué — voir le composant Beam. */
+      .beam[data-beam-actif="false"]::before {
+        animation-play-state: paused;
       }
       @keyframes beamspin {
         to {

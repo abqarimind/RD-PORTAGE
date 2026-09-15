@@ -77,3 +77,35 @@ export function SpotCard({
     </div>
   );
 }
+
+/**
+ * Enveloppe du « border beam ». L'animation tourne en boucle infinie et
+ * repeint un dégradé conique à chaque image : la laisser tourner hors écran
+ * consomme de la batterie pour rien, sur un trafic à 83 % mobile. Elle est
+ * donc mise en pause dès que la carte quitte le viewport, et à l'onglet
+ * masqué. Le mouvement réduit la désactive déjà par la feuille de styles.
+ */
+export function Beam({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [actif, setActif] = useState(true);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const majEtat = (visible: boolean) => setActif(visible && !document.hidden);
+    const io = new IntersectionObserver(([e]) => majEtat(e.isIntersecting), { threshold: 0 });
+    io.observe(el);
+    const onVisibility = () => setActif(!document.hidden && el.getBoundingClientRect().bottom > 0);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      io.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
+  return (
+    <div ref={ref} className={`beam ${className}`} data-beam-actif={actif}>
+      {children}
+    </div>
+  );
+}
