@@ -19,7 +19,7 @@ npm run report:weekly  # rapport KPI Markdown
 
 | Dossier | Contenu |
 |---|---|
-| `app/` | Next.js App Router : landing, `/simulateur`, `/lp/[angle]` (ads Meta), `/merci`, API routes lead/event/export/capi |
+| `app/` | Next.js App Router : landing, `/simulateur`, `/lp/[angle]` (ads Meta), `/dossier`, API routes lead/event/export/capi/demande-diagnostic |
 | `app/lp/` | Landings payantes mobile-first (3 angles de hero, sans navigation) — dérivées de `/concept-c` |
 | `config/fiscal-2026.ts` | **Source unique** des taux/barèmes fiscaux & sociaux, datés + sourcés (spec simulateur §4) |
 | `lib/fiscal/` | Moteur A (portage) + Moteur B (IR foyer) + 3 scénarios, tests Vitest, `AUDIT.md` |

@@ -111,17 +111,35 @@ export const airtableAdapter: CRMAdapter = {
   },
 
   async exportCSV(filter?: ExportFilter) {
-    const data = await call(`/${encodeURIComponent(LEADS_TABLE)}?pageSize=100`);
+    // Airtable pagine par 100 : sans suivre `offset`, l'export s'arrêtait
+    // silencieusement au centième lead. Une troncature invisible dans le
+    // fichier de Linda est pire qu'une erreur.
     const rows: string[] = [];
-    for (const record of data.records ?? []) {
-      try {
-        const lead = leadSchema.parse(JSON.parse(record.fields.raw_json));
-        if (filter?.funnelStage && lead.funnel_stage !== filter.funnelStage) continue;
-        rows.push(leadToCsvRow(lead));
-      } catch {
-        // Skip malformed rows rather than failing the whole export.
+    let offset: string | undefined;
+    let pages = 0;
+    do {
+      const query = new URLSearchParams({ pageSize: "100" });
+      if (offset) query.set("offset", offset);
+      const data = await call(`/${encodeURIComponent(LEADS_TABLE)}?${query.toString()}`);
+      for (const record of data.records ?? []) {
+        try {
+          const lead = leadSchema.parse(JSON.parse(record.fields.raw_json));
+          if (filter?.funnelStage && lead.funnel_stage !== filter.funnelStage) continue;
+          rows.push(leadToCsvRow(lead));
+        } catch {
+          // Ligne malformée ignorée plutôt que tout l'export en échec.
+        }
       }
-    }
+      offset = data.offset;
+      pages += 1;
+      // Garde-fou : 100 pages = 10 000 leads. Au-delà, on préfère un log
+      // explicite à une boucle qui tournerait indéfiniment sur une réponse
+      // inattendue.
+      if (pages >= 100 && offset) {
+        console.error("[crm-airtable] export interrompu après 10 000 lignes — pagination anormalement longue");
+        break;
+      }
+    } while (offset);
     return [csvHeader(), ...rows].join("\n");
   },
 };

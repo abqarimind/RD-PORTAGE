@@ -17,7 +17,7 @@ aucun event Meta n'est envoyé et aucune bannière de consentement ne s'affiche.
 | `/lp/c` | Hero **Angle C — Fondateur** (Ridha, ex-porté) |
 | `/lp/<x>?nav=1` | Aperçu interne **avec** navigation (sinon masquée — trafic payant) |
 | `/simulateur` | Simulateur IR foyer complet + capture lead (existant) |
-| `/merci` | Confirmation post-soumission — déclenche le Pixel `Lead` |
+| `/dossier` | Dossier du lead (artefact visuel) — lien signé envoyé par email |
 
 Même corps de page ; **seul le bloc above-the-fold (hero) change** selon
 l'angle (message match pub → page). Un angle inconnu retombe sur `b`.

@@ -16,6 +16,7 @@
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { gunzipSync, gzipSync } from "node:zlib";
+import { assertDossierSecret } from "@/lib/env";
 import type { SimulationResultPayload } from "@/types/simulation-result";
 
 /**
@@ -26,9 +27,9 @@ import type { SimulationResultPayload } from "@/types/simulation-result";
 function secret(): string {
   const s = process.env.DOSSIER_SECRET;
   if (s && s.length >= 16) return s;
-  if (process.env.NODE_ENV === "production") {
-    console.error("[dossier] DOSSIER_SECRET absent ou trop court — les liens de dossier ne sont pas signés de façon sûre.");
-  }
+  // En production, l'absence du secret est bloquante (lib/env.ts) : on ne
+  // produit jamais un lien signé avec une valeur connue de tous.
+  assertDossierSecret();
   return "rdp-dossier-dev-secret-change-me";
 }
 
