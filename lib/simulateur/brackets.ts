@@ -2,11 +2,11 @@
  * Fourchettes de TJM — source unique, partagée par le diagnostic flash
  * (accueil + /lp) et par le simulateur.
  *
- * Avant ce fichier, les mêmes quatre fourchettes étaient dupliquées dans
- * HeroDiagnostic.tsx et FlashDiagnostic.tsx, et le simulateur ne les
- * connaissait pas du tout : un utilisateur qui revenait en arrière depuis le
- * simulateur retombait sur la fourchette de la landing sans qu'aucune valeur
- * ne soit transmise (BUG-02).
+ * Jusqu'ici, le simulateur ne connaissait pas ces fourchettes : un
+ * utilisateur qui revenait en arrière retombait sur celle de la landing sans
+ * qu'aucune valeur ne soit transmise (BUG-02). Elles sont désormais la
+ * monnaie d'échange du relais diagnostic → simulateur
+ * (lib/diagnostic/answers.ts).
  *
  * Règle de conversion validée par le client (§9.1) : une fourchette se
  * calcule sur sa VALEUR MÉDIANE. L'utilisateur peut basculer en saisie

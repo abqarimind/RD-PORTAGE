@@ -66,6 +66,18 @@ function SimulatorShell() {
         </button>
       )}
 
+      {/* §3.3 — l'effort conservé doit se VOIR, sinon le bénéfice est perdu. */}
+      {(state.prefilled.status || state.prefilled.tjm) && state.step !== "profil" && (
+        <div className="mb-5 rounded-2xl px-4 py-3" style={{ backgroundColor: "#E7F6EE" }}>
+          <p className="text-sm font-semibold">On reprend là où vous vous êtes arrêté.</p>
+          <p className="mt-0.5 text-sm text-[#4A5061]">
+            {[state.prefilled.status && "votre profil", state.prefilled.tjm && "votre TJM"].filter(Boolean).join(" et ")} {" "}
+            {state.prefilled.status && state.prefilled.tjm ? "sont repris" : "est repris"} de votre diagnostic — modifiables à tout
+            moment.
+          </p>
+        </div>
+      )}
+
       <div key={state.step} className="step-enter">
         {state.step === "profil" && <ProfilStep />}
         {state.step === "activite" && <ActiviteStep />}

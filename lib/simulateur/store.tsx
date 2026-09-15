@@ -14,6 +14,7 @@
  */
 import { useRouter, useSearchParams } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { carriesRelay, decodeAnswers, isComplete } from "@/lib/diagnostic/answers";
 import { clearState, loadState, newSimulationId, saveState } from "./persistence";
 import {
   createInitialState,
@@ -57,16 +58,56 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
     restored.current = true;
 
     const saved = loadState();
-    const base = saved ?? createInitialState(newSimulationId());
-    // L'URL fait autorité sur l'étape : un lien partagé ou un retour natif
-    // doit gagner sur l'étape enregistrée.
-    const step: Step = isStep(urlStep) ? urlStep : base.step;
-    dispatch({ type: "restore", state: { ...base, step, visited: base.visited.includes(step) ? base.visited : [...base.visited, step] } });
+    let base = saved ?? createInitialState(newSimulationId());
+
+    /**
+     * RELAIS DU DIAGNOSTIC FLASH (§3.2).
+     *
+     * Le lien de sortie du diagnostic porte les réponses en clair
+     * (`?from=diag&p=…&t=…&q3=…`). Elles font autorité : l'utilisateur vient
+     * de cliquer, son intention est explicite. Toute valeur inconnue est
+     * ignorée par decodeAnswers, donc un relais tronqué ou bricolé donne un
+     * parcours vierge plutôt qu'un écran cassé.
+     */
+    let step: Step | null = isStep(urlStep) ? urlStep : null;
+    if (carriesRelay(searchParams)) {
+      const answers = decodeAnswers(searchParams);
+      base = reducer(base, { type: "apply_diagnostic", answers });
+      // L'étape Profil est servie par le diagnostic : on ouvre directement sur
+      // Activité, ce qui EST l'avancement réel — c'est une étape entière
+      // économisée, pas un affichage flatteur. Le bouton « Retour » y reste
+      // disponible pour corriger le profil.
+      if (!step) step = answers.segment ? "activite" : "profil";
+      if (answers.segment) base = { ...base, visited: ["profil", "activite"] };
+    }
+
+    const resolved: Step = step ?? base.step;
+    dispatch({
+      type: "restore",
+      state: {
+        ...base,
+        step: resolved,
+        visited: base.visited.includes(resolved) ? base.visited : [...base.visited, resolved],
+      },
+    });
     setHydrating(false);
     // Dépendances volontairement vides : ne rejouer la restauration
     // qu'au montage, jamais sur un changement d'URL ultérieur.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * Normalise l'URL de relais en URL d'étape, avec `replace` et non `push` :
+   * le retour natif doit ramener à la landing et à son diagnostic prérempli
+   * (§3.4), pas à l'URL de relais qui rejouerait le préremplissage.
+   */
+  useEffect(() => {
+    if (hydrating) return;
+    if (carriesRelay(searchParams)) {
+      router.replace(`/simulateur?step=${state.step}`, { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrating]);
 
   /* ————— autosave (après hydratation seulement) ————— */
   useEffect(() => {

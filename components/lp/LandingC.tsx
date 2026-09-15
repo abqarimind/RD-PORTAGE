@@ -20,6 +20,7 @@ import { CLAIMS } from "@/content/claims";
 import { computePortage } from "@/lib/fiscal/portage";
 import { trackEvent } from "@/lib/tracking/events";
 import { metaContact } from "@/lib/tracking/meta";
+import { DiagnosticProvider } from "@/lib/diagnostic/store";
 import { FlashDiagnostic } from "./FlashDiagnostic";
 import { MetaViewContent } from "./MetaViewContent";
 
@@ -540,17 +541,22 @@ export function LandingC({
   variant?: LandingVariant;
 }) {
   return (
-    <main style={{ fontFamily: SANS, color: INK }} className="bg-white">
-      <Header showNav={showNav} />
-      {variant === "vsl" ? <HeroVsl angle={angle} /> : <HeroFlash angle={angle} />}
-      <StatChips />
-      {variant === "vsl" && <DiagnosticSection angle={angle} />}
-      <Method />
-      <Atarhib />
-      <SocialProof />
-      <PricingCta />
-      <Footer />
-      <MetaViewContent contentName={`lp_${angle}_${variant}`} />
-    </main>
+    // Le diagnostic est monté deux fois sur cette page (hero + rappel en
+    // bas). Sans état partagé, répondre en haut laissait le bas vierge, et
+    // le lien de sortie du bas ne portait aucune réponse.
+    <DiagnosticProvider>
+      <main style={{ fontFamily: SANS, color: INK }} className="bg-white">
+        <Header showNav={showNav} />
+        {variant === "vsl" ? <HeroVsl angle={angle} /> : <HeroFlash angle={angle} />}
+        <StatChips />
+        {variant === "vsl" && <DiagnosticSection angle={angle} />}
+        <Method />
+        <Atarhib />
+        <SocialProof />
+        <PricingCta />
+        <Footer />
+        <MetaViewContent contentName={`lp_${angle}_${variant}`} />
+      </main>
+    </DiagnosticProvider>
   );
 }

@@ -36,6 +36,11 @@ export function ActiviteStep() {
     >
       {/* —————————— TJM : deux modes explicites, réversibles —————————— */}
       <Field label="TJM — tarif jour HT">
+        {state.prefilled.tjm && (
+          <p className="mb-2 rounded-xl px-3 py-2 text-sm" style={{ backgroundColor: "#FFF1DE" }}>
+            Fourchette reprise de votre diagnostic. Affinez-la en montant exact si vous le connaissez.
+          </p>
+        )}
         <Segmented
           options={[
             { value: "exact", label: "Montant exact" },
