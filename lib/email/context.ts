@@ -11,23 +11,15 @@ import { computePortage } from "@/lib/fiscal/portage";
 import { simulate, type SimulationInput } from "@/lib/fiscal/scenarios";
 import { checkPlausibility, reportPlausibility } from "@/lib/simulateur/guards";
 import { buildPayload } from "@/lib/simulateur/payload";
-import { DEFAULT_FORM, resolvedTjm, type FormState } from "@/lib/simulateur/state";
+import { coerceFormState, resolvedTjm, type FormState } from "@/lib/simulateur/state";
 import type { SimulationResultPayload } from "@/types/simulation-result";
 
-/** Ramène un formulaire reçu du réseau dans le domaine du valide. */
-export function coerceForm(raw: unknown): FormState {
-  const form: FormState = { ...DEFAULT_FORM };
-  if (!raw || typeof raw !== "object") return form;
-  const src = raw as Record<string, unknown>;
-  for (const k of Object.keys(DEFAULT_FORM) as (keyof FormState)[]) {
-    const v = src[k];
-    if (typeof v !== typeof DEFAULT_FORM[k] || v === null || v === undefined) continue;
-    if (typeof v === "number" && !Number.isFinite(v)) continue;
-    (form[k] as unknown) = v;
-  }
-  form.gardeAlternee = Math.min(form.gardeAlternee, form.enfants);
-  return form;
-}
+/**
+ * Ramène un formulaire reçu du réseau dans le domaine du valide.
+ * Délègue à la source unique de lib/simulateur/state.ts : la restauration
+ * locale et les routes d'API doivent valider exactement de la même façon.
+ */
+export const coerceForm = coerceFormState;
 
 export interface BuildArgs {
   form: FormState;
