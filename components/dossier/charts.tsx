@@ -24,7 +24,7 @@
  * secondaire est donc systématique — chaque marque porte son libellé et sa
  * valeur en clair, la couleur ne porte jamais l'information seule.
  */
-import { useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { buildCascadeBars, type CascadeStep, type PartagePart } from "@/lib/dossier/breakdown";
 
 export type { CascadeStep, PartagePart };
@@ -36,7 +36,6 @@ const VALIDE = "#2F6B4F";
 const INK = "#0B0D12";
 const MUTED = "#7A8093";
 const GRID = "#ECEEF3";
-const RAIL = "#D7DBE4";
 
 const eur = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`;
 const part = (n: number, total: number) => (total > 0 ? `${Math.round((n / total) * 100)} %` : "—");
@@ -147,65 +146,58 @@ export function Cascade({ steps }: { steps: CascadeStep[] }) {
   }
 
   return (
-    <div className="mt-4">
+    /*
+     * UNE SEULE grille pour toute la cascade.
+     *
+     * Une grille par ligne donnait à la colonne des montants une largeur
+     * dictée par son seul contenu : « −76 € » laissait plus de place au tracé
+     * que « −2 501 € ». Chaque ligne avait donc sa propre échelle, et le
+     * recul d'une marche à l'autre était faux — visible surtout au téléphone,
+     * où le libellé passe au-dessus et où la colonne des montants partage la
+     * ligne avec le tracé. Une grille unique force toutes les barres sur la
+     * même piste.
+     */
+    <div className="mt-4 grid grid-cols-[1fr_auto] gap-x-3 sm:grid-cols-[12rem_1fr_auto]">
       {bars.map((b, i) => {
         const left = (b.from / max) * 100;
-        const width = Math.max(((b.to - b.from) / max) * 100, 0.5);
+        const width = Math.max(((b.to - b.from) / max) * 100, 0.4);
         const epaisseur = b.total ? 22 : 14;
-        // Un palier ouvre une étape : filet de séparation, sans marge — une
-        // marge couperait les connecteurs, qui doivent rester continus.
-        const ouvreEtape = b.total && i > 0;
+        // Un palier ouvre une étape : filet de séparation sur toute la ligne.
+        const filet = b.total && i > 0;
 
         return (
-          <div
-            key={`${b.label}-${i}`}
-            className={`grid grid-cols-[1fr_auto] gap-x-3 sm:grid-cols-[12rem_1fr_auto] ${
-              ouvreEtape ? "border-t border-[#ECEEF3]" : ""
-            }`}
-          >
+          <Fragment key={`${b.label}-${i}`}>
             {/* Libellé — le gras et la couleur d'encre distinguent le palier du pas. */}
             <span
-              className={`col-span-2 self-center py-1.5 leading-tight sm:col-span-1 sm:py-0 sm:text-right ${
-                b.total ? "text-sm font-bold sm:text-[15px]" : "pl-3 text-sm sm:pl-0"
-              }`}
+              className={`col-span-2 self-center pt-2 leading-tight sm:col-span-1 sm:pt-0 sm:text-right ${
+                filet ? "border-t border-[#ECEEF3]" : ""
+              } ${b.total ? "text-sm font-bold sm:text-[15px]" : "pl-3 text-sm sm:pl-0"}`}
               style={{ color: b.total ? INK : MUTED }}
             >
               {b.label}
             </span>
 
-            {/* Zone de tracé. Elle s'étire sur toute la hauteur de la ligne
-                (`self-stretch` implicite) : les connecteurs de deux lignes
-                voisines se rejoignent alors exactement, même quand un libellé
-                passe à la ligne et fait grandir la ligne. */}
-            <div className={`relative w-full ${b.total ? "min-h-[3rem]" : "min-h-[2.25rem]"}`}>
-              {/* Rail de fond, discret, à la hauteur de la marque. */}
+            {/* Zone de tracé. Même largeur sur toutes les lignes, donc même
+                échelle : c'est ce qui rend le recul juste. */}
+            <div
+              className={`relative w-full ${b.total ? "min-h-[2.75rem]" : "min-h-[2.25rem]"} ${
+                filet ? "sm:border-t sm:border-[#ECEEF3]" : ""
+              }`}
+            >
+              {/* Rail de fond : il matérialise le CA HT en entier, donc la
+                  référence par rapport à laquelle chaque marche recule. */}
               <div
                 className="absolute inset-x-0 top-1/2 -translate-y-1/2 rounded"
                 style={{ height: epaisseur, backgroundColor: "#F7F8FB" }}
               />
-              {/* Connecteurs : une moitié montante, une moitié descendante,
-                  chacune bornée à sa propre cellule. C'est ce qui rend
-                  l'escalier lisible — sans eux, les barres flottantes
-                  ressemblent à des positions arbitraires. */}
-              {i > 0 && (
-                <span
-                  aria-hidden="true"
-                  className="absolute top-0 h-1/2 w-px"
-                  style={{ left: `${(b.entree / max) * 100}%`, backgroundColor: RAIL }}
-                />
-              )}
-              {i < bars.length - 1 && (
-                <span
-                  aria-hidden="true"
-                  className="absolute top-1/2 h-1/2 w-px"
-                  style={{ left: `${(b.running / max) * 100}%`, backgroundColor: RAIL }}
-                />
-              )}
               <div
                 className="absolute top-1/2 -translate-y-1/2 rounded"
                 style={{
                   left: `${left}%`,
                   width: `${width}%`,
+                  // Plancher en pixels, pas en pourcentage : un petit
+                  // prélèvement reste visible sans que sa position mente.
+                  minWidth: 2,
                   height: epaisseur,
                   // Palier = encre pleine ; prélèvement = laiton ; apport = vert.
                   backgroundColor: b.total ? INK : b.delta < 0 ? BRASS : VALIDE,
@@ -217,13 +209,13 @@ export function Cascade({ steps }: { steps: CascadeStep[] }) {
                 texte (jamais dans la couleur de la donnée). */}
             <span
               className={`self-center whitespace-nowrap text-right tabular-nums ${
-                b.total ? "text-[15px] font-extrabold sm:text-base" : "text-sm font-semibold"
-              }`}
+                filet ? "sm:border-t sm:border-[#ECEEF3]" : ""
+              } ${b.total ? "text-[15px] font-extrabold sm:text-base" : "text-sm font-semibold"}`}
               style={{ color: b.total ? INK : MUTED }}
             >
               {b.total ? eur(b.delta) : `${b.delta < 0 ? "−" : "+"}${eur(Math.abs(b.delta))}`}
             </span>
-          </div>
+          </Fragment>
         );
       })}
     </div>
