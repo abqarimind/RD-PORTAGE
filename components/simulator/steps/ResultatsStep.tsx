@@ -62,6 +62,14 @@ export function ResultatsStep({ onRdv }: { onRdv: (from: string) => void }) {
   const [actuel, portage, optimise] = result.scenarios;
   const ecart = result.economieAnnuelleEur;
   const enGain = ecart > 0;
+  /**
+   * « En transition » n'a pas de situation actuelle à comparer : le scénario
+   * « actuel » y est une projection en micro, pas un existant. Afficher un
+   * écart — même nul — n'aurait aucun sens, et l'invariant anti-zéro (§4.2)
+   * dit qu'il vaut mieux ne rien afficher qu'un zéro creux. On présente donc
+   * le portage seul : ce qui est perçu, le taux de foyer, les leviers.
+   */
+  const comparable = form.status !== "transition";
 
   return (
     <section>
@@ -74,7 +82,16 @@ export function ResultatsStep({ onRdv }: { onRdv: (from: string) => void }) {
       </h1>
 
       {/* L'écart, signé, avec une lecture honnête dans les deux sens. */}
-      {enGain ? (
+      {!comparable ? (
+        <p className="mt-3 text-lg text-[#4A5061]">
+          Voici ce que le portage RD optimisé vous rapporterait :{" "}
+          <span className="text-2xl font-extrabold tabular-nums" style={{ color: VALIDE }}>
+            {eur(optimise.netPerceived)} €
+          </span>{" "}
+          net perçu par an, avantages compris. Vous êtes en transition : il n&rsquo;y a pas de situation actuelle à comparer, nous
+          ne vous en inventons pas une.
+        </p>
+      ) : enGain ? (
         <p className="mt-3 text-lg text-[#4A5061]">
           Vous laissez{" "}
           <span className="text-2xl font-extrabold tabular-nums" style={{ color: VALIDE }}>
@@ -102,8 +119,8 @@ export function ResultatsStep({ onRdv }: { onRdv: (from: string) => void }) {
       )}
 
       <p className="mt-1 text-sm tabular-nums text-[#7A8093]">
-        Tranche marginale (TMI) : {(optimise.marginalRate * 100).toFixed(0)} % · écart entre votre statut actuel et le portage RD
-        optimisé.
+        Tranche marginale (TMI) : {(optimise.marginalRate * 100).toFixed(0)} %
+        {comparable ? " · écart entre votre statut actuel et le portage RD optimisé." : "."}
       </p>
 
       {form.tjmMode === "fourchette" && (
@@ -115,7 +132,7 @@ export function ResultatsStep({ onRdv }: { onRdv: (from: string) => void }) {
         </p>
       )}
 
-      <ScenarioTable rows={[actuel, portage, optimise]} />
+      {comparable && <ScenarioTable rows={[actuel, portage, optimise]} />}
       <CommentCalcule live={live} optimise={optimise} avantagesInclus={avantages.avantagesInclus} cagnotte={form.cagnotte} />
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">

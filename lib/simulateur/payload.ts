@@ -193,6 +193,9 @@ export function buildPayload(
         tauxMoyenImposition: s.averageTaxRate,
         tmi: s.marginalRate,
       })),
+      // « En transition » n'a pas de situation actuelle : le scénario « actuel »
+      // y est une projection en micro, pas un existant. Comparer n'a pas de sens.
+      comparable: form.status !== "transition",
       laisseSurLaTable: ecart,
       laisseSurLaTableSens: ecart > 0 ? "gain" : ecart < 0 ? "perte" : "neutre",
     },

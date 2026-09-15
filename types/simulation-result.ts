@@ -157,7 +157,15 @@ export interface ResultatsPayload {
   /** Les 3 scénarios comparés, dans l'ordre : actuel, portage, optimisé. */
   scenarios: ScenarioPayload[];
   /**
+   * Faux pour un profil sans situation actuelle à comparer (« en
+   * transition »). Les gabarits DOIVENT masquer tout bloc comparatif quand
+   * ce champ est faux : un écart, même nul, n'a aucun sens sans point de
+   * comparaison, et l'afficher violerait l'invariant anti-zéro (§4.2).
+   */
+  comparable: boolean;
+  /**
    * Le « laissé sur la table » : disponible optimisé − disponible actuel.
+   * N'a de sens que si `comparable` est vrai.
    * PEUT ÊTRE NÉGATIF — c'est une décision produit assumée (cf. rapport
    * §BUG-02) : à revenu égal, la micro-entreprise peut rester plus favorable
    * que le portage. Les gabarits doivent traiter les deux signes.

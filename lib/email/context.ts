@@ -41,7 +41,7 @@ export interface BuildArgs {
 export function buildServerPayload(args: BuildArgs): SimulationResultPayload | null {
   const { form } = args;
   const tjm = resolvedTjm(form);
-  if (!(tjm > 0) || !(form.days > 0)) return null;
+  if (!form.status || !(tjm > 0) || !(form.days > 0)) return null;
 
   const cagnotteGross = form.cagnotte === "aucune" ? 0 : CAGNOTTE_PROVIDERS[form.cagnotte].defaultMonthly;
   const live = computePortage({
@@ -53,7 +53,7 @@ export function buildServerPayload(args: BuildArgs): SimulationResultPayload | n
   });
 
   const input: SimulationInput = {
-    status: form.status,
+    status: form.status,  // non nul : vérifié ci-dessus
     tjmOrMonthlyGross: form.status === "salarie_esn" ? Math.round((tjm * form.days) / 1.25) : tjm,
     daysPerYear: form.days * 12,
     household: { maritalStatus: form.situation, children: form.enfants, childrenGardeAlternee: form.gardeAlternee },

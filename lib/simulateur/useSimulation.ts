@@ -39,9 +39,12 @@ export function useSimulation() {
     [tjm, form.days, form.fraisMensuels, cagnotteNetMonthly, form.titresResto],
   );
 
+  // `status` peut être nul tant que l'étape Profil n'est pas franchie ; le
+  // repli n'est utilisé que pour garder un objet typé, jamais pour calculer —
+  // `missing` bloque l'affichage en amont.
   const simInput: SimulationInput = useMemo(
     () => ({
-      status: form.status,
+      status: form.status ?? "freelance_micro",
       tjmOrMonthlyGross: form.status === "salarie_esn" ? Math.round((tjm * form.days) / 1.25) : tjm,
       daysPerYear: form.days * 12,
       household: { maritalStatus: form.situation, children: form.enfants, childrenGardeAlternee: form.gardeAlternee },

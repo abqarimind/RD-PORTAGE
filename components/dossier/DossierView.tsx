@@ -160,6 +160,9 @@ export function DossierView({ payload }: { payload: SimulationResultPayload }) {
       </section>
 
       {/* —————————————— scénarios —————————————— */}
+      {/* Masqué pour un profil sans situation actuelle : le champ vient du
+          contrat de données, aucun écran ne décide seul (§4.3). */}
+      {r.comparable && (
       <section className="mt-6 rounded-3xl border border-[#ECEEF3] bg-white p-6" data-reveal>
         <h2 className="text-lg font-extrabold tracking-tight">Disponible annuel, selon le statut</h2>
         <ScenarioBars
@@ -195,6 +198,7 @@ export function DossierView({ payload }: { payload: SimulationResultPayload }) {
           )}
         </div>
       </section>
+      )}
 
       {/* —————————————— foyer & impôt —————————————— */}
       <section className="mt-6 rounded-3xl border border-[#ECEEF3] bg-white p-6" data-reveal>

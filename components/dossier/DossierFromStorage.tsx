@@ -29,10 +29,11 @@ export function DossierFromStorage() {
     }
     const { form } = state;
     const tjm = resolvedTjm(form);
-    if (!(tjm > 0) || !(form.days > 0)) {
+    if (!form.status || !(tjm > 0) || !(form.days > 0)) {
       setReady(true);
       return;
     }
+    const status = form.status;
 
     const cagnotteGross = form.cagnotte === "aucune" ? 0 : CAGNOTTE_PROVIDERS[form.cagnotte].defaultMonthly;
     const live = computePortage({
@@ -43,8 +44,8 @@ export function DossierFromStorage() {
       mealVouchers: form.titresResto,
     });
     const result = simulate({
-      status: form.status,
-      tjmOrMonthlyGross: form.status === "salarie_esn" ? Math.round((tjm * form.days) / 1.25) : tjm,
+      status,
+      tjmOrMonthlyGross: status === "salarie_esn" ? Math.round((tjm * form.days) / 1.25) : tjm,
       daysPerYear: form.days * 12,
       household: { maritalStatus: form.situation, children: form.enfants, childrenGardeAlternee: form.gardeAlternee },
       fraisReelsAnnual: form.useFraisReels && form.fraisReels > 0 ? form.fraisReels : undefined,

@@ -32,6 +32,16 @@ export function validateInputs(form: FormState): MissingInput[] {
   const missing: MissingInput[] = [];
   const tjm = resolvedTjm(form);
 
+  // Le profil détermine l'intégralité de la comparaison : sans lui, aucun
+  // chiffre n'a de sens (§4.3). Il n'a plus de valeur par défaut.
+  if (!form.status) {
+    missing.push({
+      message: "Votre profil n'est pas renseigné — c'est lui qui détermine tout le calcul.",
+      step: "profil",
+      cta: "Choisir mon profil",
+    });
+  }
+
   if (!Number.isFinite(tjm) || tjm <= 0) {
     missing.push({
       message: "Votre TJM (ou votre fourchette de TJM) n'est pas renseigné.",

@@ -12,6 +12,7 @@
 import type { CagnotteChoice } from "@/config/fiscal-2026";
 import type { CurrentStatus } from "@/lib/fiscal/scenarios";
 import { bracketForValue, findBracket, TJM_BRACKETS, type TjmBracket } from "./brackets";
+import { findSegment, type DiagnosticAnswers } from "@/lib/diagnostic/answers";
 
 /* ————————————————————————— étapes ————————————————————————— */
 
@@ -45,7 +46,14 @@ export const isStep = (v: unknown): v is Step => typeof v === "string" && (STEPS
 export type TjmMode = "exact" | "fourchette";
 
 export interface FormState {
-  status: CurrentStatus;
+  /**
+   * Aucune présélection (§4.3). Le profil détermine l'intégralité du calcul :
+   * il doit être un choix explicite, jamais un défaut hérité. « freelance_micro »
+   * était à la fois la valeur par défaut et le premier élément de la liste, si
+   * bien que le chemin le plus fréquent du simulateur menait au seul résultat
+   * qui dessert le produit. Un parcours ne peut plus avancer sans profil.
+   */
+  status: CurrentStatus | null;
   impatrie: boolean;
   /** Mode de saisie du TJM — mémorisé et restituable dans les deux sens. */
   tjmMode: TjmMode;
@@ -69,7 +77,7 @@ export interface FormState {
 }
 
 export const DEFAULT_FORM: FormState = {
-  status: "freelance_micro",
+  status: null,
   impatrie: false,
   tjmMode: "exact",
   tjmExact: 420,
@@ -122,6 +130,17 @@ export interface SimulatorState {
   simulationId: string;
   /** Horodatage de création de la simulation courante. */
   startedAt: string;
+  /**
+   * Champs préremplis par le diagnostic flash. Sert à les marquer
+   * visuellement (§3.3) : si l'utilisateur ne voit pas que ses réponses ont
+   * été gardées, le bénéfice de les avoir gardées est perdu.
+   */
+  prefilled: { status: boolean; tjm: boolean };
+  /**
+   * Réponse à la 3e question du diagnostic. N'alimente AUCUN calcul :
+   * conservée pour l'analyse et pour moduler la formulation du résultat.
+   */
+  dejaCalcule: string | null;
 }
 
 export function createInitialState(simulationId: string, now = new Date()): SimulatorState {
@@ -133,6 +152,8 @@ export function createInitialState(simulationId: string, now = new Date()): Simu
     leadId: null,
     simulationId,
     startedAt: now.toISOString(),
+    prefilled: { status: false, tjm: false },
+    dejaCalcule: null,
   };
 }
 
@@ -141,6 +162,7 @@ export function createInitialState(simulationId: string, now = new Date()): Simu
 export type SimulatorAction =
   | { type: "set_field"; key: keyof FormState; value: FormState[keyof FormState] }
   | { type: "set_profile"; status: CurrentStatus; impatrie: boolean }
+  | { type: "apply_diagnostic"; answers: DiagnosticAnswers }
   | { type: "set_tjm_mode"; mode: TjmMode }
   | { type: "set_tjm_exact"; value: number }
   | { type: "set_tjm_bracket"; id: string }
@@ -158,8 +180,14 @@ export function reducer(state: SimulatorState, action: SimulatorAction): Simulat
       return { ...state, form };
     }
 
+    // Choisir soi-même lève la marque « prérempli » : le champ n'est plus
+    // hérité du diagnostic, il est assumé par l'utilisateur.
     case "set_profile":
-      return { ...state, form: { ...state.form, status: action.status, impatrie: action.impatrie } };
+      return {
+        ...state,
+        form: { ...state.form, status: action.status, impatrie: action.impatrie },
+        prefilled: { ...state.prefilled, status: false },
+      };
 
     /**
      * Basculer de mode ne détruit JAMAIS l'autre saisie (BUG-02) :
@@ -180,10 +208,43 @@ export function reducer(state: SimulatorState, action: SimulatorAction): Simulat
     }
 
     case "set_tjm_exact":
-      return { ...state, form: { ...state.form, tjmMode: "exact", tjmExact: action.value } };
+      return {
+        ...state,
+        form: { ...state.form, tjmMode: "exact", tjmExact: action.value },
+        prefilled: { ...state.prefilled, tjm: false },
+      };
 
     case "set_tjm_bracket":
-      return { ...state, form: { ...state.form, tjmMode: "fourchette", tjmBracketId: action.id } };
+      return {
+        ...state,
+        form: { ...state.form, tjmMode: "fourchette", tjmBracketId: action.id },
+        prefilled: { ...state.prefilled, tjm: false },
+      };
+
+    /**
+     * Applique le relais du diagnostic flash. Préremplir n'est pas
+     * verrouiller : les champs restent modifiables partout. Une réponse
+     * absente ou invalide est simplement ignorée — jamais d'écran cassé.
+     */
+    case "apply_diagnostic": {
+      const segment = findSegment(action.answers.segment);
+      const bracket = findBracket(action.answers.tjmBracketId);
+      const form = { ...state.form };
+      if (segment) {
+        form.status = segment.status;
+        form.impatrie = false;
+      }
+      if (bracket) {
+        form.tjmMode = "fourchette";
+        form.tjmBracketId = bracket.id;
+      }
+      return {
+        ...state,
+        form,
+        prefilled: { status: Boolean(segment), tjm: Boolean(bracket) },
+        dejaCalcule: action.answers.dejaCalcule ?? state.dejaCalcule,
+      };
+    }
 
     case "go_to": {
       const visited = state.visited.includes(action.step) ? state.visited : [...state.visited, action.step];
