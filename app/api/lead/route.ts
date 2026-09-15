@@ -128,10 +128,26 @@ export async function POST(req: NextRequest) {
     });
 
     if (payload) {
-      // Le lien du dossier est signé et porte le récapitulatif : il reste
-      // ouvrable depuis l'email, sur n'importe quel appareil, sans stockage.
-      dossierLink = dossierUrl(payload, baseUrl);
-      payload.meta.dossierUrl = dossierLink;
+      /**
+       * Le lien du dossier est signé et porte le récapitulatif : il reste
+       * ouvrable depuis l'email, sur n'importe quel appareil, sans stockage.
+       *
+       * Sa signature est isolée dans son propre try : DOSSIER_SECRET est
+       * bloquant en production, et sans cette isolation son absence faisait
+       * échouer TOUT le bloc — donc plus aucun email n'était envoyé. L'email
+       * est le livrable principal ; un lien manquant le dégrade, il ne doit
+       * pas le supprimer.
+       */
+      try {
+        dossierLink = dossierUrl(payload, baseUrl);
+        payload.meta.dossierUrl = dossierLink;
+      } catch (err) {
+        alertes.push("le lien de dossier n'a pas pu être signé (DOSSIER_SECRET)");
+        console.error(
+          "[lead] lien de dossier non signé — l'email part sans lien",
+          JSON.stringify({ leadId: lead.lead_id, error: String(err) }),
+        );
+      }
 
       const report = await sendRecap(payload, { alerteInterne: alertes[0] });
       emailSent = report.lead.ok;
