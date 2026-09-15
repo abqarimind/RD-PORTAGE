@@ -71,9 +71,12 @@ function SimulatorShell() {
         <div className="mb-5 rounded-2xl px-4 py-3" style={{ backgroundColor: "#E7F6EE" }}>
           <p className="text-sm font-semibold">On reprend là où vous vous êtes arrêté.</p>
           <p className="mt-0.5 text-sm text-[#4A5061]">
-            {[state.prefilled.status && "votre profil", state.prefilled.tjm && "votre TJM"].filter(Boolean).join(" et ")} {" "}
-            {state.prefilled.status && state.prefilled.tjm ? "sont repris" : "est repris"} de votre diagnostic — modifiables à tout
-            moment.
+            {state.prefilled.status && state.prefilled.tjm
+              ? "Votre profil et votre TJM sont repris de votre diagnostic"
+              : state.prefilled.status
+                ? "Votre profil est repris de votre diagnostic"
+                : "Votre TJM est repris de votre diagnostic"}{" "}
+            — modifiable{state.prefilled.status && state.prefilled.tjm ? "s" : ""} à tout moment.
           </p>
         </div>
       )}
