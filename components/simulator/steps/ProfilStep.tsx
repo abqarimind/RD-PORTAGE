@@ -63,7 +63,7 @@ export function ProfilStep() {
                 trackEvent("sim_started", { profile: p.value });
                 goTo("activite");
               }}
-              className={`w-full rounded-2xl border px-4 py-4 text-left transition-all duration-150 hover:-translate-y-0.5 ${
+              className={`w-full rounded-2xl border px-4 py-4 text-left transition-[background-color,border-color,color,transform,box-shadow] duration-150 hover:-translate-y-0.5 ${
                 active ? "border-transparent bg-[#0B0D12] text-white" : "border-[#E2E5EE] bg-white hover:border-[#B08D57]"
               }`}
               style={active || !state.prefilled.status ? undefined : { borderColor: BRASS }}

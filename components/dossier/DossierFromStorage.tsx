@@ -72,7 +72,7 @@ export function DossierFromStorage() {
 
   if (!ready) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16">
+      <div className="mx-auto max-w-reading px-4 py-16">
         <div className="h-8 w-2/3 animate-pulse rounded bg-[#F0F1F5]" />
         <div className="mt-6 h-40 animate-pulse rounded-3xl bg-[#F5F6F9]" />
       </div>
@@ -81,7 +81,7 @@ export function DossierFromStorage() {
 
   if (!payload) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-20 text-center">
+      <div className="mx-auto max-w-form px-4 py-20 text-center">
         <h1 className="text-2xl font-extrabold tracking-tight">Aucun dossier à afficher</h1>
         <p className="mt-3 text-base text-[#4A5061]">
           Ce lien ne contient pas de simulation, et aucune simulation récente n&rsquo;est enregistrée sur cet appareil.

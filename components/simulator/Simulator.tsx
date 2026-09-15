@@ -55,7 +55,7 @@ function SimulatorShell() {
   const previous = previousStep(state.step);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8" style={{ fontFamily: SANS, color: INK }}>
+    <div className="mx-auto max-w-form px-4 py-8" style={{ fontFamily: SANS, color: INK }}>
       <ProgressBar current={state.step} />
 
       {/* Retour d'interface — strictement équivalent au retour natif du
@@ -125,23 +125,39 @@ function ProgressBar({ current }: { current: Step }) {
         ))}
       </div>
       <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#F0F1F5]">
+        {/* Animé en transform et non en width : animer une largeur force un
+            recalcul de mise en page à chaque image. */}
         <div
-          className="h-1.5 rounded-full transition-[width] duration-300"
-          style={{ width: `${((shown + 1) / PROGRESS_STEPS.length) * 100}%`, backgroundColor: BRASS }}
+          className="h-1.5 w-full origin-left rounded-full transition-transform duration-300"
+          style={{ transform: `scaleX(${(shown + 1) / PROGRESS_STEPS.length})`, backgroundColor: BRASS }}
         />
       </div>
     </div>
   );
 }
 
+/**
+ * Squelette calé sur l'étape Profil, la première affichée : mêmes repères
+ * d'en-tête, même nombre d'options, mêmes hauteurs. Un squelette plus court
+ * que le contenu ferait grandir la page à l'hydratation, et ce décalage se
+ * produit précisément au moment où l'utilisateur va cliquer.
+ */
 function SimulatorSkeleton() {
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8" style={{ fontFamily: SANS }}>
-      <div className="h-1.5 w-full animate-pulse rounded-full bg-[#F0F1F5]" />
-      <div className="mt-8 h-8 w-2/3 animate-pulse rounded bg-[#F0F1F5]" />
-      <div className="mt-6 space-y-3">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-16 animate-pulse rounded-2xl bg-[#F5F6F9]" />
+    <div className="mx-auto max-w-form px-4 py-8" style={{ fontFamily: SANS }} aria-hidden>
+      <div className="mb-6">
+        <div className="flex justify-between">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-3 w-14 animate-pulse rounded bg-[#F0F1F5]" />
+          ))}
+        </div>
+        <div className="mt-2 h-1.5 w-full rounded-full bg-[#F0F1F5]" />
+      </div>
+      <div className="h-8 w-1/2 animate-pulse rounded bg-[#F0F1F5]" />
+      <div className="mt-1 h-4 w-3/4 animate-pulse rounded bg-[#F5F6F9]" />
+      <div className="mt-6 space-y-2.5">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-[74px] animate-pulse rounded-2xl bg-[#F5F6F9]" />
         ))}
       </div>
     </div>

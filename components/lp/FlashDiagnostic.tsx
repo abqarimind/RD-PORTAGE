@@ -73,13 +73,32 @@ export function FlashDiagnostic({ angle, simulateurHref: base = "/simulateur" }:
   }
 
   if (hydrating) {
+    // Le squelette reprend EXACTEMENT la structure de la première question :
+    // en-tête, barre de progression, titre, quatre options, mention. Un
+    // squelette plus court que le contenu qu'il annonce fait grandir la page
+    // à l'hydratation, et ce décalage se paie sur le CTA au moment du clic.
     return (
-      <div className="mx-auto w-full max-w-md rounded-3xl bg-white p-5 shadow-xl ring-1 ring-[#ECEEF3] md:p-6" style={{ fontFamily: SANS }}>
-        <div className="h-4 w-32 animate-pulse rounded bg-[#F0F1F5]" />
-        <div className="mt-4 space-y-2">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-12 animate-pulse rounded-xl bg-[#F5F6F9]" />
-          ))}
+      <div
+        className="mx-auto w-full max-w-md rounded-3xl bg-white p-5 text-left shadow-xl ring-1 ring-[#ECEEF3] md:p-6"
+        style={{ fontFamily: SANS }}
+        aria-hidden
+      >
+        <div className="flex items-center justify-between">
+          <div className="h-4 w-28 animate-pulse rounded bg-[#F0F1F5]" />
+          <div className="h-4 w-8 animate-pulse rounded bg-[#F0F1F5]" />
+        </div>
+        <div className="mt-2 h-1.5 w-full rounded-full bg-[#F0F1F5]" />
+        <div className="mt-4">
+          <div className="h-7 w-3/4 animate-pulse rounded bg-[#F0F1F5]" />
+          <div className="mt-3 grid grid-cols-1 gap-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-12 animate-pulse rounded-xl bg-[#F5F6F9]" />
+            ))}
+          </div>
+        </div>
+        <div className="mt-4 space-y-1">
+          <div className="h-3 w-full animate-pulse rounded bg-[#F5F6F9]" />
+          <div className="h-3 w-2/3 animate-pulse rounded bg-[#F5F6F9]" />
         </div>
       </div>
     );
@@ -100,7 +119,11 @@ export function FlashDiagnostic({ angle, simulateurHref: base = "/simulateur" }:
             <p className="text-xs font-bold tabular-nums text-[#7A8093]">{step} / 3</p>
           </div>
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#F0F1F5]">
-            <div className="h-1.5 rounded-full transition-[width] duration-300" style={{ width: `${(step / 3) * 100}%`, backgroundColor: BRASS }} />
+            {/* transform plutôt que width : pas de recalcul de mise en page. */}
+            <div
+              className="h-1.5 w-full origin-left rounded-full transition-transform duration-300"
+              style={{ transform: `scaleX(${step / 3})`, backgroundColor: BRASS }}
+            />
           </div>
 
           {step === 1 && (
@@ -235,7 +258,7 @@ function Choices({
             key={o.id}
             type="button"
             onClick={() => onPick(o.id)}
-            className="min-h-[48px] rounded-xl border border-[#E2E5EE] bg-white px-4 py-3 text-left text-base font-semibold text-[#0B0D12] transition-all duration-150 hover:-translate-y-0.5 hover:border-[#B08D57] hover:shadow-sm"
+            className="min-h-[48px] rounded-xl border border-[#E2E5EE] bg-white px-4 py-3 text-left text-base font-semibold text-[#0B0D12] transition-[background-color,border-color,color,transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:border-[#B08D57] hover:shadow-sm"
           >
             {o.label}
           </button>
