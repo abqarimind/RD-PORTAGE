@@ -11,6 +11,7 @@
 import type { SimulationResultPayload } from "@/types/simulation-result";
 import { button, esc, eur, eurSigned, h2, layout, pct, row, siteDomain, table, MUTED } from "./layout";
 import { rawBlock } from "./diagnostic";
+import { EMAIL_ENTREPRISE } from "@/config/contact";
 
 /** Corps partagé E1 / E2 — une seule rédaction, deux destinataires. */
 function corps(p: SimulationResultPayload, pourInterne: boolean): string {
@@ -67,6 +68,13 @@ ${accroche}
   )}</strong> · TMI ${esc((r.tmi * 100).toFixed(0))} %.</p>
 
 ${p.meta.dossierUrl ? button(p.meta.dossierUrl, "Ouvrir mon dossier complet") : ""}
+${
+  pourInterne
+    ? ""
+    : `<p style="margin:0 0 8px 0;font-size:13px;line-height:1.6;color:${MUTED};">Pour recevoir la suite sans passer par les spams, ajoutez ${esc(
+        EMAIL_ENTREPRISE,
+      )} à vos contacts. Une question ? Répondez simplement à cet email.</p>`
+}
 
 ${h2("Votre situation")}
 ${table(

@@ -23,9 +23,9 @@ import { useSimulator } from "@/lib/simulateur/store";
 import { useSimulation } from "@/lib/simulateur/useSimulation";
 import { trackEvent } from "@/lib/tracking/events";
 import { CountUp } from "@/components/lp/CountUp";
+import { CTA_CONSEILLER, PHONE_LABEL, RDV_URL } from "@/config/contact";
 import { ALERTE, BRASS, eur, GHOST_BTN, OUTLINE_BTN, PRIMARY_BTN, pct, VALIDE } from "../ui";
 
-const RDV_URL = process.env.NEXT_PUBLIC_RDV_URL ?? "tel:+33632988723";
 
 export function ResultatsStep({ onRdv }: { onRdv: (from: string) => void }) {
   const { state, goTo, reset } = useSimulator();
@@ -140,9 +140,12 @@ export function ResultatsStep({ onRdv }: { onRdv: (from: string) => void }) {
           Recevoir mon dossier complet
         </button>
         <a href={RDV_URL} onClick={() => onRdv("sim_result")} className={OUTLINE_BTN}>
-          Valider ce chiffre — appeler Ridha
+          {CTA_CONSEILLER}
         </a>
       </div>
+      <p className="mt-2 text-sm text-[#7A8093]">
+        Un conseiller RD Portage vous répond au <strong className="tabular-nums text-[#0B0D12]">{PHONE_LABEL}</strong>.
+      </p>
 
       {/* §4.4 — reprise et réinitialisation, explicites toutes les deux. */}
       <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-[#ECEEF3] pt-5">

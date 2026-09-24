@@ -10,6 +10,7 @@
  * pouvait l'attraper.
  */
 import type { SimulationResultPayload } from "@/types/simulation-result";
+import { groupFr } from "@/lib/format";
 
 export interface CascadeStep {
   label: string;
@@ -40,7 +41,7 @@ export interface CascadeBar {
   running: number;
 }
 
-const eur = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`;
+const eur = (n: number) => `${groupFr(n)}\u00A0€`;
 
 /** Tolérance d'arrondi : chaque montant du contrat est déjà arrondi à l'euro. */
 const TOLERANCE = 1;

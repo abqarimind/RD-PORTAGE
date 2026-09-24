@@ -13,6 +13,8 @@ let reponse: (args: SendArgs) => SendResult = () => ({ ok: true, id: "ok" });
 
 vi.mock("@/lib/email/client", () => ({
   mailFrom: () => "RD Portage <test@example.com>",
+  mailFromInterne: () => "Simulateur RD Portage <simulateur@example.com>",
+  mailReplyTo: () => "marketing@rdportage.com",
   mailInternalTo: () => "marketing@rdportage.com",
   sendEmail: async (args: SendArgs) => {
     envois.push(args);
@@ -87,6 +89,20 @@ describe("E3 + E4", () => {
     await sendDemandeDiagnostic(makePayload());
     const inscription = envois.map((e) => e.idempotencyKey);
     expect(recap.some((k) => inscription.includes(k))).toBe(false);
+  });
+
+  it("« Répondre » depuis la boîte du prospect écrit à l'entreprise (D5)", async () => {
+    await sendRecap(makePayload());
+    expect(envois[0].replyTo).toBe("marketing@rdportage.com");
+    envois.length = 0;
+    await sendDemandeDiagnostic(makePayload());
+    expect(envois[0].replyTo).toBe("marketing@rdportage.com");
+  });
+
+  it("les copies internes partent d'un expéditeur distinct de leur destinataire", async () => {
+    await sendRecap(makePayload());
+    expect(envois[0].from).toBeUndefined();
+    expect(envois[1].from).toBe("Simulateur RD Portage <simulateur@example.com>");
   });
 
   it("la notification interne permet de répondre directement au lead", async () => {

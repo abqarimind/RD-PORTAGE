@@ -14,6 +14,7 @@
  *    moyen de saisie.
  */
 import { useEffect, useId, useState } from "react";
+import { groupFr } from "@/lib/format";
 
 export const PEACH = "#FFF1DE";
 export const MINT = "#E7F6EE";
@@ -23,10 +24,10 @@ export const VALIDE = "#2F6B4F";
 export const ALERTE = "#B3261E";
 export const SANS = "'Manrope','IBM Plex Sans',sans-serif";
 
-export const eur = (n: number) => `${Math.round(n).toLocaleString("fr-FR")}`;
+export const eur = (n: number) => groupFr(n);
 export const pct = (n: number) => `${(n * 100).toFixed(1).replace(".", ",")} %`;
 /** Montant signé, pour tout ce qui peut être négatif (l'écart §BUG-02). */
-export const eurSigned = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(Math.round(n)).toLocaleString("fr-FR")}`;
+export const eurSigned = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${groupFr(Math.abs(n))}`;
 
 export const PRIMARY_BTN =
   "inline-flex min-h-[48px] items-center justify-center rounded-full bg-[#0B0D12] px-6 py-3 text-center text-base font-bold text-white transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-60";
@@ -145,7 +146,7 @@ export function AmountInput({
             autoComplete="off"
             enterKeyHint="done"
             aria-label={label}
-            className="sim-input pr-9 text-right tabular-nums"
+            className="sim-input sim-input--suffix text-right tabular-nums"
             value={draft}
             onChange={(e) => {
               setDraft(e.target.value);
@@ -265,6 +266,16 @@ export function SimulatorStyles() {
         font-size: 16px;
         line-height: 1.4;
         color: #0b0d12;
+      }
+      /*
+       * Champ avec unité (€, j) posée en absolu à droite. Le retrait doit
+       * vivre ICI, avec une spécificité supérieure à .sim-input : un utilitaire
+       * Tailwind (l'ancien pr-9) était écrasé par le « padding » ci-dessus,
+       * injecté après la feuille Tailwind — le chiffre passait sous le « € »
+       * (retour client : « 500€ » illisible).
+       */
+      .sim-input.sim-input--suffix {
+        padding-right: 2.5rem;
       }
       .sim-input:focus {
         outline: none;

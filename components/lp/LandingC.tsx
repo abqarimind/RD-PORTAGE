@@ -24,6 +24,8 @@ import { FlashDiagnostic } from "./FlashDiagnostic";
 import { MetaViewContent } from "./MetaViewContent";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Beam, Reveal, SpotCard } from "./motion";
+import { groupFr } from "@/lib/format";
+import { CTA_CONSEILLER, PHONE_E164, PHONE_LABEL } from "@/config/contact";
 
 export type Angle = "a" | "b" | "c";
 
@@ -37,14 +39,12 @@ const BRASS = "#B08D57";
 const SANS = "'Manrope','IBM Plex Sans',sans-serif";
 const SERIF = SANS;
 
-const PHONE = "+33632988723";
-const PHONE_LABEL = "06 32 98 87 23";
 
 /* Reference case computed by the real fiscal engine — not a marketing number. */
 const REF = computePortage({ tjm: 420, days: 20, ndf: 500, cagnotteMay: 1570, mealVouchers: true });
 const PCT = Math.round(REF.restitutionRate * 100);
 
-const eur = (n: number) => n.toLocaleString("fr-FR");
+const eur = (n: number) => groupFr(n);
 
 function Scribble() {
   return (
@@ -262,7 +262,7 @@ function Method() {
   const steps: [string, string, string, string][] = [
     ["01", "Diagnostic flash", "Trois questions, une fourchette immédiate — sans email.", PEACH],
     ["02", "Simulateur foyer", "Le seul calcul qui intègre enfants, garde alternée, frais réels, PER — plafonds légaux inclus.", LILAC],
-    ["03", "Diagnostic 30 min", "Vous validez votre chiffre avec Ridha. Proposition ferme, signature possible sous 48 h.", MINT],
+    ["03", "Diagnostic 30 min", "Vous validez votre chiffre avec votre conseiller. Proposition ferme, signature possible sous 48 h.", MINT],
   ];
   return (
     <section id="methode" className="border-y border-[#ECEEF3] bg-[#FAFBFD]">
@@ -405,16 +405,16 @@ function PricingCta() {
             <a href="#diagnostic" className={PRIMARY_BTN}>
               Calculer mon vrai taux — 2 à 3 min
             </a>
-            {/* Secondary CTA → call Ridha (Contact event). */}
+            {/* Secondary CTA → appel de l'équipe (Contact event). */}
             <a
-              href={`tel:${PHONE}`}
+              href={`tel:${PHONE_E164}`}
               onClick={() => {
                 trackEvent("rdv_clicked", { from: "lp_pricing" });
                 metaContact({ from: "lp_pricing" });
               }}
               className={OUTLINE_BTN}
             >
-              Appeler Ridha — {PHONE_LABEL}
+              {CTA_CONSEILLER} — {PHONE_LABEL}
             </a>
           </div>
         </SpotCard>
@@ -489,14 +489,14 @@ function HeroVsl({ angle }: { angle: Angle }) {
           Calculer mon vrai taux
         </a>
         <a
-          href={`tel:${PHONE}`}
+          href={`tel:${PHONE_E164}`}
           onClick={() => {
             trackEvent("rdv_clicked", { from: "lp_vsl_hero" });
             metaContact({ from: "lp_vsl_hero" });
           }}
           className={OUTLINE_BTN}
         >
-          Appeler Ridha
+          {CTA_CONSEILLER}
         </a>
       </div>
       {copy.proof && (

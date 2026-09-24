@@ -9,6 +9,8 @@
  * (types/simulation-result.ts) est destiné à durer.
  */
 
+import { groupFr } from "@/lib/format";
+
 export const INK = "#0B0D12";
 export const BRASS = "#B08D57";
 export const MUTED = "#7A8093";
@@ -24,9 +26,9 @@ export function esc(value: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
-export const eur = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`;
+export const eur = (n: number) => `${groupFr(n)}\u00A0€`;
 export const eurSigned = (n: number) =>
-  `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(Math.round(n)).toLocaleString("fr-FR")} €`;
+  `${n > 0 ? "+" : n < 0 ? "−" : ""}${groupFr(Math.abs(n))}\u00A0€`;
 export const pct = (n: number) => `${(n * 100).toFixed(1).replace(".", ",")} %`;
 
 export interface LayoutArgs {

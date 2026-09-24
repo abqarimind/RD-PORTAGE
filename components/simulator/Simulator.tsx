@@ -22,8 +22,8 @@ import { ProfilStep } from "./steps/ProfilStep";
 import { InscriptionStep } from "./steps/InscriptionStep";
 import { ResultatsStep } from "./steps/ResultatsStep";
 import { BRASS, GHOST_BTN, SANS, SimulatorStyles, INK } from "./ui";
+import { RDV_URL } from "@/config/contact";
 
-const RDV_URL = process.env.NEXT_PUBLIC_RDV_URL ?? "tel:+33632988723";
 
 export function Simulator() {
   return (

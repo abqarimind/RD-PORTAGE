@@ -7,11 +7,12 @@
  * final value when the user prefers reduced motion.
  */
 import { useEffect, useRef, useState } from "react";
+import { groupFr } from "@/lib/format";
 
 export function CountUp({
   value,
   durationMs = 1400,
-  format = (n: number) => Math.round(n).toLocaleString("fr-FR"),
+  format = (n: number) => groupFr(n),
   className,
 }: {
   value: number;

@@ -41,16 +41,17 @@ export function assertDossierSecret(): void {
 let mailWarned = false;
 export function warnIfMailAddressesCollide(): void {
   if (mailWarned) return;
-  const from = process.env.MAIL_FROM ?? "";
+  // Ce sont les copies internes qui vont de l'expéditeur interne vers MAIL_INTERNAL_TO.
+  const from = process.env.MAIL_FROM_INTERNE || process.env.MAIL_FROM || "";
   const to = process.env.MAIL_INTERNAL_TO ?? "";
   if (!from || !to) return;
   const address = (v: string) => (v.match(/<([^>]+)>/)?.[1] ?? v).trim().toLowerCase();
   if (address(from) === address(to)) {
     mailWarned = true;
     console.error(
-      "[email] MAIL_FROM et MAIL_INTERNAL_TO sont la MÊME adresse " +
+      "[email] L'expéditeur des copies internes (MAIL_FROM_INTERNE, à défaut MAIL_FROM) et MAIL_INTERNAL_TO sont la MÊME adresse " +
         `(${address(from)}). Les copies internes risquent d'être filtrées ou repliées par le client mail. ` +
-        "Utiliser un expéditeur distinct sur le même domaine, par exemple simulateur@rdportage.com.",
+        "Poser MAIL_FROM_INTERNE sur un expéditeur distinct du même domaine, par exemple simulateur@rdportage.com.",
     );
   }
 }

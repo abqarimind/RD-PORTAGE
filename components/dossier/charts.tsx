@@ -26,6 +26,7 @@
  */
 import { Fragment, useEffect, useRef } from "react";
 import { buildCascadeBars, type CascadeStep, type PartagePart } from "@/lib/dossier/breakdown";
+import { groupFr } from "@/lib/format";
 
 export type { CascadeStep, PartagePart };
 
@@ -37,7 +38,7 @@ const INK = "#0B0D12";
 const MUTED = "#7A8093";
 const GRID = "#ECEEF3";
 
-const eur = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`;
+const eur = (n: number) => `${groupFr(n)}\u00A0€`;
 const part = (n: number, total: number) => (total > 0 ? `${Math.round((n / total) * 100)} %` : "—");
 
 /* ————————————————— où va le CA (part-à-tout, en emphase) ————————————————— */
