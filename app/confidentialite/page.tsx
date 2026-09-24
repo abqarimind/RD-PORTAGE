@@ -1,16 +1,18 @@
 import Link from "next/link";
-import { SiteFooter } from "@/components/landing/sections";
+import { SiteFooter } from "@/components/SiteFooter";
+
+const SANS = "'Manrope','IBM Plex Sans',sans-serif";
 
 export const metadata = { title: "Politique de confidentialité — RD Portage" };
 
 export default function Confidentialite() {
   return (
-    <main className="bg-creme">
+    <main className="bg-white" style={{ fontFamily: SANS, color: "#0B0D12" }}>
       <div className="mx-auto max-w-2xl px-4 py-16">
-        <Link href="/" className="inline-flex min-h-[44px] items-center text-sm text-encre/60 underline">← Retour</Link>
-        <h1 className="display mt-4 text-3xl text-encre">Politique de confidentialité</h1>
-        <p className="mt-1 text-xs text-encre/50">Version privacy-2026-06</p>
-        <div className="mt-6 space-y-4 text-sm leading-relaxed text-encre/90">
+        <Link href="/" className="inline-flex min-h-[44px] items-center text-sm text-[#7A8093] underline">← Retour</Link>
+        <h1 className="mt-4 text-3xl font-extrabold tracking-tight">Politique de confidentialité</h1>
+        <p className="mt-1 text-xs text-[#9aa0b0]">Version privacy-2026-06</p>
+        <div className="mt-6 space-y-4 text-sm leading-relaxed text-[#4A5061]">
           <p>
             <strong>Données collectées :</strong> prénom, email, téléphone (optionnel), réponses de simulation
             (statut, revenus, composition du foyer, optimisations) et données d&rsquo;attribution marketing

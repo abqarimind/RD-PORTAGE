@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Simulator } from "@/components/simulator/Simulator";
+import { SiteFooter } from "@/components/SiteFooter";
 
 export const metadata: Metadata = {
   title: "Simulateur IR foyer — RD Portage",
@@ -24,22 +25,9 @@ export default function SimulateurPage() {
 
       <Simulator />
 
-      <footer className="mt-8 border-t border-[#ECEEF3]">
-        <div className="mx-auto max-w-page px-4 py-8 text-xs leading-relaxed text-[#7A8093]">
-          <p>RD Portage — 1 rue George Stephenson, 78180 Montigny-le-Bretonneux · RCS Versailles 912 888 013 · +33 1 71 49 71 57</p>
-          <p className="mt-1">
-            <span className="flex flex-wrap items-center gap-x-3">
-              <Link href="/mentions-legales" className="inline-flex min-h-[44px] items-center underline">
-                Mentions légales
-              </Link>
-              <Link href="/confidentialite" className="inline-flex min-h-[44px] items-center underline">
-                Confidentialité
-              </Link>
-            </span>
-            Simulation à valeur indicative — ne constitue pas un conseil fiscal personnalisé.
-          </p>
-        </div>
-      </footer>
+      <div className="mt-8">
+        <SiteFooter />
+      </div>
     </main>
   );
 }

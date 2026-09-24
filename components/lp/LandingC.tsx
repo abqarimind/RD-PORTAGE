@@ -15,7 +15,6 @@
  * figure/testimonial is a marked placeholder, never shipped as fact.
  */
 import Image from "next/image";
-import Link from "next/link";
 import { computePortage } from "@/lib/fiscal/portage";
 import { trackEvent } from "@/lib/tracking/events";
 import { metaContact } from "@/lib/tracking/meta";
@@ -23,6 +22,7 @@ import { DiagnosticProvider } from "@/lib/diagnostic/store";
 import { CountUp } from "./CountUp";
 import { FlashDiagnostic } from "./FlashDiagnostic";
 import { MetaViewContent } from "./MetaViewContent";
+import { SiteFooter } from "@/components/SiteFooter";
 import { Beam, Reveal, SpotCard } from "./motion";
 
 export type Angle = "a" | "b" | "c";
@@ -423,24 +423,6 @@ function PricingCta() {
   );
 }
 
-function Footer() {
-  return (
-    <footer className="border-t border-[#ECEEF3]">
-      <div className="mx-auto max-w-page px-4 py-8 text-xs leading-relaxed text-[#7A8093]">
-        <p>RD Portage — 1 rue George Stephenson, 78180 Montigny-le-Bretonneux · RCS Versailles 912 888 013 · +33 1 71 49 71 57</p>
-        <p className="mt-1 flex flex-wrap items-center gap-x-3">
-          <Link href="/mentions-legales" className="inline-flex min-h-[44px] items-center underline">
-            Mentions légales
-          </Link>
-          <Link href="/confidentialite" className="inline-flex min-h-[44px] items-center underline">
-            Confidentialité
-          </Link>
-        </p>
-        <p>Simulation à valeur indicative — ne constitue pas un conseil fiscal personnalisé.</p>
-      </div>
-    </footer>
-  );
-}
 
 /* —————————————————————————— VSL variant —————————————————————————— */
 
@@ -587,7 +569,7 @@ export function LandingC({
         <Atarhib />
         <SocialProof />
         <PricingCta />
-        <Footer />
+        <SiteFooter />
         <MetaViewContent contentName={`lp_${angle}_${variant}`} />
         <Styles />
       </main>
