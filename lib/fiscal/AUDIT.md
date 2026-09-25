@@ -30,7 +30,7 @@ disponible, rapprocher chaque écart ci-dessous d'une ligne de code précise.
 | 1.5 | **Décote** ignorée (sur-imposition des petits revenus) | formule 897/1 484 € − 45,25 % | cas 2, 8 |
 | 1.6 | **PER déduit sans plafond** (10 % des revenus, max 37 680 €) | `perDeduction` | cas 5 |
 | 1.7 | Abattement 10 % **sans plancher (504 €) ni plafond (14 556 €)** | `salaryAfterExpenses` | cas 3 |
-| 1.8 | NDF acceptées **au-delà de 30 % du CA** (limite du guide des frais RD) | cap dans `computePortage` | regression NDF |
+| 1.8 | NDF acceptées **au-delà de 30 % du salaire brut** (règle interne RD — corrigée le 25/09 : la base était le CA à tort, retours #4/#42) | cap en forme fermée dans `computePortage` | `retours-2509.test.ts` |
 | 1.9 | Dons : taux unique au lieu de 75 % (≤1 000 €) puis 66 % | `DONS_2026` | cas 7 |
 
 ## 2. Écarts de conception relevés dans le classeur de référence lui-même
