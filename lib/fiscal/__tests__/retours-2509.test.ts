@@ -80,3 +80,12 @@ describe("#28 — le taux de restitution dit quelle part est en avantages", () =
     expect(live.benefitsRate).toBeLessThan(live.restitutionRate);
   });
 });
+
+describe("#8 — Freelance : la structure oriente le calcul", () => {
+  it("micro et société ne donnent pas la même situation actuelle", () => {
+    const micro = simulate(buildSimInput(form({ status: "freelance_micro" }), 520, "freelance_micro"));
+    const sasu = simulate(buildSimInput(form({ status: "freelance_sasu" }), 520, "freelance_sasu"));
+    expect(sasu.scenarios[0].details.fraisComptables).toBeGreaterThan(0);
+    expect(sasu.scenarios[0].netPerceived).not.toBe(micro.scenarios[0].netPerceived);
+  });
+});

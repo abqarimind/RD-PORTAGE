@@ -127,6 +127,13 @@ export const IMPATRIE_SOURCE: RateSource = {
 export const MICRO_BNC_2026 = {
   abattement: 0.34,
   cotisations: 0.261,
+  /** Plafond de CA annuel HT encaissé, prestations de services, 2026-2028 (#9). */
+  plafondCa: 83_600,
+  plafondSource: {
+    label: "URSSAF — seuils micro-entreprise 2026 (prestations de services : 83 600 €)",
+    url: "https://www.autoentrepreneur.urssaf.fr/portail/accueil/sinformer-sur-le-statut/toutes-les-actualites/2026--modification-des-seuils-de.html",
+    checkedAt: "2026-09-25",
+  } as RateSource,
   source: {
     label: "Micro-BNC 2026 — abattement 34 %, cotisations ~26,1 %",
     url: "https://entreprendre.service-public.gouv.fr/vosdroits/F36232",

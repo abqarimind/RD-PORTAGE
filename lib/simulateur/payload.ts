@@ -35,8 +35,10 @@ export function profilOf(form: FormState): { id: ProfilUtilisateur; label: strin
       return { id: "salarie_esn", label: "Salarié en ESN" };
     case "transition":
       return { id: "reconversion", label: "En reconversion / transition" };
+    case "freelance_sasu":
+      return { id: "consultant_freelance", label: "Freelance (société SASU / EURL)" };
     default:
-      return { id: "consultant_freelance", label: "Consultant freelance" };
+      return { id: "consultant_freelance", label: "Freelance (micro-entreprise)" };
   }
 }
 

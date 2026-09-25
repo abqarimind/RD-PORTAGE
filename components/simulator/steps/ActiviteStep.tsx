@@ -14,7 +14,7 @@
  * tous deux de useSimulation(). Décocher un avantage met à jour le libellé
  * ET le montant, parce qu'ils lisent le même état.
  */
-import { CAGNOTTE_PROVIDERS, type CagnotteChoice } from "@/config/fiscal-2026";
+import { CAGNOTTE_PROVIDERS, MICRO_BNC_2026, type CagnotteChoice } from "@/config/fiscal-2026";
 import { TJM_BRACKETS } from "@/lib/simulateur/brackets";
 import { activeBracket } from "@/lib/simulateur/state";
 import { useSimulator } from "@/lib/simulateur/store";
@@ -34,6 +34,21 @@ export function ActiviteStep() {
       title="Votre activité"
       subtitle={form.status === "salarie_esn" ? "Votre TJM cible en portage." : "Ce que vous facturez (ou visez)."}
     >
+      {/* #8 : une seule carte « Freelance », la structure oriente le calcul
+          (le scénario SASU existe dans le moteur, il n'était jamais atteint). */}
+      {(form.status === "freelance_micro" || form.status === "freelance_sasu") && (
+        <Field label="Votre structure aujourd'hui">
+          <Segmented
+            options={[
+              { value: "freelance_micro", label: "Micro-entreprise" },
+              { value: "freelance_sasu", label: "Société (SASU / EURL)" },
+            ]}
+            value={form.status}
+            onChange={(v) => dispatch({ type: "set_profile", status: v as "freelance_micro" | "freelance_sasu", impatrie: false })}
+          />
+        </Field>
+      )}
+
       {/* —————————— TJM : deux modes explicites, réversibles —————————— */}
       <Field label="TJM — tarif jour HT">
         {state.prefilled.tjm && (
@@ -95,6 +110,15 @@ export function ActiviteStep() {
           </div>
         )}
       </Field>
+
+      {/* #9 : au-delà du plafond, la micro-entreprise n'est plus tenable. */}
+      {form.status === "freelance_micro" && tjm * form.days * 12 > MICRO_BNC_2026.plafondCa && (
+        <p className="rounded-xl px-3 py-2 text-sm" style={{ backgroundColor: "#FFF1DE" }}>
+          À ce rythme, votre chiffre d&rsquo;affaires annuel ({eur(tjm * form.days * 12)} €) dépasse le plafond de la
+          micro-entreprise ({eur(MICRO_BNC_2026.plafondCa)} € en 2026 pour les prestations de services). Deux années de
+          dépassement de suite font sortir du régime.
+        </p>
+      )}
 
       <AmountInput
         label="Jours facturés par mois"

@@ -25,7 +25,8 @@ import { BRASS, Screen } from "../ui";
  */
 const PROFILES: { value: CurrentStatus; impatrie?: boolean; label: string; hint: string }[] = [
   { value: "porte_ailleurs", label: "Déjà en portage", hint: "Porté dans une autre société." },
-  { value: "freelance_micro", label: "Consultant freelance", hint: "Micro-entreprise, EI ou en cours de lancement." },
+  // #8 : « Freelance » tout court ; micro ou société se précise à l'étape suivante.
+  { value: "freelance_micro", label: "Freelance", hint: "Micro-entreprise, société (SASU / EURL) ou en lancement." },
   { value: "salarie_esn", label: "Salarié en ESN", hint: "En poste, vous étudiez le portage." },
   { value: "transition", label: "En reconversion / transition", hint: "Entre deux statuts ou en création." },
   {
@@ -52,14 +53,17 @@ export function ProfilStep() {
         {PROFILES.map((p) => {
           // Aucune sélection tant que l'utilisateur n'a pas choisi : status est
           // nul au départ, donc aucune carte n'est active.
-          const active = form.status !== null && form.status === p.value && form.impatrie === !!p.impatrie;
+          const statutCarte = form.status === "freelance_sasu" ? "freelance_micro" : form.status;
+          const active = form.status !== null && statutCarte === p.value && form.impatrie === !!p.impatrie;
           return (
             <button
               key={p.label}
               type="button"
               aria-pressed={active}
               onClick={() => {
-                dispatch({ type: "set_profile", status: p.value, impatrie: !!p.impatrie });
+                // Revenir sur « Freelance » ne perd pas la structure déjà choisie.
+                const status = p.value === "freelance_micro" && form.status === "freelance_sasu" ? "freelance_sasu" : p.value;
+                dispatch({ type: "set_profile", status, impatrie: !!p.impatrie });
                 trackEvent("sim_started", { profile: p.value });
                 goTo("activite");
               }}
