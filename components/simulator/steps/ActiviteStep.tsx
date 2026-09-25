@@ -114,8 +114,8 @@ export function ActiviteStep() {
       {/* #9 : au-delà du plafond, la micro-entreprise n'est plus tenable. */}
       {form.status === "freelance_micro" && tjm * form.days * 12 > MICRO_BNC_2026.plafondCa && (
         <p className="rounded-xl px-3 py-2 text-sm" style={{ backgroundColor: "#FFF1DE" }}>
-          À ce rythme, votre chiffre d&rsquo;affaires annuel ({eur(tjm * form.days * 12)} €) dépasse le plafond de la
-          micro-entreprise ({eur(MICRO_BNC_2026.plafondCa)} € en 2026 pour les prestations de services). Deux années de
+          À ce rythme, votre chiffre d&rsquo;affaires annuel ({eur(tjm * form.days * 12)} €) dépasse le plafond de la
+          micro-entreprise ({eur(MICRO_BNC_2026.plafondCa)} € en 2026 pour les prestations de services). Deux années de
           dépassement de suite font sortir du régime.
         </p>
       )}
@@ -250,12 +250,12 @@ function LiveFeedback({
             {avantagesInclus && (
               <p className="flex justify-between">
                 <span>+ Avantages (cagnotte, titres-restaurant), non retirables en argent</span>
-                <span className="font-semibold text-[#0B0D12]">{eur(live.benefitsTotal)} €</span>
+                <span className="whitespace-nowrap font-semibold text-[#0B0D12]">{eur(live.benefitsTotal)} €</span>
               </p>
             )}
             <p className="flex justify-between">
               <span>= Rémunération globale / mois</span>
-              <span className="font-semibold text-[#0B0D12]">{eur(live.globalCompensation)} €</span>
+              <span className="whitespace-nowrap font-semibold text-[#0B0D12]">{eur(live.globalCompensation)} €</span>
             </p>
           </div>
           <p className="mt-1 text-sm text-[#4A5061]">
