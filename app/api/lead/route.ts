@@ -21,6 +21,17 @@ import { sendCapiEvent } from "@/lib/server/capi";
 import { baseUrlFrom, buildServerPayload, coerceForm } from "@/lib/email/context";
 import { sendRecap } from "@/lib/email/send";
 import { dossierUrl } from "@/lib/dossier/token";
+import { unsubscribeUrl } from "@/lib/email/unsubscribe";
+
+/** Lien de désinscription (#13) — jamais bloquant si la signature échoue. */
+function lienDesinscription(email: string, baseUrl: string): string | undefined {
+  try {
+    return unsubscribeUrl(email, baseUrl);
+  } catch (err) {
+    console.error("[lead] lien de désinscription non signé", String(err));
+    return undefined;
+  }
+}
 
 export const runtime = "nodejs";
 
@@ -69,7 +80,7 @@ export async function POST(req: NextRequest) {
    */
   const written = await crm.upsertLead(lead);
   if (lead.consent.marketing_optin) {
-    await crm.triggerSequence(lead.lead_id, SEQUENCE_ID);
+    await crm.triggerSequence(lead.lead_id, SEQUENCE_ID, lead.identity.email);
   }
 
   const alertes: string[] = [];
@@ -149,7 +160,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const report = await sendRecap(payload, { alerteInterne: alertes[0] });
+      const report = await sendRecap(payload, { alerteInterne: alertes[0], unsubscribeUrl: lienDesinscription(lead.identity.email, baseUrl) });
       emailSent = report.lead.ok;
       if (!report.lead.ok || (report.interne && !report.interne.ok)) {
         console.error(

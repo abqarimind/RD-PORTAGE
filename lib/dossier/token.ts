@@ -38,6 +38,11 @@ const unb64url = (s: string) => Buffer.from(s.replace(/-/g, "+").replace(/_/g, "
 
 const sign = (data: string) => b64url(createHmac("sha256", secret()).update(data).digest());
 
+/** Signature HMAC réutilisable (lien de désinscription, #13). */
+export const signValue = (data: string) => sign(data);
+export const toB64url = (text: string) => b64url(Buffer.from(text, "utf8"));
+export const fromB64url = (value: string) => unb64url(value).toString("utf8");
+
 /** Encode un payload en couple { d, s } à mettre en query string. */
 export function encodeDossier(payload: SimulationResultPayload): { d: string; s: string } {
   const d = b64url(gzipSync(Buffer.from(JSON.stringify(payload), "utf8"), { level: 9 }));

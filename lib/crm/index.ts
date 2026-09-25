@@ -58,10 +58,22 @@ export function storageIsDurable(): boolean {
 
 export const crm = {
   upsertLead: (lead: Lead) => reliableWrite("upsertLead", lead, () => getAdapter().upsertLead(lead)),
-  appendEvent: (leadId: string, event: FunnelEvent) =>
-    reliableWrite("appendEvent", { leadId, event }, () => getAdapter().appendEvent(leadId, event)),
-  triggerSequence: (leadId: string, sequenceId: string) =>
-    reliableWrite("triggerSequence", { leadId, sequenceId }, () => getAdapter().triggerSequence(leadId, sequenceId)),
+  appendEvent: (leadId: string, event: FunnelEvent, email?: string) =>
+    reliableWrite("appendEvent", { leadId, event, email }, () => getAdapter().appendEvent(leadId, event, email)),
+  triggerSequence: (leadId: string, sequenceId: string, email?: string) =>
+    reliableWrite("triggerSequence", { leadId, sequenceId, email }, () =>
+      getAdapter().triggerSequence(leadId, sequenceId, email),
+    ),
+  /** Désinscription (#13). Sans support côté outil, l'échec est journalisé, jamais silencieux. */
+  unsubscribe: async (email: string) => {
+    const adapter = getAdapter();
+    if (!adapter.unsubscribe) {
+      console.error(`[crm] désinscription NON appliquée : l'outil « ${adapter.name} » ne la gère pas`, JSON.stringify({ email }));
+      return false;
+    }
+    await adapter.unsubscribe(email);
+    return true;
+  },
   deleteLead: (leadId: string) => reliableWrite("deleteLead", { leadId }, () => getAdapter().deleteLead(leadId)),
   exportCSV: (...args: Parameters<CRMAdapter["exportCSV"]>) => getAdapter().exportCSV(...args),
 };

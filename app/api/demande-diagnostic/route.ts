@@ -17,6 +17,7 @@ import { crm, storageIsDurable } from "@/lib/crm";
 import { dossierUrl } from "@/lib/dossier/token";
 import { baseUrlFrom, buildServerPayload, coerceForm } from "@/lib/email/context";
 import { sendDemandeDiagnostic } from "@/lib/email/send";
+import { unsubscribeUrl } from "@/lib/email/unsubscribe";
 
 export const runtime = "nodejs";
 
@@ -70,7 +71,14 @@ export async function POST(req: NextRequest) {
 
   payload.meta.dossierUrl = dossierUrl(payload, baseUrl);
 
+  let lienDesinscription: string | undefined;
+  try {
+    lienDesinscription = unsubscribeUrl(parsed.identity.email, baseUrl);
+  } catch {
+    lienDesinscription = undefined;
+  }
   const report = await sendDemandeDiagnostic(payload, {
+    unsubscribeUrl: lienDesinscription,
     alerteInterne: storageIsDurable() ? undefined : "CRM_PROVIDER=mock : ce lead n'est conservé nulle part côté serveur",
   });
   if (!report.lead.ok || (report.interne && !report.interne.ok)) {
@@ -80,12 +88,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Journalise l'étape dans le CRM quand le lead est déjà connu.
-  if (parsed.lead_id) {
-    await crm
-      .appendEvent(parsed.lead_id, { event: "rdv_clicked", timestamp: new Date().toISOString() })
-      .catch(() => undefined);
-  }
+  // Journalise l'étape dans le CRM et ARRÊTE la séquence prospects. L'email
+  // est passé explicitement : cette requête n'est pas celle qui a créé le
+  // lead, le miroir en mémoire de l'adaptateur y est vide (piège repéré le 25/09).
+  await crm
+    .appendEvent(
+      parsed.lead_id ?? `email:${parsed.identity.email}`,
+      { event: "rdv_clicked", timestamp: new Date().toISOString() },
+      parsed.identity.email,
+    )
+    .catch(() => undefined);
 
   return NextResponse.json({ ok: true, emailSent: report.lead.ok, dossierUrl: payload.meta.dossierUrl });
 }

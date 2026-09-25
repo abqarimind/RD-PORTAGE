@@ -15,11 +15,11 @@ async function main() {
     try {
       if (entry.kind === "upsertLead") await adapter.upsertLead(entry.payload as Lead);
       else if (entry.kind === "appendEvent") {
-        const { leadId, event } = entry.payload as { leadId: string; event: FunnelEvent };
-        await adapter.appendEvent(leadId, event);
+        const { leadId, event, email } = entry.payload as { leadId: string; event: FunnelEvent; email?: string };
+        await adapter.appendEvent(leadId, event, email);
       } else if (entry.kind === "triggerSequence") {
-        const { leadId, sequenceId } = entry.payload as { leadId: string; sequenceId: string };
-        await adapter.triggerSequence(leadId, sequenceId);
+        const { leadId, sequenceId, email } = entry.payload as { leadId: string; sequenceId: string; email?: string };
+        await adapter.triggerSequence(leadId, sequenceId, email);
       } else if (entry.kind === "deleteLead") {
         await adapter.deleteLead((entry.payload as { leadId: string }).leadId);
       }
