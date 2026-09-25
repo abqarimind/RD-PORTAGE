@@ -38,7 +38,8 @@ mock (aucune clé requise) : les leads vont dans `data/leads-fallback.ndjson`.
 ## Avant la mise en ligne (checklist)
 
 - [x] Photo de Ridha (section fondateur) — `public/ridha.png`
-- [x] CTA Diagnostic : appel direct +33 6 32 98 87 23 par défaut ;
+- [x] CTA « Parler à mon conseiller » : ligne de l'équipe +33 1 71 49 71 57 par défaut
+      (`config/contact.ts`) ;
       définir `NEXT_PUBLIC_RDV_URL` plus tard si un Calendly arrive
 - [ ] `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` (domaine de prod)
 - [ ] CRM réel (`docs/branchement-brevo-airtable.md`) + `EXPORT_TOKEN`

@@ -12,22 +12,29 @@
  * même si E3 échoue.
  */
 import type { SimulationResultPayload } from "@/types/simulation-result";
+import { DELAI_RAPPEL, PHONE_LABEL } from "@/config/contact";
 import { button, esc, eur, eurSigned, h2, layout, pct, row, siteDomain, table, MUTED } from "./layout";
 
-const PHONE_LABEL = "06 32 98 87 23";
-/** Engagement de rappel affiché au lead — tenu par Ridha. */
-const DELAI_RAPPEL = "sous 24 h ouvrées";
+
+/**
+ * Promesse faite au lead. Sans numéro, on ne promet PAS de rappel « au numéro
+ * indiqué » : il n'y en a pas. On revient vers lui par email, et on lui donne
+ * la ligne de l'équipe.
+ */
+function promesse(p: SimulationResultPayload): string {
+  return p.identite.telephone
+    ? `Un conseiller RD Portage vous rappelle ${DELAI_RAPPEL} au ${p.identite.telephone}.`
+    : `Un conseiller RD Portage revient vers vous ${DELAI_RAPPEL} par email. Pour aller plus vite, appelez-nous au ${PHONE_LABEL}.`;
+}
 
 export function emailDemandeDiagnosticLead(p: SimulationResultPayload, unsubscribeUrl?: string) {
   const body = `
 <p style="margin:0 0 4px 0;font-size:15px;">Bonjour ${esc(p.identite.prenom)},</p>
-<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">Votre demande de diagnostic est bien reçue. Ridha vous rappelle <strong>${esc(
-    DELAI_RAPPEL,
-  )}</strong> au numéro que vous avez indiqué${p.identite.telephone ? ` (${esc(p.identite.telephone)})` : ""}.</p>
+<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">Votre demande de diagnostic est bien reçue. <strong>${esc(promesse(p))}</strong></p>
 
 ${h2("Ce qui sera préparé avant l'appel")}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 16px 0;">
-  <tr><td style="padding:10px 0;border-bottom:1px solid #ECEEF3;font-size:14px;line-height:1.6;"><strong>Votre simulation, revérifiée à la main</strong><br><span style="color:${MUTED};">Ridha reprend votre foyer, vos frais réels et vos leviers, et confirme — ou corrige — le chiffre que vous avez obtenu.</span></td></tr>
+  <tr><td style="padding:10px 0;border-bottom:1px solid #ECEEF3;font-size:14px;line-height:1.6;"><strong>Votre simulation, revérifiée à la main</strong><br><span style="color:${MUTED};">Votre conseiller reprend votre foyer, vos frais réels et vos leviers, et confirme — ou corrige — le chiffre que vous avez obtenu.</span></td></tr>
   <tr><td style="padding:10px 0;border-bottom:1px solid #ECEEF3;font-size:14px;line-height:1.6;"><strong>Les optimisations applicables à votre cas</strong><br><span style="color:${MUTED};">Cagnotte d'avantages, frais professionnels, PER : ce qui s'applique vraiment chez vous, et à quelle hauteur.</span></td></tr>
   <tr><td style="padding:10px 0;font-size:14px;line-height:1.6;"><strong>Une proposition ferme</strong><br><span style="color:${MUTED};">Chiffrée, sans engagement. Si elle vous convient, la signature est possible sous 48 h.</span></td></tr>
 </table>
@@ -36,7 +43,7 @@ ${h2("Ce qui sera préparé avant l'appel")}
 
 ${p.meta.dossierUrl ? button(p.meta.dossierUrl, "Revoir mon dossier") : ""}
 
-<p style="margin:16px 0 0 0;font-size:14px;line-height:1.6;">Besoin de décaler, ou une question d'ici là ? Répondez simplement à cet email, ou appelez Ridha au ${PHONE_LABEL}.</p>
+<p style="margin:16px 0 0 0;font-size:14px;line-height:1.6;">Besoin de décaler, ou une question d'ici là ? Répondez simplement à cet email, ou appelez-nous au ${PHONE_LABEL}.</p>
 
 <p style="margin:20px 0 0 0;font-size:13px;color:${MUTED};">Référence de simulation : ${esc(p.meta.simulationId)}</p>`;
 
@@ -54,9 +61,7 @@ ${p.meta.dossierUrl ? button(p.meta.dossierUrl, "Revoir mon dossier") : ""}
   const text = [
     `Bonjour ${p.identite.prenom},`,
     ``,
-    `Votre demande de diagnostic est bien reçue. Ridha vous rappelle ${DELAI_RAPPEL}${
-      p.identite.telephone ? ` au ${p.identite.telephone}` : ""
-    }.`,
+    `Votre demande de diagnostic est bien reçue. ${promesse(p)}`,
     ``,
     `CE QUI SERA PRÉPARÉ AVANT L'APPEL`,
     `1. Votre simulation, revérifiée à la main — foyer, frais réels, leviers.`,
@@ -67,7 +72,7 @@ ${p.meta.dossierUrl ? button(p.meta.dossierUrl, "Revoir mon dossier") : ""}
     ``,
     p.meta.dossierUrl ? `Revoir votre dossier : ${p.meta.dossierUrl}` : ``,
     ``,
-    `Besoin de décaler ou une question ? Répondez à cet email, ou appelez Ridha au ${PHONE_LABEL}.`,
+    `Besoin de décaler ou une question ? Répondez à cet email, ou appelez-nous au ${PHONE_LABEL}.`,
     ``,
     p.meta.mentions.valeurIndicative,
     `Référence de simulation : ${p.meta.simulationId}`,
@@ -78,7 +83,7 @@ ${p.meta.dossierUrl ? button(p.meta.dossierUrl, "Revoir mon dossier") : ""}
     subject: `${p.identite.prenom}, votre demande de diagnostic est reçue`,
     html: layout({
       title: "Votre demande de diagnostic est reçue",
-      preheader: `Ridha vous rappelle ${DELAI_RAPPEL}.`,
+      preheader: promesse(p),
       body,
       footer,
     }),

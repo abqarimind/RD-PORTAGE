@@ -19,10 +19,10 @@ import { useSimulation } from "@/lib/simulateur/useSimulation";
 import { setLeadId, trackEvent } from "@/lib/tracking/events";
 import { deriveLeadSource, deviceType, getAttribution } from "@/lib/tracking/utm";
 import { metaLead, newEventId } from "@/lib/tracking/meta";
+import { CTA_CONSEILLER, DELAI_RAPPEL, EMAIL_ENTREPRISE, PHONE_LABEL, RDV_URL } from "@/config/contact";
 import { ALERTE, BRASS, eur, Field, GHOST_BTN, OUTLINE_BTN, PRIMARY_BTN, pct, VALIDE } from "../ui";
 
 const POLICY_VERSION = "privacy-2026-06";
-const RDV_URL = process.env.NEXT_PUBLIC_RDV_URL ?? "tel:+33632988723";
 const META_LEAD_EVENT_ID_KEY = "rdp_meta_lead_eid";
 
 export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
@@ -163,9 +163,20 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
         </p>
         <h1 className="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">Votre dossier est disponible</h1>
         <p className="mt-2 text-base text-[#4A5061]">
-          {emailSent
-            ? "Nous venons de vous l'envoyer par email — le lien ci-dessous ouvre le même dossier."
-            : "Ouvrez-le ci-dessous. Si vous ne recevez pas l'email, ce lien reste valable."}
+          {emailSent ? (
+            <>
+              Nous venons de l&rsquo;envoyer à <strong className="text-[#0B0D12]">{email}</strong> — le lien ci-dessous ouvre le
+              même dossier.
+            </>
+          ) : (
+            "Ouvrez-le ci-dessous. Si vous ne recevez pas l'email, ce lien reste valable."
+          )}
+        </p>
+        {/* Retour terrain : un email de simulation est arrivé en spam. */}
+        <p className="mt-3 rounded-xl px-3 py-2 text-sm leading-relaxed text-[#4A5061]" style={{ backgroundColor: "#FFF1DE" }}>
+          Pas reçu d&rsquo;ici quelques minutes ? Regardez dans vos <strong>courriers indésirables (spams)</strong> ou
+          l&rsquo;onglet <strong>Promotions</strong>, et ajoutez <strong>{EMAIL_ENTREPRISE}</strong> à vos contacts pour
+          recevoir la suite.
         </p>
         <p className="mt-3 text-sm tabular-nums text-[#7A8093]">
           Taux moyen foyer optimisé : {pct(optimise.averageTaxRate)} · TMI {(optimise.marginalRate * 100).toFixed(0)} %.
@@ -187,12 +198,15 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
             }}
             className={OUTLINE_BTN}
           >
-            Valider ce chiffre — Diagnostic 30 min
+            {CTA_CONSEILLER}
           </a>
         </div>
 
         <p className="mt-3 text-sm text-[#7A8093]">
-          Diagnostic mené par Ridha (fondateur, ex-porté). Proposition ferme, signature possible sous 48 h.
+          {phone
+            ? `Un conseiller RD Portage vous rappelle ${DELAI_RAPPEL} au ${phone}. `
+            : `Un conseiller RD Portage vous répond au ${PHONE_LABEL}. `}
+          Diagnostic de 30 minutes, proposition ferme, signature possible sous 48 h.
         </p>
 
         <div className="mt-6 border-t border-[#ECEEF3] pt-5">
@@ -238,7 +252,7 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
             onChange={(e) => setEmail(e.target.value)}
           />
         </Field>
-        <Field label="Votre téléphone (optionnel)" hint="Uniquement si vous souhaitez être rappelé·e pour le Diagnostic 30 min." htmlFor={ids.tel}>
+        <Field label="Votre téléphone (optionnel)" hint={`Uniquement si vous souhaitez qu’un conseiller vous rappelle (${DELAI_RAPPEL}).`} htmlFor={ids.tel}>
           <input
             id={ids.tel}
             className="sim-input"
@@ -274,6 +288,10 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
         <button type="submit" disabled={submitting} className={`${PRIMARY_BTN} w-full sm:w-auto`}>
           {submitting ? "Envoi en cours…" : "Recevoir mon dossier"}
         </button>
+        <p className="text-sm leading-relaxed text-[#7A8093]">
+          Votre dossier arrive par email dans la minute, envoyé par {EMAIL_ENTREPRISE}. Pensez à vérifier vos courriers
+          indésirables (spams) s&rsquo;il n&rsquo;apparaît pas.
+        </p>
       </form>
 
       <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-[#ECEEF3] pt-5">

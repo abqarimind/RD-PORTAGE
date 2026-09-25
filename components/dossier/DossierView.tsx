@@ -17,12 +17,14 @@
 import type { SimulationResultPayload } from "@/types/simulation-result";
 import { buildCascadeSteps, buildPartage } from "@/lib/dossier/breakdown";
 import { Cascade, PartageBar, RestitutionGauge, ScenarioBars } from "./charts";
+import { groupFr } from "@/lib/format";
+import { CTA_CONSEILLER, RDV_URL } from "@/config/contact";
 
 const BRASS = "#B08D57";
 const VALIDE = "#2F6B4F";
 const SANS = "'Manrope','IBM Plex Sans',sans-serif";
 
-const eur = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} €`;
+const eur = (n: number) => `${groupFr(n)}\u00A0€`;
 const pct = (n: number) => `${(n * 100).toFixed(1).replace(".", ",")} %`;
 
 export function DossierView({ payload }: { payload: SimulationResultPayload }) {
@@ -189,15 +191,15 @@ export function DossierView({ payload }: { payload: SimulationResultPayload }) {
       <section className="mt-6 rounded-3xl p-6" style={{ backgroundColor: "#FFF1DE" }} data-reveal>
         <h2 className="text-lg font-extrabold tracking-tight">La suite</h2>
         <p className="mt-2 text-base text-[#4A5061]">
-          Ce dossier est une estimation calculée sur vos réponses. Pour le transformer en proposition ferme, Ridha le reprend
-          avec vous en 30 minutes.
+          Ce dossier est une estimation calculée sur vos réponses. Pour le transformer en proposition ferme, votre conseiller
+          le reprend avec vous en 30 minutes.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <a
-            href={process.env.NEXT_PUBLIC_RDV_URL ?? "tel:+33632988723"}
+            href={RDV_URL}
             className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-[#0B0D12] px-6 py-3 text-base font-bold text-white"
           >
-            Valider mon chiffre — Diagnostic 30 min
+            {CTA_CONSEILLER}
           </a>
           <button
             type="button"

@@ -15,6 +15,7 @@
  *    backoff, puis journalisation.
  */
 import { Resend } from "resend";
+import { EMAIL_ENTREPRISE } from "@/config/contact";
 import { warnIfMailAddressesCollide } from "@/lib/env";
 
 export interface SendResult {
@@ -30,6 +31,8 @@ export interface SendResult {
 
 export interface SendArgs {
   to: string | string[];
+  /** Expéditeur propre à cet envoi — à défaut, mailFrom(). */
+  from?: string;
   subject: string;
   html: string;
   text: string;
@@ -55,6 +58,26 @@ function getClient(): Resend | null {
 /** Expéditeur. Bascule vers le domaine vérifié par simple variable (§5.5). */
 export function mailFrom(): string {
   return process.env.MAIL_FROM ?? "RD Portage <onboarding@resend.dev>";
+}
+
+/**
+ * Expéditeur des copies internes E2/E4. Il doit différer de MAIL_INTERNAL_TO :
+ * un email envoyé de marketing@ vers marketing@ est souvent mal classé par
+ * Gmail (spam, Promotions, replié dans le fil) et la demande passerait
+ * inaperçue. Quand l'expéditeur prospect EST marketing@, on pose donc
+ * MAIL_FROM_INTERNE=simulateur@rdportage.com.
+ */
+export function mailFromInterne(): string {
+  return process.env.MAIL_FROM_INTERNE || mailFrom();
+}
+
+/**
+ * Adresse qui reçoit les réponses des prospects (décision D5) : un clic sur
+ * « Répondre » écrit toujours à l'entreprise, quel que soit l'expéditeur
+ * technique. Surchargeable par MAIL_REPLY_TO.
+ */
+export function mailReplyTo(): string {
+  return process.env.MAIL_REPLY_TO || EMAIL_ENTREPRISE;
 }
 
 /** Destinataire interne des copies E2/E4. */
@@ -102,7 +125,7 @@ export async function sendEmail(args: SendArgs): Promise<SendResult> {
     try {
       const { data, error } = await resend.emails.send(
         {
-          from: mailFrom(),
+          from: args.from ?? mailFrom(),
           to: args.to,
           subject: args.subject,
           html: args.html,

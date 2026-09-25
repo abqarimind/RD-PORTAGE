@@ -32,7 +32,7 @@ Pages en `noindex` (destinations d'annonces).
 | `META_PIXEL_ID` | Facultatif : surcharge serveur du Pixel ID. |
 | `META_GRAPH_VERSION` | Facultatif : version Graph API (défaut `v19.0`). |
 | `META_CAPI_TEST_EVENT_CODE` | Facultatif : code « Test des événements » (Events Manager). |
-| `NEXT_PUBLIC_RDV_URL` | Lien de prise de RDV (Calendly). Sinon appel direct Ridha. |
+| `NEXT_PUBLIC_RDV_URL` | Lien de prise de RDV (Calendly). Sinon appel direct de la ligne de l'équipe (`config/contact.ts`). |
 
 Voir aussi `.env.example`. La CAPI peut être activée **soit** par cette route
 serveur (`/api/capi`), **soit** en 1-clic dans Events Manager — les deux sont
@@ -63,7 +63,7 @@ cookies** (RGPD).
 | `SimulateurStart` | custom | montage du simulateur complet |
 | `SimulateurComplete` | custom | passage à l'écran résultat |
 | `Lead` | standard | **après validation backend** (`/api/lead`) — CAPI serveur + Pixel navigateur, `event_id` partagé |
-| `Contact` | standard | clic « Appeler Ridha » (lien `tel:`) |
+| `Contact` | standard | clic « Parler à mon conseiller » (lien `tel:`) |
 | `Schedule` | standard | clic prise de RDV quand `NEXT_PUBLIC_RDV_URL` est défini |
 
 ### Déduplication `Lead`

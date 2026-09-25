@@ -13,7 +13,7 @@
  * le parcours utilisateur ni l'affichage du résultat (§5.2).
  */
 import type { SimulationResultPayload } from "@/types/simulation-result";
-import { mailInternalTo, sendEmail, type SendResult } from "./client";
+import { mailFromInterne, mailInternalTo, mailReplyTo, sendEmail, type SendResult } from "./client";
 import { emailDemandeDiagnosticInterne, emailDemandeDiagnosticLead } from "./templates/diagnostic";
 import { emailRecapInterne, emailRecapLead } from "./templates/recap";
 
@@ -45,6 +45,8 @@ async function deliver(
       html: lead.html,
       text: lead.text,
       idempotencyKey: key(`${kind}-lead`, payload.meta.simulationId),
+      // « Répondre » depuis la boîte du prospect écrit à l'entreprise (D5).
+      replyTo: mailReplyTo(),
       tags: [
         { name: "type", value: kind },
         { name: "destinataire", value: "lead" },
@@ -52,6 +54,7 @@ async function deliver(
     }),
     internalTo
       ? sendEmail({
+          from: mailFromInterne(),
           to: internalTo,
           subject: interne.subject,
           html: interne.html,
