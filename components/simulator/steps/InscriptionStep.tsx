@@ -19,11 +19,10 @@ import { useSimulation } from "@/lib/simulateur/useSimulation";
 import { setLeadId, trackEvent } from "@/lib/tracking/events";
 import { deriveLeadSource, deviceType, getAttribution } from "@/lib/tracking/utm";
 import { metaLead, newEventId } from "@/lib/tracking/meta";
-import { CTA_CONSEILLER, DELAI_RAPPEL, EMAIL_ENTREPRISE, RDV_URL } from "@/config/contact";
+import { CTA_CONSEILLER, DELAI_RAPPEL, EMAIL_ENTREPRISE, POLICY_VERSION, RDV_URL, SEQUENCE_NB_EMAILS } from "@/config/contact";
 import { ContactOptions } from "@/components/ContactOptions";
 import { ALERTE, BRASS, eur, Field, GHOST_BTN, OUTLINE_BTN, PRIMARY_BTN, pct, VALIDE } from "../ui";
 
-const POLICY_VERSION = "privacy-2026-06";
 const META_LEAD_EVENT_ID_KEY = "rdp_meta_lead_eid";
 
 export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
@@ -263,21 +262,29 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
             onChange={(e) => setPhone(e.target.value)}
           />
         </Field>
+        {/*
+         * #10 (RGPD, validé par Ridha) : l'envoi de la simulation est l'objet
+         * même du formulaire, il ne dépend d'aucune case. Les emails de
+         * conseil ont leur propre case, FACULTATIVE et non pré-cochée : c'est
+         * la seule qui alimente consent.marketing_optin.
+         */}
+        <p className="text-sm text-[#4A5061]">
+          Nous utilisons votre email pour vous envoyer votre simulation.{" "}
+          <a href="/confidentialite" className="underline">
+            Politique de confidentialité
+          </a>{" "}
+          version {POLICY_VERSION}.
+        </p>
         <label className="flex min-h-[44px] items-start gap-3 text-sm text-[#4A5061]">
           <input
             type="checkbox"
             className="mt-1 h-5 w-5 accent-[#0B0D12]"
             checked={consent}
             onChange={(e) => setConsent(e.target.checked)}
-            required
           />
           <span>
-            J&rsquo;accepte de recevoir ma simulation détaillée et les conseils d&rsquo;optimisation de RD Portage (6 emails sur
-            14 jours, désinscription en un clic).{" "}
-            <a href="/confidentialite" className="underline">
-              Politique de confidentialité
-            </a>{" "}
-            version {POLICY_VERSION}.
+            (Facultatif) J&rsquo;accepte aussi de recevoir les conseils d&rsquo;optimisation de RD Portage : {SEQUENCE_NB_EMAILS} emails
+            sur 14 jours, désinscription en un clic.
           </span>
         </label>
         {submitError && (
