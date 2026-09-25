@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LIGNE_LEGALE, PHONE_INTL_LABEL } from "@/config/contact";
 
 /**
  * Pied de page unique du site public (accueil, /lp/*, /simulateur, pages
@@ -13,7 +14,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-[#ECEEF3]">
       <div className="mx-auto max-w-page px-4 py-8 text-xs leading-relaxed text-[#7A8093]">
-        <p>RD Portage — 1 rue George Stephenson, 78180 Montigny-le-Bretonneux · RCS Versailles 912 888 013 · +33 1 71 49 71 57</p>
+        <p>{LIGNE_LEGALE} · {PHONE_INTL_LABEL}</p>
         <p className="mt-1 flex flex-wrap items-center gap-x-3">
           <Link href="/mentions-legales" className="inline-flex min-h-[44px] items-center underline">
             Mentions légales

@@ -14,7 +14,7 @@
  * tous deux de useSimulation(). Décocher un avantage met à jour le libellé
  * ET le montant, parce qu'ils lisent le même état.
  */
-import { CAGNOTTE_PROVIDERS, type CagnotteChoice } from "@/config/fiscal-2026";
+import { CAGNOTTE_PROVIDERS, MICRO_BNC_2026, type CagnotteChoice } from "@/config/fiscal-2026";
 import { TJM_BRACKETS } from "@/lib/simulateur/brackets";
 import { activeBracket } from "@/lib/simulateur/state";
 import { useSimulator } from "@/lib/simulateur/store";
@@ -34,6 +34,21 @@ export function ActiviteStep() {
       title="Votre activité"
       subtitle={form.status === "salarie_esn" ? "Votre TJM cible en portage." : "Ce que vous facturez (ou visez)."}
     >
+      {/* #8 : une seule carte « Freelance », la structure oriente le calcul
+          (le scénario SASU existe dans le moteur, il n'était jamais atteint). */}
+      {(form.status === "freelance_micro" || form.status === "freelance_sasu") && (
+        <Field label="Votre structure aujourd'hui">
+          <Segmented
+            options={[
+              { value: "freelance_micro", label: "Micro-entreprise" },
+              { value: "freelance_sasu", label: "Société (SASU / EURL)" },
+            ]}
+            value={form.status}
+            onChange={(v) => dispatch({ type: "set_profile", status: v as "freelance_micro" | "freelance_sasu", impatrie: false })}
+          />
+        </Field>
+      )}
+
       {/* —————————— TJM : deux modes explicites, réversibles —————————— */}
       <Field label="TJM — tarif jour HT">
         {state.prefilled.tjm && (
@@ -96,6 +111,15 @@ export function ActiviteStep() {
         )}
       </Field>
 
+      {/* #9 : au-delà du plafond, la micro-entreprise n'est plus tenable. */}
+      {form.status === "freelance_micro" && tjm * form.days * 12 > MICRO_BNC_2026.plafondCa && (
+        <p className="rounded-xl px-3 py-2 text-sm" style={{ backgroundColor: "#FFF1DE" }}>
+          À ce rythme, votre chiffre d&rsquo;affaires annuel ({eur(tjm * form.days * 12)} €) dépasse le plafond de la
+          micro-entreprise ({eur(MICRO_BNC_2026.plafondCa)} € en 2026 pour les prestations de services). Deux années de
+          dépassement de suite font sortir du régime.
+        </p>
+      )}
+
       <AmountInput
         label="Jours facturés par mois"
         value={form.days}
@@ -107,7 +131,7 @@ export function ActiviteStep() {
 
       <AmountInput
         label="Frais professionnels mensuels"
-        hint="Déplacements, matériel, télétravail… Plafonnés à 30 % du CA."
+        hint="Déplacements, matériel, télétravail… Limités à 30 % de votre salaire brut (règle interne RD Portage)."
         value={form.fraisMensuels}
         min={0}
         max={2000}
@@ -148,7 +172,10 @@ export function ActiviteStep() {
                 <span>
                   {a.label} <span className="text-xs">({a.fraisDeService})</span>
                 </span>
-                <span className="font-semibold text-[#0B0D12]">{eur(a.montantNetMensuel)} € net/mois</span>
+                <span className="font-semibold text-[#0B0D12]">
+                  {/* #6 : Wawashi est une enveloppe annuelle utilisable quand on veut, pas un montant mensuel fixe. */}
+                  {a.id === "wawashi" ? `${eur(a.montantNetAnnuel)} €/an` : `${eur(a.montantNetMensuel)} € net/mois`}
+                </span>
               </p>
             ))}
             <p className="flex justify-between border-t border-[#ECEEF3] pt-1 text-sm font-bold tabular-nums">
@@ -161,12 +188,14 @@ export function ActiviteStep() {
         )}
       </Field>
 
-      <LiveFeedback
-        netPercu={live.netPerceived}
-        restitution={live.restitutionRate}
-        avantagesInclus={avantages.avantagesInclus}
-        tjm={tjm}
-      />
+      {form.fraisMensuels > live.ndf && tjm > 0 && (
+        <p className="-mt-2 text-sm text-[#7A8093]">
+          Frais retenus : <strong className="tabular-nums text-[#0B0D12]">{eur(live.ndf)} €</strong> sur {eur(form.fraisMensuels)} € saisis
+          (limite de 30 % du salaire brut).
+        </p>
+      )}
+
+      <LiveFeedback live={live} avantagesInclus={avantages.avantagesInclus} tjm={tjm} />
 
       <button
         type="button"
@@ -186,15 +215,18 @@ export function ActiviteStep() {
  * Aperçu immédiat. La mention sous le chiffre est DÉRIVÉE de la sélection
  * réelle — c'était une chaîne codée en dur (« Avantages inclus. »), et c'est
  * précisément ce qui produisait BUG-04.
+ *
+ * Retours #7, #28 et #34 (25/09) : le gros chiffre n'incluait pas les
+ * avantages alors que le % à côté les incluait. Chaque montant dit désormais
+ * ce qu'il contient — net en poche, avantages, total — et le % précise qu'il
+ * est calculé avant impôt et quelle part est en avantages non retirables.
  */
 function LiveFeedback({
-  netPercu,
-  restitution,
+  live,
   avantagesInclus,
   tjm,
 }: {
-  netPercu: number;
-  restitution: number;
+  live: ReturnType<typeof useSimulation>["live"];
   avantagesInclus: boolean;
   tjm: number;
 }) {
@@ -208,15 +240,29 @@ function LiveFeedback({
         <>
           <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
             <p className="text-3xl font-extrabold tabular-nums md:text-4xl">
-              <CountUp value={netPercu} /> €<span className="text-base font-medium text-[#4A5061]"> perçu net / mois</span>
+              <CountUp value={live.cashNet} /> €<span className="text-base font-medium text-[#4A5061]"> net en poche / mois</span>
             </p>
             <p className="text-sm font-bold tabular-nums" style={{ color: VALIDE }}>
-              {pct(restitution)} du CA restitué
+              {pct(live.restitutionRate)} du CA restitué avant impôt
+            </p>
+          </div>
+          <div className="mt-2 space-y-1 text-sm tabular-nums text-[#4A5061]">
+            {avantagesInclus && (
+              <p className="flex justify-between">
+                <span>+ Avantages (cagnotte, titres-restaurant), non retirables en argent</span>
+                <span className="whitespace-nowrap font-semibold text-[#0B0D12]">{eur(live.benefitsTotal)} €</span>
+              </p>
+            )}
+            <p className="flex justify-between">
+              <span>= Rémunération globale / mois</span>
+              <span className="whitespace-nowrap font-semibold text-[#0B0D12]">{eur(live.globalCompensation)} €</span>
             </p>
           </div>
           <p className="mt-1 text-sm text-[#4A5061]">
-            {avantagesInclus ? "Avantages inclus." : "Sans avantages."} Le détail foyer (votre vrai taux d&rsquo;imposition) arrive à
-            l&rsquo;étape suivante.
+            {avantagesInclus
+              ? `Dont ${pct(live.benefitsRate)} du CA en avantages, non retirables en argent. `
+              : "Sans avantages. "}
+            Le détail foyer (votre vrai taux d&rsquo;imposition) arrive à l&rsquo;étape suivante.
           </p>
         </>
       ) : (

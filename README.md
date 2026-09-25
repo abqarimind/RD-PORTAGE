@@ -27,7 +27,7 @@ npm run report:weekly  # rapport KPI Markdown
 | `lib/tracking/` | UTM first/last touch + fbclid, événements funnel (Plausible), bridge Meta Pixel/CAPI + consentement |
 | `lib/server/capi.ts` | Conversions API serveur (hash SHA-256, dédup par `event_id`) |
 | `content/claims.ts` | Tous les chiffres Atarhib/Targhib avec source obligatoire |
-| `content/emails/` | 6 emails (J0→J14) en HTML + texte, objets A/B |
+| `content/emails/` | Séquence prospects J3→J14 (4 envois en texte simple, 5 variantes à J10) — voir `content/emails/sequence.md` |
 | `docs/` | Convention UTM, schéma lead, branchement CRM, **landing-conversion.md** (système ads Meta), etc. |
 
 ## Variables d'environnement

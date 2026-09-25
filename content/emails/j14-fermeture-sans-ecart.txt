@@ -1,0 +1,10 @@
+Objet : Je ferme votre dossier ?
+Condition : economie_mensuelle <= 0
+---
+Bonjour {{{PRENOM}}},
+
+Votre simulation ne montre pas de gain chiffré par rapport à votre statut actuel. Le portage vous apporte en revanche le statut de salarié : chômage, retraite, prévoyance et congés payés.
+
+En 30 minutes, nous vous donnons un chiffre ferme : %FRAIS% de frais de gestion tout compris, signature possible sous 48 h.
+
+Je ferme votre dossier, ou on se cale un créneau ? Si c'est plus simple, appelez-nous au %TELEPHONE%.

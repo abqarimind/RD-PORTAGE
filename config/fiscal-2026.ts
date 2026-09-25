@@ -127,6 +127,13 @@ export const IMPATRIE_SOURCE: RateSource = {
 export const MICRO_BNC_2026 = {
   abattement: 0.34,
   cotisations: 0.261,
+  /** Plafond de CA annuel HT encaissé, prestations de services, 2026-2028 (#9). */
+  plafondCa: 83_600,
+  plafondSource: {
+    label: "URSSAF — seuils micro-entreprise 2026 (prestations de services : 83 600 €)",
+    url: "https://www.autoentrepreneur.urssaf.fr/portail/accueil/sinformer-sur-le-statut/toutes-les-actualites/2026--modification-des-seuils-de.html",
+    checkedAt: "2026-09-25",
+  } as RateSource,
   source: {
     label: "Micro-BNC 2026 — abattement 34 %, cotisations ~26,1 %",
     url: "https://entreprendre.service-public.gouv.fr/vosdroits/F36232",
@@ -151,7 +158,15 @@ export const RD_PORTAGE_2026 = {
    * imposable — cf. lib/fiscal/AUDIT.md.
    */
   csgNonDeductibleRate: 0.0285,
-  ndfCapShareOfFees: 0.3, // NDF pro plafonnés à 30 % du CA HT mensuel
+  /**
+   * Frais professionnels (NDF) limités à 30 % du SALAIRE BRUT — retours
+   * équipe #4/#42 du 25/09 (et non 30 % du CA, comme modélisé jusqu'ici).
+   * ⚠️ POLITIQUE INTERNE RD Portage, sans base réglementaire (ni l'arrêté du
+   * 04/09/2025 ni le BOSS ne fixent un tel plafond) : ne jamais la présenter
+   * comme une limite légale. La cagnotte d'avantages s'ajoute EN PLUS, hors
+   * de ces 30 %.
+   */
+  ndfCapShareOfGross: 0.3,
   /** Titre-restaurant : 13 €/j, 50 % salarié / 50 % compte d'activité.
    *  Part employeur (6,50 €) < plafond d'exonération URSSAF (~7,26 €) →
    *  l'avantage TR n'entre pas dans le net imposable. */
@@ -172,7 +187,15 @@ export const RD_PORTAGE_2026 = {
 export interface CagnotteProvider {
   id: string;
   label: string;
+  /** Montant mensuel UTILISABLE par le consultant (ce qu'il reçoit). */
+  usableMonthly: number;
+  /**
+   * Coût mensuel prélevé sur le compte d'activité (utilisable + frais).
+   * Dérivé de usableMonthly et des frais — ne pas saisir à la main.
+   */
   defaultMonthly: number;
+  /** Libellé public, sans jargon (retours #5 et #6). */
+  publicLabel: string;
   /** Service fee taken on each top-up. */
   feeRate: number;
   /** Flat annual service fee (spread over 12 months). */
@@ -181,26 +204,47 @@ export interface CagnotteProvider {
 }
 
 export const CAGNOTTE_PROVIDERS: Record<"may" | "wawashi", CagnotteProvider> = {
-  may: {
+  may: provider({
     id: "may",
     label: "May",
-    defaultMonthly: 1_570,
+    // Retour #5 (25/09) : 1 500 €/mois utilisables + 68,50 €/mois
+    // d'abonnement. L'email de l'équipe dit 68,5 €, le tableau 68 € : on
+    // retient 68,50 € — écart signalé, à confirmer (MAY_ABONNEMENT_MENSUEL).
+    usableMonthly: 1_500,
     feeRate: 0,
-    annualFee: 0,
+    annualFee: 68.5 * 12,
+    publicLabel: "1 500 €/mois utilisables (abonnement de 68,50 € inclus dans le calcul)",
     source: {
-      label: "Cas de référence RD × May — 1 570 €/mois",
-      checkedAt: "2026-06-22",
+      label: "Retours équipe RD Portage du 25/09 — May : 1 500 €/mois + 68,50 € d'abonnement",
+      checkedAt: "2026-09-25",
     },
-  },
-  wawashi: {
+  }),
+  wawashi: provider({
     id: "wawashi",
     label: "Wawashi",
-    defaultMonthly: 1_500,
+    // Retour #6 (confirmé par Ridha) : ce n'est pas un montant mensuel fixe
+    // mais 18 000 €/an utilisables quand on veut. Le calcul mensuel lisse
+    // l'enveloppe (18 000 / 12) ; l'affichage parle en annuel.
+    usableMonthly: 18_000 / 12,
     feeRate: 0.035,
     annualFee: 60,
-    source: { label: "Doc Wawashi — 60 €/an + 3,5 %", checkedAt: "2026-06-22" },
-  },
+    publicLabel: "18 000 €/an utilisables quand vous le souhaitez (frais de service inclus dans le calcul)",
+    source: { label: "Doc Wawashi — 60 €/an + 3,5 % ; retour #6 du 25/09 (18 000 €/an)", checkedAt: "2026-09-25" },
+  }),
 };
+
+/** Abonnement May retenu (68,50 €) — voir le commentaire du provider. */
+export const MAY_ABONNEMENT_MENSUEL = 68.5;
+
+/**
+ * Construit un prestataire à partir de son montant UTILISABLE : le coût
+ * prélevé sur l'enveloppe en découle, frais compris, pour que
+ * cagnotteNet(coût) redonne exactement l'utilisable.
+ */
+function provider(p: Omit<CagnotteProvider, "defaultMonthly">): CagnotteProvider {
+  const defaultMonthly = (p.usableMonthly + p.annualFee / 12) / (1 - p.feeRate);
+  return { ...p, defaultMonthly: Math.round(defaultMonthly * 100) / 100 };
+}
 
 export type CagnotteChoice = "may" | "wawashi" | "aucune";
 
@@ -211,9 +255,46 @@ export function cagnotteNet(choice: CagnotteChoice, grossMonthly: number): numbe
   return Math.max(0, grossMonthly * (1 - p.feeRate) - p.annualFee / 12);
 }
 
+/**
+ * Part maximale de la cagnotte dans le CA (appliquée à l'aperçu ET au
+ * résultat — retour #3 : l'aperçu ne la plafonnait pas).
+ */
+export const CAGNOTTE_MAX_SHARE_OF_FEES = 0.2;
+
+/**
+ * Cagnotte effectivement retenue pour un CA donné (mensuel ou annuel, tant
+ * que les deux sont sur la même période) : valeur pour le consultant et coût
+ * prélevé sur l'enveloppe, plafonnés ensemble à 20 % du CA.
+ */
+export function cagnotteRetenue(
+  choice: CagnotteChoice,
+  grossForPeriod: number,
+  feesForPeriod: number,
+): { value: number; cost: number } {
+  if (choice === "aucune" || grossForPeriod <= 0 || feesForPeriod <= 0) return { value: 0, cost: 0 };
+  const plafond = feesForPeriod * CAGNOTTE_MAX_SHARE_OF_FEES;
+  const ratio = grossForPeriod > plafond ? plafond / grossForPeriod : 1;
+  const cost = grossForPeriod * ratio;
+  const value = cagnotteNetForPeriod(choice, grossForPeriod) * ratio;
+  return { value, cost };
+}
+
+/**
+ * cagnotteNet généralisé à une période quelconque : les frais fixes
+ * (abonnement May, forfait Wawashi) sont comptés au prorata du nombre de
+ * mois de financement contenus dans le montant (1 mois → 1/12 du forfait
+ * annuel, 12 mois → le forfait entier).
+ */
+function cagnotteNetForPeriod(choice: CagnotteChoice, grossForPeriod: number): number {
+  if (choice === "aucune") return 0;
+  const p = CAGNOTTE_PROVIDERS[choice];
+  const net = grossForPeriod * (1 - p.feeRate) - (p.annualFee / 12) * (grossForPeriod / p.defaultMonthly);
+  return Math.max(0, net);
+}
+
 /** Headline cap claim ("jusqu'à 18 000 €/an") derives from the May reference. */
 export const MAY_2026 = {
-  referenceMonthlyAmount: 1_570,
+  referenceMonthlyAmount: CAGNOTTE_PROVIDERS.may.defaultMonthly,
   caps: { cadeaux: 193.2, servicesPersonne: 2_421, mobilite: 800 },
 } as const;
 

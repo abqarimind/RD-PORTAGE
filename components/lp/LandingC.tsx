@@ -25,7 +25,8 @@ import { MetaViewContent } from "./MetaViewContent";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Beam, Reveal, SpotCard } from "./motion";
 import { groupFr } from "@/lib/format";
-import { CTA_CONSEILLER, PHONE_E164, PHONE_LABEL } from "@/config/contact";
+import { ANNEE_CREATION, CTA_CONSEILLER, DATE_IMMATRICULATION, FRAIS_GESTION_LABEL, PHONE_E164, PHONE_LABEL, RCS } from "@/config/contact";
+import { CAGNOTTE_PROVIDERS } from "@/config/fiscal-2026";
 
 export type Angle = "a" | "b" | "c";
 
@@ -40,9 +41,20 @@ const SANS = "'Manrope','IBM Plex Sans',sans-serif";
 const SERIF = SANS;
 
 
-/* Reference case computed by the real fiscal engine — not a marketing number. */
-const REF = computePortage({ tjm: 420, days: 20, ndf: 500, cagnotteMay: 1570, mealVouchers: true });
+/* Reference case computed by the real fiscal engine — not a marketing number.
+ * Cagnotte May : 1 500 € utilisables, 1 568,50 € prélevés (retour #5). */
+const REF = computePortage({
+  tjm: 420,
+  days: 20,
+  ndf: 500,
+  cagnotteMay: CAGNOTTE_PROVIDERS.may.usableMonthly,
+  cagnotteCost: CAGNOTTE_PROVIDERS.may.defaultMonthly,
+  mealVouchers: true,
+});
+/** Taux de restitution AVANT impôt sur le revenu, avantages compris (#28, #34). */
 const PCT = Math.round(REF.restitutionRate * 100);
+/** Part de ce taux en avantages non retirables en argent (cagnotte + titres-restaurant). */
+const PCT_AVANTAGES = Math.round(REF.benefitsRate * 100);
 
 const eur = (n: number) => groupFr(n);
 
@@ -115,7 +127,7 @@ function heroCopy(angle: Angle): HeroCopy {
             d&rsquo;imposition de ton foyer — enfants, garde alternée, frais réels, PER.
           </>
         ),
-        proof: <>~30 consultants portés depuis 2021. 4 % de frais, tout compris.</>,
+        proof: <>~30 consultants portés depuis {ANNEE_CREATION}. {FRAIS_GESTION_LABEL} de frais, tout compris.</>,
         withFounder: true,
       };
     case "b":
@@ -214,7 +226,7 @@ function HeroFlash({ angle }: { angle: Angle }) {
           )}
           <div className="mt-5 flex items-center justify-center gap-2 text-xs font-semibold text-[#7A8093] lg:justify-start">
             <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: BRASS }} />
-            ~30 consultants portés depuis 2021 · RCS Versailles 912 888 013
+            ~30 consultants portés depuis {ANNEE_CREATION} · {RCS}
           </div>
         </div>
         {/* Interactive flash diagnostic — the hero conversion mechanism. */}
@@ -234,8 +246,12 @@ function StatChips() {
   const pctFmt = (n: number) => `${Math.round(n)} %`;
   const chips: Chip[] = [
     { num: 4, fmt: pctFmt, small: "frais de gestion, tout compris" },
-    { num: PCT, fmt: pctFmt, small: "du CA restitué (cas de référence TJM 420 €)" },
-    { text: "2021", small: "création — RCS Versailles" },
+    {
+      num: PCT,
+      fmt: pctFmt,
+      small: `du CA restitué avant impôt, dont ${PCT_AVANTAGES} % en avantages non retirables en argent (cas de référence TJM 420 €)`,
+    },
+    { text: String(ANNEE_CREATION), small: `création (immatriculation le ${DATE_IMMATRICULATION}) — RCS Versailles` },
     { num: 18000, fmt: (n) => `${eur(Math.round(n))} €/an`, small: "d'avantages légaux possibles" },
   ];
   return (
@@ -331,55 +347,9 @@ function Atarhib() {
             Garde-fous intégrés
           </p>
           <p className="mt-2 text-sm leading-relaxed" style={{ color: "#2F6B4F" }}>
-            Frais plafonnés à 30 % du CA, avantages dans les plafonds URSSAF, chaque chiffre du site sourcé ou retiré. La
+            Frais professionnels limités à 30 % du salaire brut (règle interne RD Portage), avantages dans les plafonds URSSAF, chaque chiffre du site sourcé ou retiré. La
             simulation reste indicative et ne remplace pas un conseil fiscal personnalisé.
           </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function SocialProof() {
-  // TODO: DONNÉE RÉELLE — en attente Ridha : vrais témoignages (nom, photo,
-  // accord écrit) et logos partenaires (droits). Placeholders d'ici là.
-  const testimonials = [
-    {
-      quote:
-        "Le simulateur m'a donné le vrai chiffre, foyer compris — personne d'autre ne le calcule. Signature en 48 h, comme annoncé.",
-      who: "Consultant data, ex-ESN — témoignage à recueillir",
-      bg: PEACH,
-    },
-    {
-      quote: "Je venais d'un portage à 8 % sans aucune optimisation. La différence était exactement celle annoncée.",
-      who: "Consultante SAP — témoignage à recueillir",
-      bg: LILAC,
-    },
-  ];
-  return (
-    <section className="border-y border-[#ECEEF3] bg-[#FAFBFD]">
-      <div className="mx-auto max-w-page px-4 py-section md:py-section-md lg:py-section-lg">
-        <Reveal>
-          <p className="text-center text-xs font-bold uppercase tracking-widest text-[#7A8093]">
-            {/* TODO: DONNÉE RÉELLE — en attente Ridha : logos clients + droits. */}
-            Logos clients / partenaires — en attente de validation
-          </p>
-        </Reveal>
-        <div className="mt-8 grid gap-5 md:grid-cols-2">
-          {testimonials.map((t, i) => (
-            <Reveal key={t.who} delayMs={i * 90} className="h-full">
-              <SpotCard className="h-full rounded-3xl border border-[#ECEEF3] bg-white p-6 transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-xl">
-                <p className="text-sm font-bold" style={{ color: BRASS }}>
-                  ★★★★★
-                </p>
-                <blockquote className="mt-3 text-sm leading-relaxed text-[#4A5061]">« {t.quote} »</blockquote>
-                <div className="mt-4 flex items-center gap-3">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full ring-2 ring-white" style={{ backgroundColor: t.bg }} aria-hidden />
-                  <p className="text-xs font-semibold text-[#7A8093]">{t.who}</p>
-                </div>
-              </SpotCard>
-            </Reveal>
-          ))}
         </div>
       </div>
     </section>
@@ -513,7 +483,7 @@ function HeroVsl({ angle }: { angle: Angle }) {
       </Reveal>
       <div className="mt-6 flex items-center justify-center gap-2 text-xs font-semibold text-[#7A8093]">
         <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: BRASS }} />
-        ~30 consultants portés depuis 2021 · RCS Versailles 912 888 013
+        ~30 consultants portés depuis {ANNEE_CREATION} · {RCS}
       </div>
     </section>
   );
@@ -567,7 +537,9 @@ export function LandingC({
         {variant === "vsl" && <DiagnosticSection angle={angle} />}
         <Method />
         <Atarhib />
-        <SocialProof />
+        {/* #14 : témoignages et logos fictifs retirés (pratique commerciale
+            trompeuse, refus Meta). À rétablir UNIQUEMENT avec de vrais
+            témoignages validés (ancien composant SocialProof dans l'historique Git). */}
         <PricingCta />
         <SiteFooter />
         <MetaViewContent contentName={`lp_${angle}_${variant}`} />

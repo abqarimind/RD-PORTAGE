@@ -10,7 +10,7 @@
  * se lit sur `avantages.avantagesInclus`, qui est dérivé de la sélection
  * réelle — c'est ce qui empêche BUG-04 de réapparaître.
  */
-import { CAGNOTTE_PROVIDERS, cagnotteNet, RD_PORTAGE_2026 } from "@/config/fiscal-2026";
+import { CAGNOTTE_PROVIDERS, cagnotteNet, MAY_ABONNEMENT_MENSUEL, RD_PORTAGE_2026 } from "@/config/fiscal-2026";
 import { computeIr } from "@/lib/fiscal/ir";
 import type { computePortage } from "@/lib/fiscal/portage";
 import type { SimulationResult } from "@/lib/fiscal/scenarios";
@@ -35,8 +35,10 @@ export function profilOf(form: FormState): { id: ProfilUtilisateur; label: strin
       return { id: "salarie_esn", label: "Salarié en ESN" };
     case "transition":
       return { id: "reconversion", label: "En reconversion / transition" };
+    case "freelance_sasu":
+      return { id: "consultant_freelance", label: "Freelance (société SASU / EURL)" };
     default:
-      return { id: "consultant_freelance", label: "Consultant freelance" };
+      return { id: "consultant_freelance", label: "Freelance (micro-entreprise)" };
   }
 }
 
@@ -58,10 +60,9 @@ export function buildAvantages(form: FormState, mealVoucherCredit: number): Avan
       montantBrutMensuel: Math.round(brut),
       montantNetMensuel: Math.round(net),
       montantNetAnnuel: Math.round(net * 12),
-      fraisDeService:
-        provider.feeRate === 0 && provider.annualFee === 0
-          ? "sans frais de service"
-          : `${provider.annualFee} €/an + ${(provider.feeRate * 100).toFixed(1).replace(".", ",")} %`,
+      // Retours #5 et #6 : dire ce qui est utilisable et ce que coûtent les
+      // frais, au lieu d'un « sans frais de service » inexact pour May.
+      fraisDeService: fraisCagnotteLabel(provider),
     });
   }
 
@@ -86,6 +87,18 @@ export function buildAvantages(form: FormState, mealVoucherCredit: number): Avan
     // L'unique source de vérité de la mention « avantages inclus ».
     avantagesInclus: selection.length > 0,
   };
+}
+
+function fraisCagnotteLabel(p: (typeof CAGNOTTE_PROVIDERS)["may"]): string {
+  if (p.id === "may") {
+    return `abonnement de ${MAY_ABONNEMENT_MENSUEL.toFixed(2).replace(".", ",")} € inclus dans le calcul`;
+  }
+  if (p.id === "wawashi") {
+    return `18 000 €/an utilisables quand vous le souhaitez ; frais de ${p.annualFee} €/an + ${(p.feeRate * 100)
+      .toFixed(1)
+      .replace(".", ",")} % inclus dans le calcul`;
+  }
+  return p.feeRate === 0 && p.annualFee === 0 ? "sans frais de service" : "frais du prestataire inclus dans le calcul";
 }
 
 /* ————————————————————————— payload complet ————————————————————————— */
@@ -169,6 +182,7 @@ export function buildPayload(
         assurancesTaxes: live.insuranceTax,
         fraisPro: live.ndf,
         cagnotte: live.cagnotteMay,
+        cagnotteCout: live.cagnotteCost,
         disponible: live.available,
         brut: live.grossSalary,
         cotisationsSalariales: live.employeeContributions,
@@ -178,6 +192,7 @@ export function buildPayload(
         remunerationGlobale: live.globalCompensation,
       },
       tauxRestitution: live.restitutionRate,
+      tauxAvantages: live.benefitsRate,
       netImposableAnnuel: Math.round(live.netTaxable * 12),
       impotNet: optimise.tax,
       tauxMoyenImposition: optimise.averageTaxRate,

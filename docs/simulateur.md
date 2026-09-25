@@ -22,13 +22,18 @@ et sourcée. Sortie : 3 scénarios, **vrai taux d'imposition du foyer**, et
 - Décote : seuils **1 982 € / 3 277 €**, coefficient 0,4525.
 - Abattement 10 % : **509 € à 14 555 €** (corrigé : l'ancien code avait 504 / 14 556).
 - PER (revenus 2025) : 10 % des revenus pro, **4 710 € à 37 680 €** (PASS 2025 = 47 100 €). PASS 2026 = 48 060 €.
-- Cascade portage (frais 4 %, assurances/taxes 0,9 %, NDF 30 %, patronal 45,6 %, salarial 21,5 %, TR 13 €/j) : `Template_Simulation_RD_PORTAGE_V2.xlsx` (« Simul Honoraires »).
+- Cascade portage (frais 4 %, assurances/taxes 0,9 %, NDF limitées à 30 % du salaire brut (règle interne RD, retours #4/#42 du 25/09 — pas un plafond légal), patronal 45,6 %, salarial 21,5 %, TR 13 €/j) : `Template_Simulation_RD_PORTAGE_V2.xlsx` (« Simul Honoraires »).
 
 ## Cas de référence (validé à l'euro)
 
-TJM 420 €, 20 j, NDF 500 €, cagnotte May 1 570 €, titres-resto :
+Classeur d'origine — TJM 420 €, 20 j, NDF 500 €, cagnotte May 1 570 €, titres-resto :
 Disponible **5 918 €** · brut **4 065 €** · perçu net + TR **3 821 €** ·
 rémunération globale **5 391 €** · restitution **64,2 %**. (cf. `__tests__/ir.test.ts`)
+
+Recalculé le 25/09 avec la cagnotte May réelle (1 500 € utilisables, 1 568,50 € prélevés) :
+Disponible **5 920 €** · brut **4 066 €** · perçu net + TR **3 822 €** · rémunération globale
+**5 322 €** · restitution **63,4 % avant impôt, dont 21 % en avantages** non retirables en argent.
+C'est ce chiffre (63 %) qu'affichent le site et les emails (cf. `lib/__tests__/claims-reference.test.ts`).
 
 ## La cagnotte avantages (« à quoi ça sert »)
 
@@ -40,8 +45,9 @@ gain sur la « rémunération globale ». **Affichée nette des frais de service
 du prestataire. Deux prestataires sont proposés au choix (l'un, l'autre, ou
 aucune), à figer avec RD dans `config/fiscal-2026.ts → CAGNOTTE_PROVIDERS` :
 
-- **May** — 1 570 €/mois (cas de référence, sans frais modélisés).
-- **Wawashi** — 1 500 €/mois, net de 60 €/an + 3,5 %.
+- **May** — 1 500 €/mois utilisables + 68,50 € d'abonnement : l'enveloppe est débitée de 1 568,50 € (retour #5 du 25/09 ; le tableau de l'équipe dit 68 €, écart à confirmer).
+- **Wawashi** — 18 000 €/an utilisables quand on veut (retour #6), frais de 60 €/an + 3,5 % en sus.
+- Cagnotte plafonnée à 20 % du CA, dans l'aperçu comme dans le résultat (`cagnotteRetenue`, retour #3).
 
 ## Honnêteté & conformité
 

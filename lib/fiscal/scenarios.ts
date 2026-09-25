@@ -8,7 +8,7 @@
  * (see AUDIT.md §3) — the output is indicative, never tax advice.
  */
 import {
-  cagnotteNet,
+  cagnotteRetenue,
   type CagnotteChoice,
   MARKET_AVG_MANAGEMENT_FEE,
   MAY_2026,
@@ -27,7 +27,14 @@ export interface SimulationInput {
   /** Invoiced days per year (ignored for salaried). */
   daysPerYear: number;
   household: HouseholdInput;
-  /** Optimisation levers (scenario C). */
+  /**
+   * Frais professionnels remboursés en NDF (étape Activité), sur l'année.
+   * Levier du scénario C, plafonné à 30 % du brut dans computePortage.
+   * Retours #1/#11 : ces frais n'atteignaient jamais le résultat, le
+   * scénario C prenait à leur place les « frais réels » de l'étape Foyer.
+   */
+  fraisProAnnual?: number;
+  /** Optimisation levers (scenario C). Frais réels = déduction d'IMPÔT (étape Foyer). */
   fraisReelsAnnual?: number;
   versementsPER?: number;
   dons?: number;
@@ -178,17 +185,21 @@ function portageScenario(input: SimulationInput, optimised: boolean): ScenarioRe
       : input.tjmOrMonthlyGross * input.daysPerYear;
   const days = input.status === "salarie_esn" ? 215 : input.daysPerYear;
 
-  const ndf = optimised ? Math.min(input.fraisReelsAnnual ?? 0, annualFees * RD_PORTAGE_2026.ndfCapShareOfFees) : 0;
-  // Wallet net of the provider's service fees, capped at 20% of annual fees.
+  // NDF : le plafond (30 % du brut) est appliqué dans computePortage.
+  const ndf = optimised ? input.fraisProAnnual ?? 0 : 0;
+  // Cagnotte : valeur nette de frais et coût prélevé, plafonnés à 20 % du CA
+  // — même règle que l'aperçu (cagnotteRetenue, source unique).
   const cagnotteGrossMonthly = input.cagnotteMonthly ?? MAY_2026.referenceMonthlyAmount;
-  const cagnotteNetAnnual = cagnotteNet(input.cagnotteChoice ?? "may", cagnotteGrossMonthly) * 12;
-  const cagnotte = optimised ? Math.min(cagnotteNetAnnual, annualFees * 0.2) : 0;
+  const cagnotte = optimised
+    ? cagnotteRetenue(input.cagnotteChoice ?? "may", cagnotteGrossMonthly * 12, annualFees)
+    : { value: 0, cost: 0 };
 
   const p = computePortage({
     tjm: annualFees / Math.max(days, 1),
     days,
     ndf,
-    cagnotteMay: cagnotte,
+    cagnotteMay: cagnotte.value,
+    cagnotteCost: cagnotte.cost,
     mealVouchers: optimised,
   });
 

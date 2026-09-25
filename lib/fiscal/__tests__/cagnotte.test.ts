@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { cagnotteNet } from "@/config/fiscal-2026";
+import { CAGNOTTE_PROVIDERS, cagnotteNet } from "@/config/fiscal-2026";
 import { simulate, type SimulationInput } from "../scenarios";
 
 describe("cagnotteNet — net of service fees", () => {
-  it("May is at face value (no service fee in the reference case)", () => {
-    expect(cagnotteNet("may", 1_570)).toBe(1_570);
+  it("May : 1 568,50 € prélevés = 1 500 € utilisables + 68,50 € d'abonnement (#5)", () => {
+    expect(CAGNOTTE_PROVIDERS.may.defaultMonthly).toBe(1_568.5);
+    expect(cagnotteNet("may", CAGNOTTE_PROVIDERS.may.defaultMonthly)).toBeCloseTo(1_500, 2);
   });
 
-  it("Wawashi nets the 3.5% + 60 €/an service fees", () => {
-    // 1 500 × (1 − 0.035) − 60/12 = 1 447.5 − 5 = 1 442.5
+  it("Wawashi : 18 000 €/an utilisables, frais (3,5 % + 60 €/an) en sus (#6)", () => {
+    expect(cagnotteNet("wawashi", CAGNOTTE_PROVIDERS.wawashi.defaultMonthly) * 12).toBeCloseTo(18_000, 0);
+    // Formule des frais inchangée : 1 500 × (1 − 0,035) − 60/12 = 1 442,5.
     expect(cagnotteNet("wawashi", 1_500)).toBeCloseTo(1_442.5, 1);
   });
 
@@ -25,11 +27,15 @@ describe("simulate — cagnotte choice flows into scenario C", () => {
     household: { maritalStatus: "celibataire", children: 0, childrenGardeAlternee: 0 },
   };
 
-  it("May ≥ Wawashi ≥ none on optimised disposable income", () => {
-    const may = simulate({ ...base, cagnotteChoice: "may", cagnotteMonthly: 1_570 }).scenarios[2].disposable;
-    const wawashi = simulate({ ...base, cagnotteChoice: "wawashi", cagnotteMonthly: 1_500 }).scenarios[2].disposable;
+  // Avec les chiffres du 25/09, May (68,50 €/mois d'abonnement) coûte un peu
+  // plus que Wawashi (3,5 % + 60 €/an) pour les mêmes 1 500 € utilisables :
+  // l'ordre May ≥ Wawashi ne tient plus. Seule certitude : une cagnotte bat
+  // l'absence de cagnotte.
+  it("une cagnotte (May ou Wawashi) bat l'absence de cagnotte", () => {
+    const may = simulate({ ...base, cagnotteChoice: "may", cagnotteMonthly: CAGNOTTE_PROVIDERS.may.defaultMonthly }).scenarios[2].disposable;
+    const wawashi = simulate({ ...base, cagnotteChoice: "wawashi", cagnotteMonthly: CAGNOTTE_PROVIDERS.wawashi.defaultMonthly }).scenarios[2].disposable;
     const none = simulate({ ...base, cagnotteChoice: "aucune" }).scenarios[2].disposable;
-    expect(may).toBeGreaterThanOrEqual(wawashi);
+    expect(may).toBeGreaterThan(none);
     expect(wawashi).toBeGreaterThan(none);
   });
 });

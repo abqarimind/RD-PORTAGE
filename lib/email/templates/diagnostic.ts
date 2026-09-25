@@ -12,7 +12,7 @@
  * même si E3 échoue.
  */
 import type { SimulationResultPayload } from "@/types/simulation-result";
-import { DELAI_RAPPEL, PHONE_LABEL } from "@/config/contact";
+import { DELAI_RAPPEL, LIGNE_LEGALE, PHONE_LABEL } from "@/config/contact";
 import { button, esc, eur, eurSigned, h2, layout, pct, row, siteDomain, table, MUTED } from "./layout";
 
 
@@ -55,7 +55,7 @@ ${p.meta.dossierUrl ? button(p.meta.dossierUrl, "Revoir mon dossier") : ""}
     )}" style="color:${MUTED};">Mentions légales</a>${
       unsubscribeUrl ? ` · <a href="${esc(unsubscribeUrl)}" style="color:${MUTED};">Se désinscrire</a>` : ""
     }`,
-    `RD Portage — 1 rue George Stephenson, 78180 Montigny-le-Bretonneux · RCS Versailles 912 888 013`,
+    esc(LIGNE_LEGALE),
   ].join("<br>");
 
   const text = [

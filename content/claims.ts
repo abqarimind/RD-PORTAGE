@@ -67,8 +67,9 @@ export const CLAIMS: Record<string, Claim> = {
       "Jusqu'à 18 000 €/an d'avantages exonérés via les dispositifs légaux (cagnotte May, titres-restaurant, mobilité durable, services à la personne).",
     value: "18 000 €/an",
     source: {
-      label: "Simulation officielle RD Portage (cagnotte 1 570 €/mois) + présentation May × RD Portage",
-      checkedAt: "2026-06-11",
+      label:
+        "Simulation officielle RD Portage + présentation May × RD Portage ; retours équipe du 25/09 (May : 1 500 €/mois utilisables + 68,50 € d'abonnement ; Wawashi : 18 000 €/an utilisables)",
+      checkedAt: "2026-09-25",
     },
     condition:
       "Sous conditions d'éligibilité URSSAF par catégorie : cadeaux 193,20 €/an, services à la personne 2 421 €/an, mobilité 800 €/an, sur justificatifs.",
@@ -101,27 +102,36 @@ export const CLAIMS: Record<string, Claim> = {
   },
   ca_optimise_40: {
     id: "ca_optimise_40",
+    // Retours #4/#42 du 25/09 : la limite porte sur le SALAIRE BRUT, pas sur
+    // le CA, et c'est une règle interne RD Portage (aucune base
+    // réglementaire). L'ancien « 40 % du CA » reposait sur la mauvaise base :
+    // il est retiré plutôt que recalculé.
     text:
-      "Jusqu'à 40 % de votre chiffre d'affaires optimisé dans les règles : 30 % de frais professionnels remboursables + dispositifs d'avantages salariés.",
-    value: "40 % du CA",
+      "Frais professionnels remboursés sur justificatifs, limités à 30 % de votre salaire brut (règle interne RD Portage), en plus des dispositifs d'avantages salariés.",
+    value: "30 % du salaire brut",
     source: {
-      label: "Guide des frais professionnels RD Portage 2024 (plafond NDF 30 % du CA mensuel)",
-      checkedAt: "2026-06-11",
+      label: "Règle interne RD Portage — retours équipe #4/#42 du 25/09 (pas un plafond légal)",
+      checkedAt: "2026-09-25",
     },
-    condition: "Frais réels justifiés, plafond 30 % du CA HT mensuel, justificatifs avec TVA.",
+    condition: "Frais réels justifiés, justificatifs avec TVA. Limite interne, non réglementaire.",
   },
   restitution_64: {
     id: "restitution_64",
-    text: "Cas de référence TJM 420 € : 64 % du CA restitué net, avantages inclus.",
-    value: "64 %",
-    source: { label: "Simulation officielle RD Portage TJM 420", checkedAt: "2026-06-11" },
-    condition: "Cas type : 20 jours/mois, NDF 500 €, cagnotte 1 570 €, titres-restaurant.",
+    // Recalculé le 25/09 avec la cagnotte May réelle (#5) ; le taux est
+    // AVANT impôt sur le revenu et inclut des avantages non retirables en
+    // argent (#28, #34). L'identifiant est conservé pour la traçabilité.
+    text:
+      "Cas de référence TJM 420 € : 63 % du CA restitué avant impôt sur le revenu, dont 21 % en avantages (cagnotte May, titres-restaurant) non retirables en argent.",
+    value: "63 %",
+    source: { label: "Simulation officielle RD Portage TJM 420, recalculée le 25/09 (lib/fiscal/portage.ts)", checkedAt: "2026-09-25" },
+    condition:
+      "Cas type : 20 jours/mois, NDF 500 €, cagnotte May 1 500 €/mois utilisables (+ 68,50 € d'abonnement), titres-restaurant. Avant impôt sur le revenu.",
   },
 
   // ——— PROOF ————————————————————————————————————————————————
   preuve_societe: {
     id: "preuve_societe",
-    text: "RD Portage — société de portage salarial depuis 2021, ~30 consultants portés, Montigny-le-Bretonneux.",
+    text: "RD Portage — société de portage salarial immatriculée le 01/04/2022, ~30 consultants portés, Montigny-le-Bretonneux.",
     source: {
       label: "RCS Versailles n° 912 888 013",
       url: "https://annuaire-entreprises.data.gouv.fr/entreprise/912888013",

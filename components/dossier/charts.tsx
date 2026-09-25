@@ -261,7 +261,7 @@ export function ScenarioBars({ rows }: { rows: ScenarioBar[] }) {
 
 /* ————————————————————— jauge du taux de restitution ————————————————————— */
 
-export function RestitutionGauge({ rate }: { rate: number }) {
+export function RestitutionGauge({ rate, benefitsRate }: { rate: number; benefitsRate?: number }) {
   const pctValue = Math.max(0, Math.min(rate, 1));
   const r = 52;
   const circumference = Math.PI * r; // demi-cercle
@@ -315,7 +315,14 @@ export function RestitutionGauge({ rate }: { rate: number }) {
       <p className="-mt-6 text-3xl font-extrabold tabular-nums" style={{ color: VALIDE }}>
         {(pctValue * 100).toFixed(1).replace(".", ",")} %
       </p>
-      <p className="mt-1 text-sm text-[#7A8093]">de votre CA vous revient</p>
+      <p className="mt-1 text-sm text-[#7A8093]">de votre CA vous revient, avant impôt sur le revenu</p>
+      {/* #28 : absent des dossiers signés avant le 25/09, d'où la garde. */}
+      {benefitsRate !== undefined && benefitsRate > 0 && (
+        <p className="mt-1 text-center text-xs text-[#7A8093]">
+          dont {(benefitsRate * 100).toFixed(1).replace(".", ",")} % en avantages (cagnotte, titres-restaurant), non retirables en
+          argent
+        </p>
+      )}
     </div>
   );
 }

@@ -173,10 +173,11 @@ describe("computePortage — non-regression vs the official RD Portage workbook"
     expect(p.restitutionRate).toBeLessThan(0.66);
   });
 
-  // Manus prototype regression: NDF must be capped at 30% of fees.
-  it("caps NDF at 30% of invoiced fees", () => {
+  // Règle RD (retours #4/#42 du 25/09) : NDF limitées à 30 % du SALAIRE BRUT.
+  it("caps NDF at 30% of the gross salary", () => {
     const p = computePortage({ tjm: 400, days: 10, ndf: 3_000 });
-    expect(p.ndf).toBe(1_200);
+    expect(p.ndf).toBeLessThan(3_000);
+    expect(p.ndf).toBeCloseTo(0.3 * p.grossSalary, -1);
   });
 
   it("never produces a negative available account", () => {

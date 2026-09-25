@@ -57,6 +57,11 @@ function proprietes(lead: Lead): Record<string, string | number | null> {
     tjm_ou_ca: lead.profile.tjm_ou_ca,
     jours_factures: lead.profile.jours_factures,
     economie_annuelle_eur: lead.simulation.economie_annuelle_eur,
+    // Variable de l'email J14 de la séquence (« environ X € laissés chaque mois »).
+    economie_mensuelle: Math.round(lead.simulation.economie_annuelle_eur / 12),
+    // Condition d'arrêt de la séquence : « oui » dès que le prospect demande
+    // son Diagnostic (automatique), répond ou est joint (à la main).
+    sequence_stop: "non",
     funnel_stage: lead.funnel_stage,
     lead_source: lead.attribution.lead_source,
     consentement_marketing: lead.consent.marketing_optin ? "oui" : "non",
@@ -74,6 +79,12 @@ function proprietes(lead: Lead): Record<string, string | number | null> {
  * parcours peuvent être manqués, et ils sont déjà journalisés par ailleurs.
  */
 const emailParLeadId = new Map<string, string>();
+
+/**
+ * Événements qui arrêtent la séquence prospects (voir content/emails/sequence.md).
+ * `rdv_clicked` = demande de Diagnostic ; `call_done` = prospect joint.
+ */
+const ARRETS_SEQUENCE = new Set<FunnelEvent["event"]>(["rdv_clicked", "rdv_booked", "call_done", "signe"]);
 
 /** Le SDK renvoie { data, error } au lieu de lever : on normalise. */
 function messageErreur(error: unknown): string {
@@ -131,24 +142,42 @@ export const resendAdapter: CRMAdapter = {
     }
   },
 
-  async appendEvent(leadId: string, event: FunnelEvent) {
-    const email = emailParLeadId.get(leadId);
-    if (!email) return; // au mieux : voir la note sur le miroir
+  async appendEvent(leadId: string, event: FunnelEvent, emailConnu?: string) {
+    // L'email passé par l'appelant prime : le miroir est vide d'une
+    // invocation serverless à l'autre, et c'était précisément le cas de la
+    // demande de Diagnostic — la mise à jour ne partait jamais, sans erreur.
+    const email = emailConnu ?? emailParLeadId.get(leadId);
+    if (!email) {
+      console.warn("[crm-resend] appendEvent ignoré : email inconnu", JSON.stringify({ leadId, event: event.event }));
+      return;
+    }
     const res = await getClient().contacts.update({
       email,
-      properties: { last_event: event.event, last_event_at: event.timestamp },
+      properties: {
+        last_event: event.event,
+        last_event_at: event.timestamp,
+        ...(ARRETS_SEQUENCE.has(event.event) ? { sequence_stop: "oui" } : {}),
+      },
     });
     if (res.error) throw new Error(`Resend appendEvent → ${messageErreur(res.error)}`);
   },
 
-  async triggerSequence(leadId: string, sequenceId: string) {
-    const email = emailParLeadId.get(leadId);
+  async triggerSequence(leadId: string, _sequenceId: string, emailConnu?: string) {
+    const email = emailConnu ?? emailParLeadId.get(leadId);
     if (!email) return;
-    const nomEvenement = sequenceId || process.env.RESEND_SEQUENCE_EVENT || "sequence_j14";
+    // La variable d'environnement prime : l'identifiant générique passé par
+    // la route (« seq14 ») l'écrasait, et l'Automation n'aurait jamais reçu
+    // l'événement qu'elle attend.
+    const nomEvenement = process.env.RESEND_SEQUENCE_EVENT || "sequence_j14";
     // Déclenchement par ÉVÉNEMENT NOMMÉ : c'est ce qu'attend le pas de
     // déclenchement d'une Automation Resend.
     const res = await getClient().events.send({ event: nomEvenement, email });
     if (res.error) throw new Error(`Resend triggerSequence → ${messageErreur(res.error)}`);
+  },
+
+  async unsubscribe(email: string) {
+    const res = await getClient().contacts.update({ email, unsubscribed: true, properties: { sequence_stop: "oui" } });
+    if (res.error) throw new Error(`Resend unsubscribe → ${messageErreur(res.error)}`);
   },
 
   async deleteLead(leadId: string) {

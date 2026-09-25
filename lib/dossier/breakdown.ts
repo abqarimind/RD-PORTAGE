@@ -95,23 +95,29 @@ export function derivePaie(payload: SimulationResultPayload) {
   // tombe exactement sur le perçu net.
   const partEntrepriseTR = m.percuNet - netSalaire - m.fraisPro;
   const fraisRd = m.fraisDeGestion + m.assurancesTaxes;
+  // Frais du prestataire d'avantages (abonnement May, forfait Wawashi) :
+  // prélevés sur l'enveloppe mais ne reviennent pas au consultant.
+  // Coût obtenu PAR DIFFÉRENCE (1 568,50 € arrondi à 1 569 € décalerait la
+  // cascade d'un euro).
+  const cagnotteCout = m.cagnotte > 0 ? m.caHt - m.fraisDeGestion - m.assurancesTaxes - m.fraisPro - m.disponible : 0;
+  const fraisCagnotte = Math.max(cagnotteCout - m.cagnotte, 0);
   const cotisations = chargesPatronales + m.cotisationsSalariales;
   // Obtenue par différence, jamais par addition : sinon les arrondis la
   // feraient dépasser le total de la barre.
-  const pourVous = m.caHt - fraisRd - cotisations;
-  return { chargesPatronales, netSalaire, partEntrepriseTR, fraisRd, cotisations, pourVous };
+  const pourVous = m.caHt - fraisRd - cotisations - fraisCagnotte;
+  return { chargesPatronales, netSalaire, partEntrepriseTR, fraisRd, cotisations, pourVous, fraisCagnotte, cagnotteCout };
 }
 
 export function buildCascadeSteps(payload: SimulationResultPayload): CascadeStep[] {
   const m = payload.resultats.mensuel;
-  const { chargesPatronales, netSalaire, partEntrepriseTR } = derivePaie(payload);
+  const { chargesPatronales, netSalaire, partEntrepriseTR, cagnotteCout } = derivePaie(payload);
 
   return [
     { label: "CA HT facturé", delta: m.caHt, total: true },
     { label: "Frais de gestion", delta: -m.fraisDeGestion },
     { label: "Assurances & taxes", delta: -m.assurancesTaxes },
     ...(m.fraisPro > 0 ? [{ label: "Frais professionnels avancés", delta: -m.fraisPro }] : []),
-    ...(m.cagnotte > 0 ? [{ label: "Cagnotte avantages", delta: -m.cagnotte }] : []),
+    ...(m.cagnotte > 0 ? [{ label: "Cagnotte avantages (frais inclus)", delta: -cagnotteCout }] : []),
     { label: "Disponible pour votre salaire", delta: m.disponible, total: true },
     { label: "Charges patronales", delta: -chargesPatronales },
     { label: "Cotisations salariales", delta: -m.cotisationsSalariales },
@@ -126,7 +132,7 @@ export function buildCascadeSteps(payload: SimulationResultPayload): CascadeStep
 
 export function buildPartage(payload: SimulationResultPayload): { parts: PartagePart[]; hint: string } {
   const m = payload.resultats.mensuel;
-  const { fraisRd, cotisations, pourVous, partEntrepriseTR } = derivePaie(payload);
+  const { fraisRd, cotisations, pourVous, partEntrepriseTR, fraisCagnotte } = derivePaie(payload);
 
   const parts: PartagePart[] = [
     {
@@ -139,6 +145,9 @@ export function buildPartage(payload: SimulationResultPayload): { parts: Partage
     },
     { label: "Cotisations sociales", value: cotisations, note: "retraite, santé, chômage, prévoyance" },
     { label: "Frais RD Portage", value: fraisRd, note: "gestion, assurances et taxes" },
+    ...(fraisCagnotte >= 1
+      ? [{ label: "Frais de la cagnotte", value: fraisCagnotte, note: "abonnement ou frais du prestataire d'avantages" }]
+      : []),
   ];
 
   // La page affiche deux pourcentages voisins : la jauge (rémunération

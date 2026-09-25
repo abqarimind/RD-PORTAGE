@@ -138,7 +138,14 @@ export interface ResultatsPayload {
     fraisDeGestion: number;
     assurancesTaxes: number;
     fraisPro: number;
+    /** Valeur de la cagnotte pour le consultant (nette de frais). */
     cagnotte: number;
+    /**
+     * Coût prélevé sur l'enveloppe (valeur + frais du prestataire, ex.
+     * abonnement May 68,50 €). Absent des dossiers signés avant le 25/09 :
+     * les lecteurs retombent alors sur `cagnotte`.
+     */
+    cagnotteCout?: number;
     disponible: number;
     brut: number;
     cotisationsSalariales: number;
@@ -147,8 +154,10 @@ export interface ResultatsPayload {
     percuNet: number;
     remunerationGlobale: number;
   };
-  /** Taux de restitution réel : rémunération globale / CA HT. */
+  /** Taux de restitution réel : rémunération globale / CA HT, AVANT impôt sur le revenu. */
   tauxRestitution: number;
+  /** Part de ce taux en avantages non retirables en argent (#28). Absent des anciens dossiers. */
+  tauxAvantages?: number;
   /** Annuel, foyer complet. */
   netImposableAnnuel: number;
   impotNet: number;

@@ -15,7 +15,7 @@ NDJSON, zéro perte). Pour basculer sur un vrai CRM :
 3. Créer une **liste** « Séquence 14 jours » ; noter son ID.
 4. Créer l'**automation** : déclencheur = contact ajouté à cette liste,
    puis 6 envois (J0, J2, J4, J7, J10, J14) avec les templates de
-   `content/emails/` (voir `content/emails/objets.md`).
+   `content/emails/` (voir `content/emails/sequence.md` — la séquence est désormais chargée dans Resend, pas dans Brevo).
 5. Variables d'environnement (Vercel → Settings → Environment Variables) :
    ```
    CRM_PROVIDER=brevo

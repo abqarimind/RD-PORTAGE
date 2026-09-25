@@ -32,7 +32,9 @@ export interface DiagnosticSegment {
 
 export const DIAGNOSTIC_SEGMENTS: DiagnosticSegment[] = [
   { id: "porte", label: "Porté chez un autre prestataire", status: "porte_ailleurs" },
-  { id: "freelance", label: "Freelance (micro / SASU)", status: "freelance_micro" },
+  // #8 (consigne de l'équipe) : « Freelance » tout court, sans déclinaison.
+  // La structure (micro / société) est demandée dans le simulateur.
+  { id: "freelance", label: "Freelance", status: "freelance_micro" },
   { id: "esn", label: "Salarié en ESN", status: "salarie_esn" },
   { id: "transition", label: "En transition", status: "transition" },
 ];

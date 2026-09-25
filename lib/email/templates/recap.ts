@@ -11,7 +11,7 @@
 import type { SimulationResultPayload } from "@/types/simulation-result";
 import { button, esc, eur, eurSigned, h2, layout, pct, row, siteDomain, table, MUTED } from "./layout";
 import { rawBlock } from "./diagnostic";
-import { EMAIL_ENTREPRISE } from "@/config/contact";
+import { EMAIL_ENTREPRISE, LIGNE_LEGALE } from "@/config/contact";
 
 /** Corps partagé E1 / E2 — une seule rédaction, deux destinataires. */
 function corps(p: SimulationResultPayload, pourInterne: boolean): string {
@@ -52,7 +52,12 @@ function corps(p: SimulationResultPayload, pourInterne: boolean): string {
 
   const avantages = p.avantages.avantagesInclus
     ? p.avantages.selection
-        .map((a) => row(`${a.label} (${a.fraisDeService})`, `${eur(a.montantNetMensuel)} net/mois`))
+        .map((a) =>
+          row(
+            `${a.label} (${a.fraisDeService})`,
+            a.id === "wawashi" ? `${eur(a.montantNetAnnuel)} par an` : `${eur(a.montantNetMensuel)} net/mois`,
+          ),
+        )
         .join("") + row("Total avantages", `${eur(p.avantages.totalNetMensuel)} net/mois`, true)
     : row("Avantages retenus", "aucun");
 
@@ -81,7 +86,7 @@ ${table(
   row("Profil", p.identite.profilLabel) +
     row("TJM", tjmLigne) +
     row("Jours facturés", `${p.activite.joursFactures} / mois`) +
-    row("Frais professionnels", `${eur(p.activite.fraisProMensuels)} / mois`) +
+    row("Frais professionnels", fraisProLabel(p)) +
     row("Foyer", p.foyer.situationLabel) +
     row("Parts fiscales", String(p.foyer.nombreDeParts)) +
     row(
@@ -105,7 +110,7 @@ ${table(
     row("Frais de gestion RD", `− ${eur(r.mensuel.fraisDeGestion)}`) +
     row("Assurances & taxes", `− ${eur(r.mensuel.assurancesTaxes)}`) +
     row("Frais professionnels", `− ${eur(r.mensuel.fraisPro)}`) +
-    row("Cagnotte avantages", `− ${eur(r.mensuel.cagnotte)}`) +
+    row("Cagnotte avantages (frais inclus)", `− ${eur(r.mensuel.cagnotteCout ?? r.mensuel.cagnotte)}`) +
     row("Disponible compte d'activité", eur(r.mensuel.disponible)) +
     row("Salaire brut", eur(r.mensuel.brut)) +
     row("Cotisations salariales", `− ${eur(r.mensuel.cotisationsSalariales)}`) +
@@ -113,7 +118,8 @@ ${table(
     (p.avantages.titresResto.inclus ? row("Titres-restaurant", `+ ${eur(r.mensuel.titresResto)}`) : "") +
     row("Perçu net", eur(r.mensuel.percuNet), true) +
     row("Rémunération globale", eur(r.mensuel.remunerationGlobale), true) +
-    row("Taux de restitution", pct(r.tauxRestitution), true),
+    row("Taux de restitution, avant impôt sur le revenu", pct(r.tauxRestitution), true) +
+    (r.tauxAvantages ? row("dont avantages, non retirables en argent", pct(r.tauxAvantages)) : ""),
 )}
 
 ${
@@ -147,7 +153,17 @@ ${table(
   )}</p>`;
 }
 
-function texte(p: SimulationResultPayload): string {
+/** #12 : les frais pro saisis, et ce qui est retenu après la limite de 30 % du brut. */
+function fraisProLabel(p: SimulationResultPayload): string {
+  const saisis = p.activite.fraisProMensuels;
+  const retenus = p.resultats.mensuel.fraisPro;
+  if (!(saisis > 0)) return "aucun";
+  return retenus < saisis
+    ? `${eur(saisis)} / mois saisis, ${eur(retenus)} retenus (limite de 30 % du salaire brut, règle interne RD Portage)`
+    : `${eur(saisis)} / mois`;
+}
+
+function texte(p: SimulationResultPayload, unsubscribeUrl?: string): string {
   const r = p.resultats;
   const lignes = [
     `Bonjour ${p.identite.prenom},`,
@@ -172,12 +188,19 @@ function texte(p: SimulationResultPayload): string {
         : `${eur(p.activite.tjm)} (montant exact)`
     }`,
     `- Jours facturés : ${p.activite.joursFactures} / mois`,
+    `- Frais professionnels : ${fraisProLabel(p)}`,
     `- Foyer : ${p.foyer.situationLabel}, ${p.foyer.nombreDeParts} part(s), ${p.foyer.enfants} enfant(s)`,
     `- Mode de déduction : ${p.foyer.modeDeductionLabel}`,
     ``,
     `VOS AVANTAGES`,
     p.avantages.avantagesInclus
-      ? p.avantages.selection.map((a) => `- ${a.label} : ${eur(a.montantNetMensuel)} net/mois (${a.fraisDeService})`).join("\n")
+      ? p.avantages.selection
+          .map((a) =>
+            a.id === "wawashi"
+              ? `- ${a.label} : ${eur(a.montantNetAnnuel)} par an (${a.fraisDeService})`
+              : `- ${a.label} : ${eur(a.montantNetMensuel)} net/mois (${a.fraisDeService})`,
+          )
+          .join("\n")
       : `- Aucun avantage retenu.`,
     ``,
     `VOTRE RÉMUNÉRATION MENSUELLE`,
@@ -186,7 +209,9 @@ function texte(p: SimulationResultPayload): string {
     `- Salaire brut : ${eur(r.mensuel.brut)}`,
     `- Perçu net : ${eur(r.mensuel.percuNet)}`,
     `- Rémunération globale : ${eur(r.mensuel.remunerationGlobale)}`,
-    `- Taux de restitution : ${pct(r.tauxRestitution)}`,
+    `- Taux de restitution, avant impôt sur le revenu : ${pct(r.tauxRestitution)}${
+      r.tauxAvantages ? ` (dont ${pct(r.tauxAvantages)} en avantages, non retirables en argent)` : ""
+    }`,
     ``,
     ...(r.comparable
       ? [
@@ -206,6 +231,9 @@ function texte(p: SimulationResultPayload): string {
     p.meta.mentions.valeurIndicative,
     `Référence de simulation : ${p.meta.simulationId}`,
     `Politique de confidentialité : ${p.meta.mentions.politiqueConfidentialiteUrl}`,
+    // #13 : la version texte porte aussi le lien de désinscription.
+    unsubscribeUrl ? `Se désinscrire : ${unsubscribeUrl}` : ``,
+    LIGNE_LEGALE,
   ];
   return lignes.filter((l) => l !== undefined).join("\n");
 }
@@ -220,7 +248,7 @@ function piedLead(p: SimulationResultPayload, unsubscribeUrl?: string): string {
     )}" style="color:${MUTED};">Mentions légales</a>${
       unsubscribeUrl ? ` · <a href="${esc(unsubscribeUrl)}" style="color:${MUTED};">Se désinscrire</a>` : ""
     }`,
-    `RD Portage — 1 rue George Stephenson, 78180 Montigny-le-Bretonneux · RCS Versailles 912 888 013`,
+    esc(LIGNE_LEGALE),
   ].join("<br>");
 }
 
@@ -236,7 +264,7 @@ export function emailRecapLead(p: SimulationResultPayload, unsubscribeUrl?: stri
       body: corps(p, false),
       footer: piedLead(p, unsubscribeUrl),
     }),
-    text: texte(p),
+    text: texte(p, unsubscribeUrl),
   };
 }
 

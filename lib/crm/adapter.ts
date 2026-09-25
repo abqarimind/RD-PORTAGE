@@ -16,10 +16,16 @@ export interface CRMAdapter {
   readonly name: string;
   /** Create or update a lead (idempotent on lead_id / email). */
   upsertLead(lead: Lead): Promise<void>;
-  /** Append a funnel event to an existing lead. */
-  appendEvent(leadId: string, event: FunnelEvent): Promise<void>;
+  /**
+   * Append a funnel event to an existing lead. `email` est passé quand
+   * l'appelant le connaît : en serverless, le lead a pu être créé dans une
+   * autre invocation, et un miroir en mémoire ne suffit pas à le retrouver.
+   */
+  appendEvent(leadId: string, event: FunnelEvent, email?: string): Promise<void>;
   /** Trigger an email sequence (e.g. Brevo automation) for the lead. */
-  triggerSequence(leadId: string, sequenceId: string): Promise<void>;
+  triggerSequence(leadId: string, sequenceId: string, email?: string): Promise<void>;
+  /** Désinscription marketing (lien des emails, #13). Optionnel selon l'outil. */
+  unsubscribe?(email: string): Promise<void>;
   /** GDPR right to erasure. */
   deleteLead(leadId: string): Promise<void>;
   /** CSV export compatible with Linda's current Excel workflow. */

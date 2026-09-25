@@ -19,6 +19,7 @@ import { buildCascadeSteps, buildPartage } from "@/lib/dossier/breakdown";
 import { Cascade, PartageBar, RestitutionGauge, ScenarioBars } from "./charts";
 import { groupFr } from "@/lib/format";
 import { CTA_CONSEILLER, RDV_URL } from "@/config/contact";
+import { ContactOptions } from "@/components/ContactOptions";
 
 const BRASS = "#B08D57";
 const VALIDE = "#2F6B4F";
@@ -67,10 +68,10 @@ export function DossierView({ payload }: { payload: SimulationResultPayload }) {
       <section className="mt-10 rounded-3xl border border-[#ECEEF3] bg-white p-6" data-reveal>
         <h2 className="text-lg font-extrabold tracking-tight">Ce qui vous revient réellement</h2>
         <p className="mt-1 text-sm text-[#7A8093]">
-          Sur {eur(m.caHt)} facturés chaque mois, voici la part qui finit dans votre poche, avantages compris.
+          Sur {eur(m.caHt)} facturés chaque mois, voici la part qui vous revient avant impôt sur le revenu, avantages compris.
         </p>
         <div className="mt-5">
-          <RestitutionGauge rate={r.tauxRestitution} />
+          <RestitutionGauge rate={r.tauxRestitution} benefitsRate={r.tauxAvantages} />
         </div>
       </section>
 
@@ -209,6 +210,7 @@ export function DossierView({ payload }: { payload: SimulationResultPayload }) {
             Imprimer ce dossier
           </button>
         </div>
+        <ContactOptions className="mt-3 text-sm text-[#4A5061]" />
       </section>
 
       <RevealStyles />

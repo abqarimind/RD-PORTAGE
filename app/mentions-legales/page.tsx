@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ADRESSE, DATE_IMMATRICULATION, PHONE_INTL_LABEL, RAISON_SOCIALE, RCS } from "@/config/contact";
 import { SiteFooter } from "@/components/SiteFooter";
 
 const SANS = "'Manrope','IBM Plex Sans',sans-serif";
@@ -13,8 +14,8 @@ export default function MentionsLegales() {
         <h1 className="mt-4 text-3xl font-extrabold tracking-tight">Mentions légales</h1>
         <div className="mt-6 space-y-4 text-sm leading-relaxed text-[#4A5061]">
           <p>
-            <strong>Éditeur :</strong> RD Portage, société de portage salarial, 1 rue George Stephenson,
-            78180 Montigny-le-Bretonneux — RCS Versailles 912 888 013 — Tél. +33 1 71 49 71 57.
+            <strong>Éditeur :</strong> {RAISON_SOCIALE}, société de portage salarial, {ADRESSE} — {RCS}, immatriculée le{" "}
+            {DATE_IMMATRICULATION} — Tél. {PHONE_INTL_LABEL}.
           </p>
           <p><strong>Directeur de la publication :</strong> Ridha Chammam, fondateur.</p>
           <p>
