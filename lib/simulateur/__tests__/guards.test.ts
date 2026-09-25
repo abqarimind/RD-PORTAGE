@@ -125,14 +125,21 @@ describe("BUG-04 — la mention « avantages inclus » suit la sélection réell
     expect(deux.totalNetMensuel).toBe(deux.selection.reduce((s, x) => s + x.montantNetMensuel, 0));
   });
 
-  it("Wawashi est affichée NETTE de ses frais de service (60 €/an + 3,5 %)", () => {
+  it("Wawashi : 18 000 €/an utilisables, frais (60 €/an + 3,5 %) en plus (#6)", () => {
     const a = buildAvantages(form({ cagnotte: "wawashi", titresResto: false }), 0);
     const w = a.selection[0];
     expect(w.label).toBe("Wawashi");
-    // 1 500 × (1 − 3,5 %) − 60/12 = 1 442,5
-    expect(w.montantNetMensuel).toBe(1_443);
+    expect(w.montantNetAnnuel).toBe(18_000);
     expect(w.montantNetMensuel).toBeLessThan(w.montantBrutMensuel);
+    expect(w.fraisDeService).toContain("18 000 €/an");
     expect(w.fraisDeService).toContain("3,5");
+  });
+
+  it("May : 1 500 € utilisables, abonnement de 68,50 € affiché (#5)", () => {
+    const m = buildAvantages(form({ cagnotte: "may", titresResto: false }), 0).selection[0];
+    expect(m.montantNetMensuel).toBe(1_500);
+    expect(m.fraisDeService).toContain("68,50");
+    expect(m.fraisDeService).not.toContain("sans frais");
   });
 
   it("toute combinaison de sélection reste cohérente entre libellé, liste et total", () => {

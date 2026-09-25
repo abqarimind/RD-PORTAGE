@@ -8,9 +8,8 @@
  */
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CAGNOTTE_PROVIDERS, cagnotteNet } from "@/config/fiscal-2026";
-import { computePortage } from "@/lib/fiscal/portage";
 import { simulate } from "@/lib/fiscal/scenarios";
+import { buildSimInput, computeLive } from "@/lib/simulateur/live";
 import { loadState } from "@/lib/simulateur/persistence";
 import { buildPayload } from "@/lib/simulateur/payload";
 import { resolvedTjm } from "@/lib/simulateur/state";
@@ -35,28 +34,8 @@ export function DossierFromStorage() {
     }
     const status = form.status;
 
-    const cagnotteGross = form.cagnotte === "aucune" ? 0 : CAGNOTTE_PROVIDERS[form.cagnotte].defaultMonthly;
-    const live = computePortage({
-      tjm,
-      days: form.days,
-      ndf: form.fraisMensuels,
-      cagnotteMay: cagnotteNet(form.cagnotte, cagnotteGross),
-      mealVouchers: form.titresResto,
-    });
-    const result = simulate({
-      status,
-      tjmOrMonthlyGross: status === "salarie_esn" ? Math.round((tjm * form.days) / 1.25) : tjm,
-      daysPerYear: form.days * 12,
-      household: { maritalStatus: form.situation, children: form.enfants, childrenGardeAlternee: form.gardeAlternee },
-      fraisReelsAnnual: form.useFraisReels && form.fraisReels > 0 ? form.fraisReels : undefined,
-      versementsPER: form.per || undefined,
-      dons: form.dons || undefined,
-      revenusFonciers: form.foncier || undefined,
-      impatrie: form.impatrie || undefined,
-      cagnotteChoice: form.cagnotte,
-      cagnotteMonthly: cagnotteGross || undefined,
-      revenuConjoint: form.situation === "marie_pacse" && form.revenuConjoint > 0 ? form.revenuConjoint : undefined,
-    });
+    const live = computeLive(form, tjm);
+    const result = simulate(buildSimInput(form, tjm, status));
 
     setPayload(
       buildPayload(form, result, live, {

@@ -1,10 +1,9 @@
 /** Payload de référence pour les tests d'emails et de dossier. */
-import { computePortage } from "@/lib/fiscal/portage";
 import { simulate } from "@/lib/fiscal/scenarios";
+import { buildSimInput, computeLive } from "@/lib/simulateur/live";
 import { buildPayload } from "@/lib/simulateur/payload";
 import { DEFAULT_FORM, resolvedTjm, type FormState } from "@/lib/simulateur/state";
 import type { SimulationResultPayload } from "@/types/simulation-result";
-import { CAGNOTTE_PROVIDERS, cagnotteNet } from "@/config/fiscal-2026";
 
 export function makePayload(patch: Partial<FormState> = {}): SimulationResultPayload {
   // Le profil n'a plus de valeur par défaut (§4.3) : un parcours réel en
@@ -12,23 +11,8 @@ export function makePayload(patch: Partial<FormState> = {}): SimulationResultPay
   const form: FormState = { ...DEFAULT_FORM, status: "freelance_micro", ...patch };
   const status = form.status ?? "freelance_micro";
   const tjm = resolvedTjm(form);
-  const cagnotteGross = form.cagnotte === "aucune" ? 0 : CAGNOTTE_PROVIDERS[form.cagnotte].defaultMonthly;
-
-  const live = computePortage({
-    tjm,
-    days: form.days,
-    ndf: form.fraisMensuels,
-    cagnotteMay: cagnotteNet(form.cagnotte, cagnotteGross),
-    mealVouchers: form.titresResto,
-  });
-  const result = simulate({
-    status,
-    tjmOrMonthlyGross: status === "salarie_esn" ? Math.round((tjm * form.days) / 1.25) : tjm,
-    daysPerYear: form.days * 12,
-    household: { maritalStatus: form.situation, children: form.enfants, childrenGardeAlternee: form.gardeAlternee },
-    cagnotteChoice: form.cagnotte,
-    cagnotteMonthly: cagnotteGross || undefined,
-  });
+  const live = computeLive(form, tjm);
+  const result = simulate(buildSimInput(form, tjm, status));
 
   return buildPayload(form, result, live, {
     identite: { prenom: "Camille", email: "camille@example.com", telephone: "0612345678" },

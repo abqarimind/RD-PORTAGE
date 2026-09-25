@@ -6,10 +6,9 @@
  * moyen de garantir que l'email, le dossier et l'écran affichent les mêmes
  * chiffres, et que ces chiffres sortent bien du moteur fiscal.
  */
-import { CAGNOTTE_PROVIDERS, cagnotteNet } from "@/config/fiscal-2026";
-import { computePortage } from "@/lib/fiscal/portage";
 import { simulate, type SimulationInput } from "@/lib/fiscal/scenarios";
 import { checkPlausibility, reportPlausibility } from "@/lib/simulateur/guards";
+import { buildSimInput, computeLive } from "@/lib/simulateur/live";
 import { buildPayload } from "@/lib/simulateur/payload";
 import { coerceFormState, resolvedTjm, type FormState } from "@/lib/simulateur/state";
 import type { SimulationResultPayload } from "@/types/simulation-result";
@@ -35,29 +34,8 @@ export function buildServerPayload(args: BuildArgs): SimulationResultPayload | n
   const tjm = resolvedTjm(form);
   if (!form.status || !(tjm > 0) || !(form.days > 0)) return null;
 
-  const cagnotteGross = form.cagnotte === "aucune" ? 0 : CAGNOTTE_PROVIDERS[form.cagnotte].defaultMonthly;
-  const live = computePortage({
-    tjm,
-    days: form.days,
-    ndf: form.fraisMensuels,
-    cagnotteMay: cagnotteNet(form.cagnotte, cagnotteGross),
-    mealVouchers: form.titresResto,
-  });
-
-  const input: SimulationInput = {
-    status: form.status,  // non nul : vérifié ci-dessus
-    tjmOrMonthlyGross: form.status === "salarie_esn" ? Math.round((tjm * form.days) / 1.25) : tjm,
-    daysPerYear: form.days * 12,
-    household: { maritalStatus: form.situation, children: form.enfants, childrenGardeAlternee: form.gardeAlternee },
-    fraisReelsAnnual: form.useFraisReels && form.fraisReels > 0 ? form.fraisReels : undefined,
-    versementsPER: form.per || undefined,
-    dons: form.dons || undefined,
-    revenusFonciers: form.foncier || undefined,
-    impatrie: form.impatrie || undefined,
-    cagnotteChoice: form.cagnotte,
-    cagnotteMonthly: cagnotteGross || undefined,
-    revenuConjoint: form.situation === "marie_pacse" && form.revenuConjoint > 0 ? form.revenuConjoint : undefined,
-  };
+  const live = computeLive(form, tjm);
+  const input: SimulationInput = buildSimInput(form, tjm, form.status); // statut non nul : vérifié ci-dessus
 
   const result = simulate(input);
   reportPlausibility(checkPlausibility(result, form), { where: "serveur", simulationId: args.simulationId });
