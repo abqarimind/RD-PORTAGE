@@ -1,0 +1,12 @@
+Objet : Et votre CDI ?
+Statut : salarie_esn
+---
+Bonjour {{{PRENOM}}},
+
+Quitter un CDI, c'est souvent ce qui fait hésiter. En portage, vous restez salarié : contrat de travail, assurance chômage, retraite, prévoyance et congés payés.
+
+Ce qui change : vous choisissez vos missions et vous fixez votre tarif.
+
+[[CAS CLIENT À FOURNIR : un ex-salarié d'ESN passé en portage, en une phrase, avec son accord]]
+
+On en parle 30 minutes ?

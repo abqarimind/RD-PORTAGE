@@ -1,0 +1,4 @@
+—
+%LIGNE_LEGALE%
+Vous recevez cet email parce que vous avez accepté les conseils de RD Portage lors de votre simulation.
+Se désinscrire : {{{RESEND_UNSUBSCRIBE_URL}}}

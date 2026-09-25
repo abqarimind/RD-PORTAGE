@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "report:weekly": "tsx scripts/weekly-report.ts"
+    "report:weekly": "tsx scripts/weekly-report.ts",
+    "sequence:resend": "tsx scripts/resend-sequence.ts"
   },
   "dependencies": {
     "next": "^14.2.0",

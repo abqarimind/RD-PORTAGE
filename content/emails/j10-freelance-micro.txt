@@ -1,0 +1,12 @@
+Objet : Et vos plafonds ?
+Statut : freelance_micro
+---
+Bonjour {{{PRENOM}}},
+
+En micro-entreprise, le chiffre d'affaires est plafonné : %PLAFOND_MICRO% € par an en 2026 pour les prestations de services, et deux années de dépassement font sortir du régime.
+
+En portage, il n'y a plus de plafond de chiffre d'affaires, ni de déclarations à gérer : nous nous en occupons.
+
+[[CAS CLIENT À FOURNIR : un ancien micro-entrepreneur passé en portage, en une phrase, avec son accord]]
+
+On en parle 30 minutes ?

@@ -42,4 +42,4 @@ et masquent la navigation (cf. docs/landing-conversion.md).
 - Google Ads : `?utm_source=google&utm_medium=cpc&utm_campaign=2026-07_simulateur`
 - Meta Ads (angle A) : `/lp/a?utm_source=facebook&utm_medium=paid_social&utm_campaign=rd-leads-test&utm_content=angleA-hook1-video`
 - Cold call (lien envoyé par SMS) : `?utm_source=coldcall&utm_medium=outbound&utm_campaign=2026-07_linda`
-- Email J4 : `?utm_source=brevo&utm_medium=email&utm_campaign=seq14_j4`
+- Séquence prospects : plus aucun lien dans les emails depuis le 25/09 (voir `content/emails/sequence.md`), donc plus de paramètres UTM à poser.

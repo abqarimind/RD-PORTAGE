@@ -1,0 +1,12 @@
+Objet : Et votre mission en cours ?
+Statut : porte_ailleurs
+---
+Bonjour {{{PRENOM}}},
+
+Changer de société de portage fait souvent craindre pour la mission en cours. Vous pouvez changer sans perdre votre client : la mission continue, seul le contrat de portage change.
+
+Nous organisons la transition avec vous, à la date qui vous convient.
+
+[[CAS CLIENT À FOURNIR : un consultant venu d'une autre société de portage, en une phrase, avec son accord]]
+
+On en parle 30 minutes ?

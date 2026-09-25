@@ -1,0 +1,12 @@
+Objet : Et si la mission n'est pas encore signée ?
+Statut : transition
+---
+Bonjour {{{PRENOM}}},
+
+Pas besoin d'attendre la signature pour vous préparer. Nous calculons votre rémunération, préparons votre contrat et vérifions vos options dès maintenant.
+
+Le jour où la mission arrive, vous signez sans délai.
+
+[[CAS CLIENT À FOURNIR : un consultant accompagné avant la signature de sa mission, en une phrase, avec son accord]]
+
+On en parle 30 minutes ?

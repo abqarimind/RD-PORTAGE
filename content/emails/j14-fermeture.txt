@@ -1,0 +1,10 @@
+Objet : Je ferme votre dossier ?
+Condition : economie_mensuelle > 0
+---
+Bonjour {{{PRENOM}}},
+
+D'après votre simulation, attendre vous laisse environ {{{ECONOMIE_MENSUELLE}}} € sur la table chaque mois.
+
+En 30 minutes, nous vous donnons un chiffre ferme : %FRAIS% de frais de gestion tout compris, signature possible sous 48 h.
+
+Je ferme votre dossier, ou on se cale un créneau ? Si c'est plus simple, appelez-nous au %TELEPHONE%.

@@ -1,0 +1,12 @@
+Objet : Et votre société ?
+Statut : freelance_sasu
+---
+Bonjour {{{PRENOM}}},
+
+Une société, c'est une comptabilité, un expert-comptable, des déclarations et, chaque année, l'arbitrage entre salaire et dividendes.
+
+En portage, plus de comptabilité ni de juridique : vous facturez votre client, nous nous occupons du reste.
+
+[[CAS CLIENT À FOURNIR : un ancien dirigeant de SASU ou d'EURL passé en portage, en une phrase, avec son accord]]
+
+On en parle 30 minutes ?
