@@ -17,7 +17,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { CAGNOTTE_PROVIDERS, MICRO_BNC_2026 } from "@/config/fiscal-2026";
-import { FRAIS_GESTION_LABEL, LIGNE_LEGALE, PHONE_LABEL } from "@/config/contact";
+import { FRAIS_GESTION_LABEL, LIGNE_LEGALE, LINKEDIN_RIDHA, PHONE_LABEL } from "@/config/contact";
 import { computePortage } from "@/lib/fiscal/portage";
 import { groupFr } from "@/lib/format";
 
@@ -61,8 +61,8 @@ export function tokens(): Record<string, string> {
     "%PLAFOND_MICRO%": groupFr(MICRO_BNC_2026.plafondCa).replace(/ /g, " "),
     "%LIGNE_LEGALE%": LIGNE_LEGALE,
     "%CAS_TYPE%": casType(),
-    // URL LinkedIn de Ridha : en attente (question ouverte). Ligne retirée si vide.
-    "%LINKEDIN_RIDHA%": process.env.RIDHA_LINKEDIN_URL ?? "",
+    // Surchargeable par RIDHA_LINKEDIN_URL ; la ligne est retirée si vide.
+    "%LINKEDIN_RIDHA%": process.env.RIDHA_LINKEDIN_URL ?? LINKEDIN_RIDHA,
   };
 }
 

@@ -11,7 +11,7 @@
  *    geste manuel dans le tableau de bord, après validation de l'équipe.
  *
  * Variables : RESEND_API_KEY, MAIL_FROM, MAIL_REPLY_TO (défaut marketing@),
- * RESEND_SEQUENCE_EVENT (défaut sequence_j14), RIDHA_LINKEDIN_URL (facultatif).
+ * RESEND_SEQUENCE_EVENT (défaut sequence_j14).
  * Procédure complète : content/emails/sequence.md.
  */
 import { Resend } from "resend";

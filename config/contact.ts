@@ -63,3 +63,6 @@ export const PHONE_INTL_LABEL = "+33 1 71 49 71 57";
 export const POLICY_VERSION = "privacy-2026-09";
 /** Nombre d'emails de conseil de la séquence prospects (content/emails/sequence.md). */
 export const SEQUENCE_NB_EMAILS = 4;
+
+/** Profil LinkedIn de Ridha, cité en signature de la séquence prospects (fourni le 25/09). */
+export const LINKEDIN_RIDHA = "https://www.linkedin.com/in/ridha-chammam/";

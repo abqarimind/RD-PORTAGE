@@ -49,10 +49,9 @@ Elle est **prête mais pas activée**, en attente de votre validation. Elle comp
 
 1. Le **numéro WhatsApp Business**.
 2. L'**outil de prise de rendez-vous** (Calendly, Cal.com, iClosed…) et son lien.
-3. L'**URL LinkedIn de Ridha**, pour la signature des emails.
-4. L'**abonnement May** : 68 € ou 68,50 € ? Le tableau et l'email ne disent pas la même chose ; nous avons retenu 68,50 €.
-5. Pour la séquence d'emails : **validation des 5 freins** cités dans le 3e email, et **un vrai témoignage client** par situation, avec l'accord du client.
-6. Pour information : avec ces nouveaux chiffres, pour les mêmes 1 500 € utilisables, May coûte légèrement plus cher à l'enveloppe que Wawashi (68,50 € par mois contre environ 60 €).
+3. L'**abonnement May** : 68 € ou 68,50 € ? Le tableau et l'email ne disent pas la même chose ; nous avons retenu 68,50 €.
+4. Pour la séquence d'emails : **validation des 5 freins** cités dans le 3e email, et **un vrai témoignage client** par situation, avec l'accord du client.
+5. Pour information : avec ces nouveaux chiffres, pour les mêmes 1 500 € utilisables, May coûte légèrement plus cher à l'enveloppe que Wawashi (68,50 € par mois contre environ 60 €).
 
 Bien à vous,
 Ayoub

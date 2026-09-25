@@ -53,7 +53,7 @@
 | `%TELEPHONE%`, `%FRAIS%`, `%LIGNE_LEGALE%` | le script de chargement | `config/contact.ts` |
 | `%PLAFOND_MICRO%` | le script de chargement | `config/fiscal-2026.ts` (83 600 € en 2026, source URSSAF) |
 | `%CAS_TYPE%` | le script de chargement | recalculé par le moteur (63 % avant impôt, cagnotte comprise) |
-| `%LINKEDIN_RIDHA%` | le script de chargement | variable `RIDHA_LINKEDIN_URL` — **URL manquante**, la ligne est retirée tant qu'elle est vide |
+| `%LINKEDIN_RIDHA%` | le script de chargement | `config/contact.ts` (linkedin.com/in/ridha-chammam) |
 
 ## Qui entre dans la séquence
 
@@ -75,7 +75,7 @@ Fonctionnement retenu : les Automations Resend savent évaluer une condition sur
 ## Procédure de chargement
 
 1. Faire valider les textes par l'équipe et remplacer les 5 marqueurs `[[CAS CLIENT À FOURNIR…]]` par de vrais cas clients (accord écrit).
-2. Renseigner `RIDHA_LINKEDIN_URL` si l'URL est disponible.
+2. (Fait) L'URL LinkedIn de Ridha est dans `config/contact.ts`.
 3. Aperçu : `npx tsx scripts/resend-sequence.ts` (ne crée rien).
 4. Chargement : avec `RESEND_API_KEY`, `MAIL_FROM` et `MAIL_REPLY_TO` définis, `npx tsx scripts/resend-sequence.ts --appliquer`. Le script crée et publie les 9 modèles, puis l'automation **en statut « disabled »**. Si la création de l'automation échoue, les modèles restent créés : recréer à la main dans Resend → Automations le parcours décrit ci-dessus (déclencheur `sequence_j14` → délai 3 jours → [arrêt ?] → J3 → délai 3 jours → [arrêt ?] → J6 → délai 4 jours → [arrêt ?] → branche par `statut_actuel` → délai 4 jours → [arrêt ?] → branche `economie_mensuelle > 0`).
 5. Dans Resend : ouvrir l'automation, **envoyer un test** à une adresse interne pour chaque branche, vérifier le prénom, le montant et le lien de désinscription.

@@ -48,3 +48,9 @@ describe("séquence J3 → J14", () => {
     expect(tout).not.toContain("Stephenson");
   });
 });
+
+describe("signature", () => {
+  it("porte le LinkedIn de Ridha", () => {
+    for (const e of emails) expect(e.text).toContain("linkedin.com/in/ridha-chammam");
+  });
+});
