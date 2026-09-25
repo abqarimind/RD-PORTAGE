@@ -218,8 +218,8 @@ function CommentCalcule({
     ["CA HT mensuel", `${eur(live.fees)} €`],
     [`Frais de gestion RD (${(RD_PORTAGE_2026.managementFeeRate * 100).toFixed(0)} %)`, `−${eur(live.managementFee)} €`],
     ["Assurances & taxes (0,9 %)", `−${eur(live.insuranceTax)} €`],
-    ["NDF professionnels", `−${eur(live.ndf)} €`],
-    ["Cagnotte", `−${eur(live.cagnotteMay)} €`],
+    ["NDF professionnels (≤ 30 % du brut)", `−${eur(live.ndf)} €`],
+    ["Cagnotte (frais inclus)", `−${eur(live.cagnotteCost)} €`],
     ["Disponible compte d'activité", `${eur(live.available)} €`],
     ["Salaire brut", `${eur(live.grossSalary)} €`],
     ["Cotisations salariales (21,5 %)", `−${eur(live.employeeContributions)} €`],
@@ -237,11 +237,16 @@ function CommentCalcule({
           </div>
         ))}
         <div className="mt-2 flex justify-between py-1">
-          <span className="text-[#7A8093]">Taux de restitution réel</span>
+          <span className="text-[#7A8093]">Taux de restitution réel, avant impôt sur le revenu</span>
           <span className="font-bold" style={{ color: VALIDE }}>
             {pct(live.restitutionRate)}
           </span>
         </div>
+        {live.benefitsTotal > 0 && (
+          <p className="text-xs text-[#7A8093]">
+            Dont {pct(live.benefitsRate)} en avantages (cagnotte, titres-restaurant), non retirables en argent.
+          </p>
+        )}
       </div>
       <p className="mt-3 text-xs leading-relaxed text-[#7A8093]">
         IR foyer : barème progressif {BAREME_IR_2026.version.replace(/_/g, " ")}, quotient familial (plafonné à 1 807 €/demi-part),
