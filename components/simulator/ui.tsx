@@ -136,7 +136,14 @@ export function AmountInput({
   return (
     <Field label={label} hint={hint} htmlFor={id}>
       <div className="flex items-center gap-2">
-        <div className="relative flex-1">
+        {/*
+         * L'unité est un élément FRÈRE du champ, dans une boîte flex qui porte
+         * la bordure : le chiffre et le « € » ne peuvent plus se chevaucher,
+         * quelle que soit la feuille de style chargée en dernier ou le
+         * navigateur (retour client : « 500€ » puis « 0€ » illisibles sur iOS).
+         * Le style du champ lui-même est en ligne pour la même raison.
+         */}
+        <div className="sim-input sim-amount flex flex-1 items-center gap-2" onClick={(e) => (e.currentTarget.querySelector("input") as HTMLInputElement | null)?.focus()}>
           <input
             // JAMAIS type="number" : c'est lui qui déclenche molette + spinner.
             id={id}
@@ -146,7 +153,20 @@ export function AmountInput({
             autoComplete="off"
             enterKeyHint="done"
             aria-label={label}
-            className="sim-input sim-input--suffix text-right tabular-nums"
+            className="text-right tabular-nums"
+            style={{
+              flex: "1 1 auto",
+              minWidth: 0,
+              width: "100%",
+              border: 0,
+              padding: 0,
+              margin: 0,
+              background: "transparent",
+              outline: "none",
+              fontSize: 16,
+              lineHeight: 1.4,
+              color: "#0b0d12",
+            }}
             value={draft}
             onChange={(e) => {
               setDraft(e.target.value);
@@ -160,7 +180,7 @@ export function AmountInput({
               if (e.key === "Enter") (e.target as HTMLInputElement).blur();
             }}
           />
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-base font-semibold text-[#7A8093]">
+          <span aria-hidden="true" className="shrink-0 text-base font-semibold text-[#7A8093]">
             {suffix}
           </span>
         </div>
@@ -267,16 +287,10 @@ export function SimulatorStyles() {
         line-height: 1.4;
         color: #0b0d12;
       }
-      /*
-       * Champ avec unité (€, j) posée en absolu à droite. Le retrait doit
-       * vivre ICI, avec une spécificité supérieure à .sim-input : un utilitaire
-       * Tailwind (l'ancien pr-9) était écrasé par le « padding » ci-dessus,
-       * injecté après la feuille Tailwind — le chiffre passait sous le « € »
-       * (retour client : « 500€ » illisible).
-       */
-      .sim-input.sim-input--suffix {
-        padding-right: 2.5rem;
+      .sim-amount {
+        cursor: text;
       }
+      .sim-amount:focus-within,
       .sim-input:focus {
         outline: none;
         border-color: #b08d57;
