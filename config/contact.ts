@@ -9,11 +9,23 @@ export const PHONE_E164 = "+33171497157";
 export const PHONE_LABEL = "01 71 49 71 57";
 export const TEL_URL = `tel:${PHONE_E164}`;
 
-/** Lien de prise de RDV (Calendly, Cal.com…) s'il existe, sinon appel direct. */
-export const RDV_URL = process.env.NEXT_PUBLIC_RDV_URL || TEL_URL;
+/**
+ * Lien de prise de rendez-vous (Calendly, Cal.com, iClosed…). Vide tant que
+ * l'outil n'est pas choisi (question ouverte #16) : l'option reste masquée.
+ */
+export const RDV_BOOKING_URL = process.env.NEXT_PUBLIC_RDV_URL || "";
+/** Lien WhatsApp Business (ex. https://wa.me/33…). Vide = option masquée (#16). */
+export const WHATSAPP_URL = process.env.NEXT_PUBLIC_WHATSAPP_URL || "";
 
-/** Libellé unique du bouton de contact (décision D1). */
-export const CTA_CONSEILLER = "Parler à mon conseiller";
+/** Cible du bouton principal : la prise de RDV si elle existe, sinon l'appel. */
+export const RDV_URL = RDV_BOOKING_URL || TEL_URL;
+
+/**
+ * Libellé unique du bouton de contact. Retour #16 du 25/09 : « Nous
+ * contacter », avec les canaux affichés dessous (téléphone, email, WhatsApp
+ * et prise de rendez-vous quand ils sont configurés).
+ */
+export const CTA_CONSEILLER = "Nous contacter";
 
 /** Engagement de rappel affiché au prospect (décision D4). */
 export const DELAI_RAPPEL = "sous 24 h";

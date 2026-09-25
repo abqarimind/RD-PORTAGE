@@ -19,6 +19,7 @@ import { buildCascadeSteps, buildPartage } from "@/lib/dossier/breakdown";
 import { Cascade, PartageBar, RestitutionGauge, ScenarioBars } from "./charts";
 import { groupFr } from "@/lib/format";
 import { CTA_CONSEILLER, RDV_URL } from "@/config/contact";
+import { ContactOptions } from "@/components/ContactOptions";
 
 const BRASS = "#B08D57";
 const VALIDE = "#2F6B4F";
@@ -209,6 +210,7 @@ export function DossierView({ payload }: { payload: SimulationResultPayload }) {
             Imprimer ce dossier
           </button>
         </div>
+        <ContactOptions className="mt-3 text-sm text-[#4A5061]" />
       </section>
 
       <RevealStyles />

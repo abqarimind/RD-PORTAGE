@@ -19,7 +19,8 @@ import { useSimulation } from "@/lib/simulateur/useSimulation";
 import { setLeadId, trackEvent } from "@/lib/tracking/events";
 import { deriveLeadSource, deviceType, getAttribution } from "@/lib/tracking/utm";
 import { metaLead, newEventId } from "@/lib/tracking/meta";
-import { CTA_CONSEILLER, DELAI_RAPPEL, EMAIL_ENTREPRISE, PHONE_LABEL, RDV_URL } from "@/config/contact";
+import { CTA_CONSEILLER, DELAI_RAPPEL, EMAIL_ENTREPRISE, RDV_URL } from "@/config/contact";
+import { ContactOptions } from "@/components/ContactOptions";
 import { ALERTE, BRASS, eur, Field, GHOST_BTN, OUTLINE_BTN, PRIMARY_BTN, pct, VALIDE } from "../ui";
 
 const POLICY_VERSION = "privacy-2026-06";
@@ -203,11 +204,10 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
         </div>
 
         <p className="mt-3 text-sm text-[#7A8093]">
-          {phone
-            ? `Un conseiller RD Portage vous rappelle ${DELAI_RAPPEL} au ${phone}. `
-            : `Un conseiller RD Portage vous répond au ${PHONE_LABEL}. `}
+          {phone ? `Un conseiller RD Portage vous rappelle ${DELAI_RAPPEL} au ${phone}. ` : ""}
           Diagnostic de 30 minutes, proposition ferme, signature possible sous 48 h.
         </p>
+        <ContactOptions />
 
         <div className="mt-6 border-t border-[#ECEEF3] pt-5">
           <button type="button" className={GHOST_BTN} onClick={reset}>
