@@ -44,6 +44,8 @@ const payloadSchema = leadSchema
     // Optional: browser-generated Meta event_id so the CAPI Lead below
     // deduplicates against the Pixel Lead fired client-side.
     meta_event_id: z.string().optional(),
+    // Consentement publicitaire donné dans la bannière cookies (≠ opt-in email).
+    ad_consent: z.boolean().optional(),
     // Identifiant stable de la simulation — sert de clé d'idempotence email.
     simulation_id: z.string().optional(),
     // État complet du formulaire, pour recalculer le récapitulatif ici.
@@ -90,19 +92,18 @@ export async function POST(req: NextRequest) {
     console.error("[lead] lead non durablement enregistré", JSON.stringify({ leadId: lead.lead_id, alertes }));
   }
 
-  // Server-side Meta CAPI Lead — fires only when marketing consent was given
-  // (the Pixel is consent-gated too) and Meta keys are configured. The
-  // event_id is shared with the browser Pixel Lead for deduplication.
+  // Lead Meta côté serveur (API Conversions) — INACTIF tant que
+  // META_CAPI_ENABLED !== "true" (docs/meta-capi.md). Ne part qu'avec le
+  // consentement publicitaire de la bannière, sans email, téléphone ni
+  // montant ; même event_id que le Pixel pour la déduplication.
   const metaEventId = parsed.meta_event_id ?? randomUUID();
-  if (lead.consent.marketing_optin) {
+  if (parsed.ad_consent === true) {
     void sendCapiEvent({
       eventName: "Lead",
       eventId: metaEventId,
       eventSourceUrl: req.headers.get("referer") ?? undefined,
-      customData: { value: lead.simulation.economie_annuelle_eur, currency: "EUR", content_name: "simulateur" },
+      customData: { content_name: "simulateur_dossier" },
       userData: {
-        email: lead.identity.email,
-        phone: lead.identity.phone,
         fbp: req.cookies.get("_fbp")?.value,
         fbc: req.cookies.get("_fbc")?.value,
         clientIp: ip,

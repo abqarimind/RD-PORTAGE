@@ -11,11 +11,11 @@
  * L'état vit dans lib/simulateur/ (store + reducer + persistance), les
  * dérivés dans useSimulation(), chaque écran dans steps/.
  */
-import { Suspense, useEffect } from "react";
+import { Suspense } from "react";
 import { PROGRESS_STEPS, STEP_LABELS, stepIndex, type Step } from "@/lib/simulateur/state";
 import { SimulatorProvider, useSimulator } from "@/lib/simulateur/store";
 import { trackEvent } from "@/lib/tracking/events";
-import { ensureMetaInit, metaContact, metaSchedule, metaSimulateurStart } from "@/lib/tracking/meta";
+import { metaContact } from "@/lib/tracking/meta";
 import { ActiviteStep } from "./steps/ActiviteStep";
 import { FoyerStep } from "./steps/FoyerStep";
 import { ProfilStep } from "./steps/ProfilStep";
@@ -39,15 +39,15 @@ export function Simulator() {
 function SimulatorShell() {
   const { state, goTo, reset, hydrating } = useSimulator();
 
-  useEffect(() => {
-    ensureMetaInit();
-    metaSimulateurStart();
-  }, []);
-
+  /**
+   * « Nous contacter » : tant qu'aucun outil de RDV n'est intégré, le bouton
+   * appelle l'équipe (tel:) → Contact. Un lien de réservation externe ne
+   * permet pas de savoir si le RDV est confirmé : pas de Schedule au clic
+   * (voir docs/meta-pixel.md).
+   */
   function onRdv(from: string) {
     trackEvent("rdv_clicked", { from });
-    if (RDV_URL.startsWith("tel:")) metaContact({ from });
-    else metaSchedule({ from });
+    if (RDV_URL.startsWith("tel:")) metaContact(`${from}_tel`);
   }
 
   if (hydrating) return <SimulatorSkeleton />;

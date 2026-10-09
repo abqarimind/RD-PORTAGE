@@ -14,7 +14,7 @@
  */
 import { useRouter, useSearchParams } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { carriesRelay, decodeAnswers, isComplete } from "@/lib/diagnostic/answers";
+import { consumeDiagnosticRelay } from "@/lib/diagnostic/relay";
 import { clearState, loadState, newSimulationId, saveState } from "./persistence";
 import {
   createInitialState,
@@ -63,15 +63,14 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
     /**
      * RELAIS DU DIAGNOSTIC FLASH (§3.2).
      *
-     * Le lien de sortie du diagnostic porte les réponses en clair
-     * (`?from=diag&p=…&t=…&q3=…`). Elles font autorité : l'utilisateur vient
-     * de cliquer, son intention est explicite. Toute valeur inconnue est
-     * ignorée par decodeAnswers, donc un relais tronqué ou bricolé donne un
-     * parcours vierge plutôt qu'un écran cassé.
+     * Les réponses arrivent par lib/diagnostic/relay.ts (mémoire du module,
+     * à défaut localStorage) — jamais par l'URL, que le Pixel Meta transmet.
+     * Elles font autorité : l'utilisateur vient de cliquer, son intention est
+     * explicite. Toute valeur inconnue est écartée par sanitizeAnswers.
      */
     let step: Step | null = isStep(urlStep) ? urlStep : null;
-    if (carriesRelay(searchParams)) {
-      const answers = decodeAnswers(searchParams);
+    const answers = consumeDiagnosticRelay();
+    if (answers) {
       base = reducer(base, { type: "apply_diagnostic", answers });
       // L'étape Profil est servie par le diagnostic : on ouvre directement sur
       // Activité, ce qui EST l'avancement réel — c'est une étape entière
@@ -97,13 +96,16 @@ export function SimulatorProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
-   * Normalise l'URL de relais en URL d'étape, avec `replace` et non `push` :
-   * le retour natif doit ramener à la landing et à son diagnostic prérempli
-   * (§3.4), pas à l'URL de relais qui rejouerait le préremplissage.
+   * Nettoie une URL qui porterait encore d'autres paramètres que `step`
+   * (ancien lien de relais `?from=diag&p=…&t=…`, valeurs bricolées) : ils ne
+   * sont pas lus, et le Pixel n'envoie rien tant qu'ils sont présents. Les
+   * seuls paramètres d'attribution ne déclenchent pas ce nettoyage : ils sont
+   * déjà capturés (lib/tracking/utm.ts) et tolérés par le Pixel.
    */
   useEffect(() => {
     if (hydrating) return;
-    if (carriesRelay(searchParams)) {
+    const extra = Array.from(searchParams.keys()).filter((k) => k !== "step" && !k.startsWith("utm_") && k !== "fbclid");
+    if (extra.length > 0) {
       router.replace(`/simulateur?step=${state.step}`, { scroll: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

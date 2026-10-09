@@ -1,8 +1,14 @@
 /**
- * UTM capture & persistence (client side).
- * first_touch: immutable, 90-day first-party cookie.
- * last_touch: overwritten at each session.
- * Convention: docs/convention-utm.md.
+ * Capture des UTM et du fbclid (navigateur) — sessionStorage uniquement.
+ *
+ * - first_touch : le premier passage de la session qui porte une
+ *   attribution (utm_*, fbclid, gclid), à défaut la page d'arrivée. Immuable
+ *   pendant la session.
+ * - last_touch : le dernier passage qui portait une attribution.
+ * Rien n'est posé en cookie : l'attribution sert au CRM via /api/lead et
+ * /api/demande-diagnostic, et n'est jamais transmise à Meta (le Pixel ne lit
+ * que l'URL de la page, après consentement publicitaire).
+ * Convention : docs/convention-utm.md.
  */
 export interface Touch {
   utm_source?: string;
@@ -17,79 +23,89 @@ export interface Touch {
   timestamp: string;
 }
 
-const FIRST_COOKIE = "rdp_first_touch";
-const LAST_COOKIE = "rdp_last_touch";
-const NINETY_DAYS = 90 * 24 * 3600;
+const FIRST_KEY = "rdp_first_touch";
+const LAST_KEY = "rdp_last_touch";
+const FBCLID_KEY = "rdp_fbclid";
 
-function readCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
+/** Paramètres d'attribution reconnus dans l'URL d'arrivée. */
+const ATTRIBUTION_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "fbclid"] as const;
+
+/** Construit un passage à partir d'une query string (fonction pure, testée). */
+export function touchFromSearch(search: string, extra: { referrer?: string; landing_path?: string; now?: string } = {}): Touch {
+  const p = new URLSearchParams(search);
+  const touch: Touch = { timestamp: extra.now ?? new Date().toISOString() };
+  for (const key of ATTRIBUTION_KEYS) {
+    const v = p.get(key);
+    if (v) touch[key] = v.slice(0, 200);
+  }
+  if (extra.referrer) touch.referrer = extra.referrer;
+  if (extra.landing_path) touch.landing_path = extra.landing_path;
+  return touch;
 }
 
-function writeCookie(name: string, value: string, maxAge: number) {
-  document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${maxAge}; path=/; samesite=lax`;
+export const hasAttribution = (t: Touch): boolean => ATTRIBUTION_KEYS.some((k) => Boolean(t[k]));
+
+/**
+ * Fusion pure : renvoie le nouvel état {first, last} après un passage.
+ * Un passage sans attribution n'écrase jamais une attribution déjà connue.
+ */
+export function mergeTouch(prev: { first: Touch | null; last: Touch | null }, touch: Touch): { first: Touch; last: Touch } {
+  const attributed = hasAttribution(touch);
+  const first = prev.first && (hasAttribution(prev.first) || !attributed) ? prev.first : touch;
+  const last = attributed || !prev.last ? touch : prev.last;
+  return { first, last };
 }
 
 function currentTouch(): Touch {
-  const p = new URLSearchParams(window.location.search);
-  return {
-    utm_source: p.get("utm_source") ?? undefined,
-    utm_medium: p.get("utm_medium") ?? undefined,
-    utm_campaign: p.get("utm_campaign") ?? undefined,
-    utm_term: p.get("utm_term") ?? undefined,
-    utm_content: p.get("utm_content") ?? undefined,
-    gclid: p.get("gclid") ?? undefined,
-    fbclid: p.get("fbclid") ?? undefined,
-    referrer: document.referrer || undefined,
-    landing_path: window.location.pathname,
-    timestamp: new Date().toISOString(),
-  };
+  // Le referrer externe seulement : un referrer interne n'apprend rien et
+  // pourrait porter une URL de page privée.
+  const ref = document.referrer;
+  const external = ref && !ref.startsWith(window.location.origin) ? ref.split("?")[0] : undefined;
+  return touchFromSearch(window.location.search, { referrer: external, landing_path: window.location.pathname });
 }
 
-const FBCLID_KEY = "rdp_fbclid";
+function readJson(key: string): Touch | null {
+  try {
+    const raw = sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as Touch) : null;
+  } catch {
+    return null;
+  }
+}
 
-/** Call once per page load (Tracker component in app/layout.tsx). */
+/** Supprime les anciens cookies / clés localStorage d'attribution (avant le passage en sessionStorage). */
+function purgeLegacyStorage(): void {
+  for (const name of [FIRST_KEY, LAST_KEY]) {
+    document.cookie = `${name}=; max-age=0; path=/`;
+  }
+  try {
+    localStorage.removeItem(FIRST_KEY);
+    localStorage.removeItem(LAST_KEY);
+    localStorage.removeItem(FBCLID_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** À appeler une fois par chargement de page (composant Tracker du layout). */
 export function captureUtm(): void {
+  purgeLegacyStorage();
   const touch = currentTouch();
-  if (!readCookie(FIRST_COOKIE)) {
-    writeCookie(FIRST_COOKIE, JSON.stringify(touch), NINETY_DAYS);
-  }
-  writeCookie(LAST_COOKIE, JSON.stringify(touch), NINETY_DAYS);
-  // Mirror to localStorage so attribution survives even when third-party
-  // cookies are restricted, and keep the raw fbclid for Meta fbc rebuild.
+  const next = mergeTouch({ first: readJson(FIRST_KEY), last: readJson(LAST_KEY) }, touch);
   try {
-    if (!localStorage.getItem(FIRST_COOKIE)) localStorage.setItem(FIRST_COOKIE, JSON.stringify(touch));
-    localStorage.setItem(LAST_COOKIE, JSON.stringify(touch));
-    if (touch.fbclid) localStorage.setItem(FBCLID_KEY, touch.fbclid);
+    sessionStorage.setItem(FIRST_KEY, JSON.stringify(next.first));
+    sessionStorage.setItem(LAST_KEY, JSON.stringify(next.last));
+    if (touch.fbclid) sessionStorage.setItem(FBCLID_KEY, touch.fbclid);
   } catch {
-    /* localStorage may be unavailable (private mode) — cookies are enough. */
-  }
-}
-
-/** Raw fbclid (current URL, else last stored) — used to rebuild Meta's _fbc. */
-export function getStoredFbclid(): string | undefined {
-  if (typeof window === "undefined") return undefined;
-  const fromUrl = new URLSearchParams(window.location.search).get("fbclid");
-  if (fromUrl) return fromUrl;
-  try {
-    return localStorage.getItem(FBCLID_KEY) ?? undefined;
-  } catch {
-    return undefined;
+    /* sessionStorage indisponible : getAttribution retombe sur l'URL courante */
   }
 }
 
 export function getAttribution(): { first_touch: Touch; last_touch: Touch } {
   const fallback = currentTouch();
-  const parse = (raw: string | null): Touch => {
-    try {
-      return raw ? (JSON.parse(raw) as Touch) : fallback;
-    } catch {
-      return fallback;
-    }
-  };
   return {
-    first_touch: parse(readCookie(FIRST_COOKIE)),
-    last_touch: parse(readCookie(LAST_COOKIE)),
+    first_touch: readJson(FIRST_KEY) ?? fallback,
+    last_touch: readJson(LAST_KEY) ?? fallback,
   };
 }
 

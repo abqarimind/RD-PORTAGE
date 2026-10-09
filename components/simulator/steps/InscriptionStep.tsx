@@ -18,12 +18,11 @@ import { useSimulator } from "@/lib/simulateur/store";
 import { useSimulation } from "@/lib/simulateur/useSimulation";
 import { setLeadId, trackEvent } from "@/lib/tracking/events";
 import { deriveLeadSource, deviceType, getAttribution } from "@/lib/tracking/utm";
+import { hasMarketingConsent } from "@/lib/tracking/consent";
 import { metaLead, newEventId } from "@/lib/tracking/meta";
 import { CTA_CONSEILLER, DELAI_RAPPEL, EMAIL_ENTREPRISE, POLICY_VERSION, RDV_URL, SEQUENCE_NB_EMAILS } from "@/config/contact";
 import { ContactOptions } from "@/components/ContactOptions";
 import { ALERTE, BRASS, eur, Field, GHOST_BTN, OUTLINE_BTN, PRIMARY_BTN, pct, VALIDE } from "../ui";
-
-const META_LEAD_EVENT_ID_KEY = "rdp_meta_lead_eid";
 
 export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
   const { state, dispatch, goTo, reset } = useSimulator();
@@ -73,6 +72,9 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           meta_event_id: metaEventId,
+          // Consentement publicitaire (bannière cookies), distinct de l'opt-in
+          // email : seul ce consentement autorise un futur envoi CAPI.
+          ad_consent: hasMarketingConsent(),
           // Clé d'idempotence : même simulation + même email = un seul envoi.
           simulation_id: state.simulationId,
           identity: { email, first_name: firstName, phone: phone || undefined },
@@ -102,12 +104,9 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
 
       setLeadId(data.leadId);
       trackEvent("lead_submitted");
-      metaLead(metaEventId, { email, phone });
-      try {
-        localStorage.setItem(META_LEAD_EVENT_ID_KEY, metaEventId);
-      } catch {
-        /* non bloquant */
-      }
+      // Lead UNIQUEMENT après la réponse serveur réussie, une fois par envoi,
+      // sans email ni téléphone (pas de correspondance avancée).
+      metaLead("simulateur_dossier", metaEventId);
       setDossierHref(data.dossierUrl ?? "/dossier");
       setEmailSent(data.emailSent ?? false);
       dispatch({ type: "unlock", leadId: data.leadId });

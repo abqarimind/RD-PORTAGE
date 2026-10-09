@@ -380,7 +380,7 @@ function PricingCta() {
               href={`tel:${PHONE_E164}`}
               onClick={() => {
                 trackEvent("rdv_clicked", { from: "lp_pricing" });
-                metaContact({ from: "lp_pricing" });
+                metaContact("lp_pricing_tel");
               }}
               className={OUTLINE_BTN}
             >
@@ -462,7 +462,7 @@ function HeroVsl({ angle }: { angle: Angle }) {
           href={`tel:${PHONE_E164}`}
           onClick={() => {
             trackEvent("rdv_clicked", { from: "lp_vsl_hero" });
-            metaContact({ from: "lp_vsl_hero" });
+            metaContact("lp_vsl_hero_tel");
           }}
           className={OUTLINE_BTN}
         >
@@ -542,7 +542,7 @@ export function LandingC({
             témoignages validés (ancien composant SocialProof dans l'historique Git). */}
         <PricingCta />
         <SiteFooter />
-        <MetaViewContent contentName={`lp_${angle}_${variant}`} />
+        <MetaViewContent contentName={`lp_${angle}`} />
         <Styles />
       </main>
     </DiagnosticProvider>

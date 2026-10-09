@@ -1,7 +1,8 @@
 /**
- * Cookie-consent state for marketing trackers (Meta Pixel + CAPI).
- * The privacy-first analytics (Plausible) stay cookieless and run without
- * consent; only the Meta pixel is gated here, per RGPD.
+ * Consentement aux traceurs publicitaires (Pixel Meta), règles CNIL.
+ * Le choix est mémorisé 180 jours (6 mois, durée recommandée par la CNIL) dans
+ * le cookie first-party rdp_consent. Plausible reste sans cookie et ne
+ * dépend pas de ce choix.
  */
 export type ConsentState = "granted" | "denied";
 
@@ -24,6 +25,14 @@ export function setConsent(state: ConsentState): void {
 
 export function hasMarketingConsent(): boolean {
   return getConsent() === "granted";
+}
+
+/** Événement qui rouvre la bannière (lien « Gérer les cookies » du pied de page). */
+export const CONSENT_OPEN_EVENT = "rdp-consent-open";
+
+export function openConsentSettings(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(CONSENT_OPEN_EVENT));
 }
 
 /** Subscribe to consent changes; returns an unsubscribe fn. */

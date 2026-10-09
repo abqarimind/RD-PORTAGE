@@ -1,8 +1,8 @@
 # Convention UTM — RD Portage
 
 À respecter sur TOUTES les campagnes. Le `lead_source` est dérivé du
-first-touch (immuable, cookie 90 jours) ; le last-touch est écrasé à chaque
-session.
+first-touch : le premier passage attribué de la session (sessionStorage,
+aucun cookie). Le last-touch est le dernier passage portant des UTM.
 
 ## Valeurs autorisées
 
@@ -14,9 +14,9 @@ session.
 | `utm_content` | créa / angle / format, ex. `angleA-hook1-video`, `angleB-hook2-image` |
 | `utm_term` | mot-clé ou audience (optionnel) |
 
-`fbclid` (ajouté par Meta au clic) est capté et persisté comme les UTM
-(cookie + localStorage) ; il sert à reconstruire le cookie `_fbc` pour le
-matching Pixel/CAPI. Les landings payantes vivent sous `/lp/<angle>` (a / b / c)
+`fbclid` (ajouté par Meta au clic) est capté comme les UTM (sessionStorage)
+et envoyé à `/api/lead` pour le CRM ; il n'est jamais transmis à Meta sans
+consentement publicitaire (voir docs/meta-pixel.md). Les landings payantes vivent sous `/lp/<angle>` (a / b / c)
 et masquent la navigation (cf. docs/landing-conversion.md).
 
 ## Dérivation lead_source (lib/tracking/utm.ts)

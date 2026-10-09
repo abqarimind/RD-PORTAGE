@@ -2,18 +2,11 @@
  * RÉPONSES DU DIAGNOSTIC FLASH — le contrat de relais vers le simulateur.
  *
  * Les trois questions ne produisent plus seulement une fourchette de net :
- * elles segmentent, préremplissent et réveillent. Ce module est pur — types,
- * validation, encodage/décodage d'URL — donc testable sans React.
+ * elles segmentent, préremplissent et réveillent. Ce module est pur — types
+ * et validation — donc testable sans React.
  *
- * Le relais voyage par un PARAMÈTRE D'URL LISIBLE sur le lien de sortie
- * (`?from=diag&p=…&t=…&q3=…`) plutôt que par un jeton opaque :
- *  - il est traçable en analytics (on voit ce qui a été prérempli) ;
- *  - il est partageable et débogable à l'œil ;
- *  - il fonctionne même quand le stockage est indisponible (navigation
- *    privée, purge ITP), cas où un relais par localStorage seul serait perdu
- *    en silence et l'utilisateur ressaisirait sans qu'on le sache.
- * Ces trois réponses ne sont ni sensibles ni à protéger contre l'altération :
- * une signature serait du poids sans bénéfice.
+ * Le relais ne passe PLUS par l'URL (le Pixel Meta transmet l'URL de la page,
+ * et la tranche de TJM est une donnée financière) : voir ./relay.ts.
  */
 import type { CurrentStatus } from "@/lib/fiscal/scenarios";
 import { findBracket, TJM_BRACKETS } from "@/lib/simulateur/brackets";
@@ -81,47 +74,6 @@ export const isComplete = (a: DiagnosticAnswers): boolean =>
 /** Combien des trois questions sont répondues — pilote la progression. */
 export const answeredCount = (a: DiagnosticAnswers): number =>
   (a.segment ? 1 : 0) + (a.tjmBracketId ? 1 : 0) + (a.dejaCalcule ? 1 : 0);
-
-/* ————————————————————————— encodage d'URL ————————————————————————— */
-
-export const DIAG_FLAG = "from";
-export const DIAG_FLAG_VALUE = "diag";
-
-/**
- * Construit la query string du lien de sortie. Seules les réponses
- * effectivement données sont écrites : un relais partiel reste valide.
- */
-export function encodeAnswers(a: DiagnosticAnswers): string {
-  const params = new URLSearchParams();
-  params.set(DIAG_FLAG, DIAG_FLAG_VALUE);
-  if (a.segment) params.set("p", a.segment);
-  if (a.tjmBracketId) params.set("t", a.tjmBracketId);
-  if (a.dejaCalcule) params.set("q3", a.dejaCalcule);
-  return params.toString();
-}
-
-/** Lien complet vers le simulateur, prêt à poser dans un CTA. */
-export function simulateurHref(a: DiagnosticAnswers, base = "/simulateur"): string {
-  return isComplete(a) || answeredCount(a) > 0 ? `${base}?${encodeAnswers(a)}` : base;
-}
-
-/**
- * Lit les réponses depuis une query string. TOUTE valeur inconnue est
- * ignorée plutôt que propagée : des données de relais absentes, tronquées ou
- * bricolées à la main ne doivent jamais produire un écran cassé — on repart
- * proprement d'un parcours vierge (§3.2).
- */
-export function decodeAnswers(params: URLSearchParams | null | undefined): DiagnosticAnswers {
-  if (!params) return { ...EMPTY_ANSWERS };
-  const segment = findSegment(params.get("p"))?.id ?? null;
-  const tjmBracketId = findBracket(params.get("t"))?.id ?? null;
-  const q3 = params.get("q3");
-  return { segment, tjmBracketId, dejaCalcule: isDejaCalcule(q3) ? q3 : null };
-}
-
-/** Vrai si l'URL prétend venir du diagnostic — même partiellement. */
-export const carriesRelay = (params: URLSearchParams | null | undefined): boolean =>
-  Boolean(params?.get(DIAG_FLAG) === DIAG_FLAG_VALUE || params?.get("p") || params?.get("t"));
 
 /** Ramène un objet quelconque (localStorage, réseau) dans le domaine du valide. */
 export function sanitizeAnswers(raw: unknown): DiagnosticAnswers {

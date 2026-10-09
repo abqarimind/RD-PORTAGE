@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   description: "Le détail de votre simulation de portage salarial : rémunération, avantages, impôt du foyer.",
   // Un dossier porte des données personnelles : il ne doit pas être indexé.
   robots: { index: false, follow: false },
+  // Le lien porte le récapitulatif dans l'URL : il ne doit jamais fuiter en
+  // referrer vers une autre page ou un tiers. Pas de Pixel Meta ici non plus.
+  referrer: "origin",
 };
 
 const SANS = "'Manrope','IBM Plex Sans',sans-serif";
