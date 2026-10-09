@@ -16,12 +16,14 @@
  * §4.4 — « Modifier ma simulation » ramène à l'étape voulue AVEC les valeurs
  * conservées ; « Nouvelle simulation » repart d'un état vide (BUG-03).
  */
+import { useEffect } from "react";
 import { BAREME_IR_2026, CAGNOTTE_PROVIDERS, RD_PORTAGE_2026 } from "@/config/fiscal-2026";
 import type { ScenarioResult } from "@/lib/fiscal/scenarios";
 import { activeBracket } from "@/lib/simulateur/state";
 import { useSimulator } from "@/lib/simulateur/store";
 import { useSimulation } from "@/lib/simulateur/useSimulation";
 import { trackEvent } from "@/lib/tracking/events";
+import { metaSimulateurFoyerComplete } from "@/lib/tracking/meta";
 import { CountUp } from "@/components/lp/CountUp";
 import { CTA_CONSEILLER, RDV_URL } from "@/config/contact";
 import { ContactOptions } from "@/components/ContactOptions";
@@ -74,6 +76,7 @@ export function ResultatsStep({ onRdv }: { onRdv: (from: string) => void }) {
 
   return (
     <section>
+      <MetaResultShown simulationId={state.simulationId} />
       <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BRASS }}>
         Votre résultat
       </p>
@@ -260,4 +263,16 @@ function CommentCalcule({
       </p>
     </details>
   );
+}
+
+/**
+ * SimulateurFoyerComplete : au premier AFFICHAGE d'un résultat chiffré, une
+ * fois par simulation (re-rendus, StrictMode et retours arrière compris).
+ * Aucun montant n'est transmis.
+ */
+function MetaResultShown({ simulationId }: { simulationId: string }) {
+  useEffect(() => {
+    metaSimulateurFoyerComplete(simulationId);
+  }, [simulationId]);
+  return null;
 }

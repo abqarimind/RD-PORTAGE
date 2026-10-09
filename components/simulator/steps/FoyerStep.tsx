@@ -2,7 +2,6 @@
 
 import { useSimulator } from "@/lib/simulateur/store";
 import { trackEvent } from "@/lib/tracking/events";
-import { metaSimulateurComplete } from "@/lib/tracking/meta";
 import { AmountInput, Field, PRIMARY_BTN, Screen, Segmented, Stepper } from "../ui";
 
 /** Étape 3 — foyer fiscal : ce qui distingue ce simulateur des autres. */
@@ -107,7 +106,6 @@ export function FoyerStep() {
         onClick={() => {
           trackEvent("sim_step_2_completed");
           trackEvent("sim_completed");
-          metaSimulateurComplete();
           goTo("resultats");
         }}
         className={`${PRIMARY_BTN} w-full sm:w-auto`}

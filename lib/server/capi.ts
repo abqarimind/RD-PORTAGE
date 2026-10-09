@@ -1,22 +1,28 @@
 /**
- * Meta Conversions API (CAPI) — server-side event sender.
+ * Meta Conversions API (CAPI) — envoi serveur. PRÉPARÉ, NON ACTIVÉ.
  *
- * Best practice 2026: every browser-Pixel event is mirrored here with the
- * SAME event_name + event_id so Meta deduplicates (else double counting),
- * and PII is SHA-256 hashed for match quality. Secrets stay server-side.
+ * No-op tant que META_CAPI_ENABLED !== "true" ET qu'aucun token serveur
+ * (META_CAPI_TOKEN) n'est défini. Voir docs/meta-capi.md pour l'activation.
  *
- * Degrades to a no-op when META_PIXEL_ID / META_CAPI_ACCESS_TOKEN are unset
- * (mock mode), so the funnel runs end-to-end without any Meta credentials.
+ * Garde-fous identiques au Pixel (lib/tracking/meta-rules.ts) : événements
+ * et paramètres en liste blanche, URL source vérifiée. Pas de correspondance
+ * avancée : les helpers de hachage ci-dessous sont conservés pour une
+ * décision ultérieure, mais aucun email ni téléphone n'est envoyé.
  */
 import { createHash } from "node:crypto";
+import { isMetaEvent, isUrlSafeForMeta, sanitizeParams } from "@/lib/tracking/meta-rules";
 
 const DEFAULT_GRAPH_VERSION = "v19.0";
 
-function pixelId(): string | undefined {
-  return process.env.META_PIXEL_ID ?? process.env.NEXT_PUBLIC_META_PIXEL_ID;
+function pixelId(): string {
+  return process.env.META_PIXEL_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID || "4019768748330072";
 }
+/** Token serveur, jamais exposé au navigateur ni versionné. Ancien nom accepté. */
 function accessToken(): string | undefined {
-  return process.env.META_CAPI_ACCESS_TOKEN;
+  return process.env.META_CAPI_TOKEN || process.env.META_CAPI_ACCESS_TOKEN || undefined;
+}
+export function isCapiEnabled(): boolean {
+  return process.env.META_CAPI_ENABLED === "true" && Boolean(accessToken());
 }
 
 export function sha256(value: string): string {
@@ -42,11 +48,8 @@ export function hashPhone(phone?: string): string[] | undefined {
   return phone ? [sha256(normalizePhone(phone))] : undefined;
 }
 
+/** Pas d'email ni de téléphone : correspondance avancée non retenue pour l'instant. */
 export interface CapiUserData {
-  /** Raw email — hashed here, never stored. */
-  email?: string;
-  /** Raw phone — hashed here, never stored. */
-  phone?: string;
   fbp?: string;
   fbc?: string;
   clientIp?: string;
@@ -68,16 +71,14 @@ export interface CapiResult {
 }
 
 export async function sendCapiEvent(event: CapiEvent): Promise<CapiResult> {
-  const id = pixelId();
   const token = accessToken();
-  if (!id || !token) return { sent: false, reason: "capi_disabled" };
+  if (!isCapiEnabled() || !token) return { sent: false, reason: "capi_disabled" };
+  if (!isMetaEvent(event.eventName)) return { sent: false, reason: "unknown_event" };
+  const id = pixelId();
+  const sourceUrl = event.eventSourceUrl && isUrlSafeForMeta(event.eventSourceUrl) ? event.eventSourceUrl : undefined;
 
   const u = event.userData ?? {};
   const userData: Record<string, unknown> = {};
-  const em = hashEmail(u.email);
-  if (em) userData.em = em;
-  const ph = hashPhone(u.phone);
-  if (ph) userData.ph = ph;
   if (u.fbp) userData.fbp = u.fbp;
   if (u.fbc) userData.fbc = u.fbc;
   if (u.clientIp) userData.client_ip_address = u.clientIp;
@@ -90,19 +91,21 @@ export async function sendCapiEvent(event: CapiEvent): Promise<CapiResult> {
         event_time: Math.floor(Date.now() / 1000),
         event_id: event.eventId,
         action_source: event.actionSource ?? "website",
-        ...(event.eventSourceUrl ? { event_source_url: event.eventSourceUrl } : {}),
+        ...(sourceUrl ? { event_source_url: sourceUrl } : {}),
         user_data: userData,
-        custom_data: event.customData ?? {},
+        custom_data: sanitizeParams(event.customData),
       },
     ],
   };
+  // Token dans le corps et non dans l'URL : il ne finit pas dans les journaux d'accès.
+  payload.access_token = token;
   const testCode = process.env.META_CAPI_TEST_EVENT_CODE;
   if (testCode) payload.test_event_code = testCode;
 
   const version = process.env.META_GRAPH_VERSION ?? DEFAULT_GRAPH_VERSION;
   try {
     const res = await fetch(
-      `https://graph.facebook.com/${version}/${id}/events?access_token=${encodeURIComponent(token)}`,
+      `https://graph.facebook.com/${version}/${id}/events`,
       { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) },
     );
     if (!res.ok) return { sent: false, reason: `graph_${res.status}` };

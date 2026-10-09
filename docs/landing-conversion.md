@@ -23,56 +23,17 @@ Même corps de page ; **seul le bloc above-the-fold (hero) change** selon
 l'angle (message match pub → page). Un angle inconnu retombe sur `b`.
 Pages en `noindex` (destinations d'annonces).
 
-## Variables d'environnement
+## Variables d'environnement, convention UTM, événements Meta
 
-| Variable | Rôle |
-|---|---|
-| `NEXT_PUBLIC_META_PIXEL_ID` | Pixel navigateur (public). Active aussi la bannière de consentement. |
-| `META_CAPI_ACCESS_TOKEN` | Token Conversions API (**secret serveur**). |
-| `META_PIXEL_ID` | Facultatif : surcharge serveur du Pixel ID. |
-| `META_GRAPH_VERSION` | Facultatif : version Graph API (défaut `v19.0`). |
-| `META_CAPI_TEST_EVENT_CODE` | Facultatif : code « Test des événements » (Events Manager). |
-| `NEXT_PUBLIC_RDV_URL` | Lien de prise de RDV (Calendly). Sinon appel direct de la ligne de l'équipe (`config/contact.ts`). |
-
-Voir aussi `.env.example`. La CAPI peut être activée **soit** par cette route
-serveur (`/api/capi`), **soit** en 1-clic dans Events Manager — les deux sont
-compatibles tant que l'`event_id` est partagé (ce que fait ce code).
-
-## Convention UTM
-
-Détail complet : `docs/convention-utm.md`. À l'arrivée on capte et **persiste**
-(cookie + localStorage) `utm_source/medium/campaign/term/content` + `fbclid`,
-injectés ensuite dans le payload du lead (→ CRM) et dans les events de tracking.
+- Pixel Meta, consentement, plan de marquage et procédure de test :
+  **`docs/meta-pixel.md`**.
+- API Conversions (préparée, non activée) : **`docs/meta-capi.md`**.
+- UTM : `docs/convention-utm.md` (capture en sessionStorage, injectée dans le
+  payload du lead → CRM, jamais transmise à Meta).
+- `NEXT_PUBLIC_RDV_URL` : lien de prise de RDV. Sinon appel direct de la ligne
+  de l'équipe (`config/contact.ts`).
 
 Exemple : `/lp/a?utm_source=facebook&utm_medium=paid_social&utm_campaign=rd-leads-test&utm_content=angleA-hook1-video`
-
-## Events Meta (Pixel + CAPI, dédupliqués)
-
-Chaque event est tiré **sur le Pixel navigateur ET la CAPI serveur** avec le
-**même `event_name` + `event_id`** (sinon double comptage). PII (email,
-téléphone) **hashée SHA-256 côté serveur** ; `fbp`/`fbc` + IP + user-agent
-joints pour la qualité de matching. Rien ne part avant le **consentement
-cookies** (RGPD).
-
-| Event Meta | Type | Déclencheur |
-|---|---|---|
-| `PageView` | standard | chaque chargement / navigation (`MetaRouteTracker`) |
-| `ViewContent` | standard | montage d'une landing `/lp/<angle>` (`content_name=lp_<angle>`) |
-| `DiagnosticStart` | custom | 1ʳᵉ réponse du diagnostic flash |
-| `DiagnosticComplete` | custom | 3ᵉ réponse — fourchette affichée |
-| `SimulateurStart` | custom | montage du simulateur complet |
-| `SimulateurComplete` | custom | passage à l'écran résultat |
-| `Lead` | standard | **après validation backend** (`/api/lead`) — CAPI serveur + Pixel navigateur, `event_id` partagé |
-| `Contact` | standard | clic « Parler à mon conseiller » (lien `tel:`) |
-| `Schedule` | standard | clic prise de RDV quand `NEXT_PUBLIC_RDV_URL` est défini |
-
-### Déduplication `Lead`
-
-1. Le navigateur génère **un** `event_id` au moment de la soumission.
-2. Il est envoyé à `/api/lead` (`meta_event_id`) → la **CAPI serveur** émet
-   `Lead` avec cet id (email/téléphone hashés, `fbp`/`fbc` depuis les cookies).
-3. À la réussite, le **Pixel navigateur** émet `Lead` avec le **même** id.
-4. Meta fusionne les deux via `event_name` + `event_id`.
 
 ## Funnel interne (inchangé)
 

@@ -19,13 +19,13 @@ npm run report:weekly  # rapport KPI Markdown
 
 | Dossier | Contenu |
 |---|---|
-| `app/` | Next.js App Router : landing, `/simulateur`, `/lp/[angle]` (ads Meta), `/dossier`, API routes lead/event/export/capi/demande-diagnostic |
+| `app/` | Next.js App Router : landing, `/simulateur`, `/lp/[angle]` (ads Meta), `/dossier`, API routes lead/event/export/demande-diagnostic |
 | `app/lp/` | Landings payantes mobile-first (3 angles de hero, sans navigation) — dérivées de `/concept-c` |
 | `config/fiscal-2026.ts` | **Source unique** des taux/barèmes fiscaux & sociaux, datés + sourcés (spec simulateur §4) |
 | `lib/fiscal/` | Moteur A (portage) + Moteur B (IR foyer) + 3 scénarios, tests Vitest, `AUDIT.md` |
 | `lib/crm/` | `lead_schema_v1` (Zod), interface CRMAdapter, Brevo/Airtable + stubs, file + journal NDJSON |
-| `lib/tracking/` | UTM first/last touch + fbclid, événements funnel (Plausible), bridge Meta Pixel/CAPI + consentement |
-| `lib/server/capi.ts` | Conversions API serveur (hash SHA-256, dédup par `event_id`) |
+| `lib/tracking/` | UTM first/last touch + fbclid (sessionStorage), événements funnel (Plausible), Pixel Meta + consentement CNIL (`docs/meta-pixel.md`) |
+| `lib/server/capi.ts` | Conversions API serveur — préparée, **non activée** (`docs/meta-capi.md`) |
 | `content/claims.ts` | Tous les chiffres Atarhib/Targhib avec source obligatoire |
 | `content/emails/` | Séquence prospects J3→J14 (4 envois en texte simple, 5 variantes à J10) — voir `content/emails/sequence.md` |
 | `docs/` | Convention UTM, schéma lead, branchement CRM, **landing-conversion.md** (système ads Meta), etc. |
@@ -42,6 +42,8 @@ mock (aucune clé requise) : les leads vont dans `data/leads-fallback.ndjson`.
       (`config/contact.ts`) ;
       définir `NEXT_PUBLIC_RDV_URL` plus tard si un Calendly arrive
 - [ ] `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` (domaine de prod)
+- [ ] Pixel Meta : tester en Preview (`docs/meta-pixel.md` § Vérification) avant la mise en production
+- [ ] Politique de confidentialité : compléter la section cookies (`docs/meta-pixel.md` § Politique de confidentialité)
 - [ ] CRM réel (`docs/branchement-brevo-airtable.md`) + `EXPORT_TOKEN`
 - [ ] Nom du garant financier (mentions légales)
 - [ ] Vérifier le plafond exact de l'abattement 10 % (constante

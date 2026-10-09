@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LIGNE_LEGALE, PHONE_INTL_LABEL } from "@/config/contact";
+import { ConsentSettingsLink } from "@/components/ConsentBanner";
 
 /**
  * Pied de page unique du site public (accueil, /lp/*, /simulateur, pages
@@ -22,6 +23,7 @@ export function SiteFooter() {
           <Link href="/confidentialite" className="inline-flex min-h-[44px] items-center underline">
             Confidentialité
           </Link>
+          <ConsentSettingsLink className="inline-flex min-h-[44px] items-center underline" />
         </p>
         <p>Simulation à valeur indicative — ne constitue pas un conseil fiscal personnalisé.</p>
       </div>

@@ -1,12 +1,11 @@
 "use client";
 
-/** Fires a Meta ViewContent once on mount (queued until consent). */
+/** ViewContent Meta, une fois par affichage de landing, avec content_name seul. */
 import { useEffect } from "react";
-import { ensureMetaInit, metaViewContent } from "@/lib/tracking/meta";
+import { metaViewContent } from "@/lib/tracking/meta";
 
 export function MetaViewContent({ contentName }: { contentName: string }) {
   useEffect(() => {
-    ensureMetaInit();
     metaViewContent(contentName);
   }, [contentName]);
   return null;

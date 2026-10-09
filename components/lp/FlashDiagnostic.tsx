@@ -5,9 +5,9 @@
  * réveillent (§3.1).
  *
  * Ce n'est plus une version dégradée du simulateur : les réponses sont
- * transmises au simulateur, qui ne redemande rien. Le lien de sortie porte
- * les réponses en clair (lib/diagnostic/answers.ts), et l'état est partagé
- * entre les deux instances montées sur une même landing.
+ * transmises au simulateur, qui ne redemande rien. Elles passent par
+ * lib/diagnostic/relay.ts (mémoire + localStorage), JAMAIS par l'URL que le
+ * Pixel Meta transmet, et l'état est partagé entre les instances d'une landing.
  *
  * La 3e question n'alimente aucun calcul. Elle installe le manque que le
  * simulateur vient combler — « personne ne t'avait jamais calculé ton vrai
@@ -30,13 +30,13 @@ import {
   DEJA_CALCULE_OPTIONS,
   DIAGNOSTIC_SEGMENTS,
   isComplete,
-  simulateurHref,
   type DejaCalcule,
 } from "@/lib/diagnostic/answers";
+import { setDiagnosticRelay } from "@/lib/diagnostic/relay";
 import { useDiagnostic } from "@/lib/diagnostic/store";
 import { computePortage } from "@/lib/fiscal/portage";
 import { trackEvent } from "@/lib/tracking/events";
-import { metaDiagnosticComplete, metaDiagnosticStart } from "@/lib/tracking/meta";
+import { metaDiagnosticFlashComplete, metaDiagnosticFlashStart } from "@/lib/tracking/meta";
 import { CountUp } from "./CountUp";
 
 const BRASS = "#B08D57";
@@ -65,7 +65,7 @@ export function FlashDiagnostic({ angle, simulateurHref: base = "/simulateur" }:
   ) {
     if (event === "diag_q1_answered" && answeredCount(answers) === 0) {
       trackEvent("diag_started");
-      metaDiagnosticStart(angle);
+      metaDiagnosticFlashStart();
     }
     setAnswer(key, value as never);
     trackEvent(event);
@@ -179,9 +179,9 @@ function FlashResult({
   base: string;
   angle: string;
 }) {
+  // Aucun montant, aucune réponse : l'événement dit seulement « fourchette affichée ».
   useEffect(() => {
-    metaDiagnosticComplete({ low, high, angle });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    metaDiagnosticFlashComplete();
   }, []);
 
   const { setAnswer } = useDiagnostic();
@@ -218,8 +218,11 @@ function FlashResult({
       </p>
 
       <Link
-        href={simulateurHref(answers, base)}
-        onClick={() => trackEvent("sim_started", { from: "flash", angle })}
+        href={base}
+        onClick={() => {
+          setDiagnosticRelay(answers);
+          trackEvent("sim_started", { from: "flash", angle });
+        }}
         className="mt-4 flex min-h-[48px] items-center justify-center rounded-full bg-[#0B0D12] px-6 py-3 text-center text-base font-bold text-white transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-lg"
       >
         Calculer mon vrai taux — 2 min
