@@ -15,9 +15,8 @@
  * figure/testimonial is a marked placeholder, never shipped as fact.
  */
 import Image from "next/image";
-import { computePortage } from "@/lib/fiscal/portage";
 import { trackEvent } from "@/lib/tracking/events";
-import { metaContact } from "@/lib/tracking/meta";
+import { trackContact } from "@/lib/tracking/analytics";
 import { DiagnosticProvider } from "@/lib/diagnostic/store";
 import { CountUp } from "./CountUp";
 import { FlashDiagnostic } from "./FlashDiagnostic";
@@ -25,8 +24,7 @@ import { MetaViewContent } from "./MetaViewContent";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Beam, Reveal, SpotCard } from "./motion";
 import { groupFr } from "@/lib/format";
-import { ANNEE_CREATION, CTA_CONSEILLER, DATE_IMMATRICULATION, FRAIS_GESTION_LABEL, PHONE_E164, PHONE_LABEL, RCS } from "@/config/contact";
-import { CAGNOTTE_PROVIDERS } from "@/config/fiscal-2026";
+import { CTA_CONSEILLER, FRAIS_GESTION_LABEL, PHONE_E164, PHONE_LABEL, RAISON_SOCIALE, RCS } from "@/config/contact";
 
 export type Angle = "a" | "b" | "c";
 
@@ -41,20 +39,14 @@ const SANS = "'Manrope','IBM Plex Sans',sans-serif";
 const SERIF = SANS;
 
 
-/* Reference case computed by the real fiscal engine — not a marketing number.
- * Cagnotte May : 1 500 € utilisables, 1 568,50 € prélevés (retour #5). */
-const REF = computePortage({
-  tjm: 420,
-  days: 20,
-  ndf: 500,
-  cagnotteMay: CAGNOTTE_PROVIDERS.may.usableMonthly,
-  cagnotteCost: CAGNOTTE_PROVIDERS.may.defaultMonthly,
-  mealVouchers: true,
-});
-/** Taux de restitution AVANT impôt sur le revenu, avantages compris (#28, #34). */
-const PCT = Math.round(REF.restitutionRate * 100);
-/** Part de ce taux en avantages non retirables en argent (cagnotte + titres-restaurant). */
-const PCT_AVANTAGES = Math.round(REF.benefitsRate * 100);
+/*
+ * 14/10 — retirés du site car NON VALIDÉS (consigne d'Ayoub) : le taux de
+ * restitution du cas de référence (pastilles « 63 % » et « 21 % »), le
+ * « ~50 % du CA » du portage classique, « ~30 consultants portés depuis
+ * 2022 », la date de création mise en avant, et tout le registre « risque
+ * URSSAF » (angle A, section « Depuis 2024… »), réservé à la pub D, inactive.
+ * À rétablir uniquement après validation écrite.
+ */
 
 const eur = (n: number) => groupFr(n);
 
@@ -79,33 +71,6 @@ interface HeroCopy {
 
 function heroCopy(angle: Angle): HeroCopy {
   switch (angle) {
-    case "a":
-      // ANGLE A — Warning (framework PAS : Problème → Agitation → Solution).
-      // H1 = ancre de message-match avec l'annonce ; on ne la réécrit pas.
-      // TODO: VALIDATION JURIDIQUE — la formulation « depuis 2024 / c'est toi »
-      // est marquée à valider avant diffusion (cf. content/claims.ts →
-      // redressement_personnel_2024.condition). Ne pas diffuser sans accord.
-      return {
-        eyebrow: "Portage salarial — le risque qu'on ne te montre pas",
-        title: (
-          <>
-            Depuis 2024, ce n&rsquo;est plus ta société de portage qui est{" "}
-            <span className="relative inline-block">
-              redressée
-              <Scribble />
-            </span>
-            . C&rsquo;est toi.
-          </>
-        ),
-        subtitle: (
-          <>
-            Frais « gonflés », cagnotte opaque, avantages réservés à quelques-uns : quand l&rsquo;URSSAF requalifie, la société
-            paie l&rsquo;amende — mais c&rsquo;est <strong>ta rémunération</strong> qui est corrigée, jusqu&rsquo;à 3 ans en
-            arrière. Vois en 30 secondes ce qu&rsquo;un cadre 100 % légal te laisse vraiment.
-          </>
-        ),
-        proof: <>Chez RD : frais réels, justifiés, proportionnés. Zéro montage gris.</>,
-      };
     case "c":
       // ANGLE C — Founder (autorité + preuve vécue, chiffres réels, zéro hype).
       return {
@@ -127,9 +92,11 @@ function heroCopy(angle: Angle): HeroCopy {
             d&rsquo;imposition de ton foyer — enfants, garde alternée, frais réels, PER.
           </>
         ),
-        proof: <>~30 consultants portés depuis {ANNEE_CREATION}. {FRAIS_GESTION_LABEL} de frais, tout compris.</>,
+        proof: <>{FRAIS_GESTION_LABEL} de frais, tout compris.</>,
         withFounder: true,
       };
+    // L'angle A (risque URSSAF) n'est plus diffusé : /lp/a affiche la promesse B.
+    case "a":
     case "b":
     default:
       // ANGLE B — Vrai net (défaut, promesse verrouillée de concept-c).
@@ -147,9 +114,8 @@ function heroCopy(angle: Angle): HeroCopy {
         ),
         subtitle: (
           <>
-            En portage classique, on ne récupère en moyenne que ~50 % de son CA — sans jamais connaître son vrai taux
-            d&rsquo;imposition. Le seul simulateur qui calcule le taux réel de votre foyer (enfants, garde alternée, frais réels,
-            PER) et ce que vous laissez sur la table. Gratuit, 2 à 3 minutes.
+            Le seul simulateur qui calcule le taux réel de votre foyer (enfants, garde alternée, frais réels, PER) et ce que
+            vous laissez sur la table. Gratuit, 2 à 3 minutes.
           </>
         ),
         proof: <>4 % de frais tout compris, là où le marché facture souvent 5 à 10 %.</>,
@@ -226,7 +192,7 @@ function HeroFlash({ angle }: { angle: Angle }) {
           )}
           <div className="mt-5 flex items-center justify-center gap-2 text-xs font-semibold text-[#7A8093] lg:justify-start">
             <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: BRASS }} />
-            ~30 consultants portés depuis {ANNEE_CREATION} · {RCS}
+            {RAISON_SOCIALE} · {RCS}
           </div>
         </div>
         {/* Interactive flash diagnostic — the hero conversion mechanism. */}
@@ -240,30 +206,23 @@ function HeroFlash({ angle }: { angle: Angle }) {
   );
 }
 
-type Chip = { small: string } & ({ text: string } | { num: number; fmt: (n: number) => string });
+type Chip = { small: string; num: number; fmt: (n: number) => string };
 
 function StatChips() {
   const pctFmt = (n: number) => `${Math.round(n)} %`;
   const chips: Chip[] = [
     { num: 4, fmt: pctFmt, small: "frais de gestion, tout compris" },
-    {
-      num: PCT,
-      fmt: pctFmt,
-      small: `du CA restitué avant impôt, dont ${PCT_AVANTAGES} % en avantages non retirables en argent (cas de référence TJM 420 €)`,
-    },
-    { text: String(ANNEE_CREATION), small: `création (immatriculation le ${DATE_IMMATRICULATION}) — RCS Versailles` },
     { num: 18000, fmt: (n) => `${eur(Math.round(n))} €/an`, small: "d'avantages légaux possibles" },
   ];
   return (
     <section className="mx-auto max-w-page px-4 pb-section">
-      {/* Deux colonnes jusqu'à 1024 : à 768, quatre colonnes ne laissaient que
-          175 px et les libellés cassaient sur trois lignes. */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* Deux pastilles sourcées (content/claims.ts), deux colonnes à toutes les largeurs. */}
+      <div className="grid grid-cols-2 gap-3 lg:mx-auto lg:max-w-2xl">
         {chips.map((c, i) => (
           <Reveal key={c.small} delayMs={i * 70}>
             <SpotCard className="h-full rounded-2xl border border-[#ECEEF3] bg-white px-4 py-4 text-center transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md lg:text-left">
               <p className="text-2xl font-extrabold tabular-nums" style={{ color: BRASS }}>
-                {"text" in c ? c.text : <CountUp value={c.num} format={c.fmt} />}
+                <CountUp value={c.num} format={c.fmt} />
               </p>
               <p className="mt-1 text-xs font-medium text-[#7A8093]">{c.small}</p>
             </SpotCard>
@@ -319,22 +278,7 @@ function Atarhib() {
     <section id="preuves" className="mx-auto max-w-page px-4 py-section md:py-section-md lg:py-section-lg">
       <div className="grid items-center gap-10 md:grid-cols-2">
         <div>
-          <h2 className="text-2xl font-extrabold leading-tight tracking-tight md:text-4xl" style={{ fontFamily: SERIF }}>
-            Depuis 2024, un montage opaque se paie sur{" "}
-            <span className="relative inline-block">
-              votre
-              <Scribble />
-            </span>{" "}
-            paie.
-          </h2>
-          <p className="mt-4 text-sm leading-relaxed text-[#4A5061]">
-            {/* Sourced mechanism (cf. content/claims.ts → redressement_personnel_2024). */}
-            En cas de redressement URSSAF sur des frais ou avantages injustifiés, la régularisation s&rsquo;impute sur la
-            rémunération du porté — l&rsquo;URSSAF pouvant remonter jusqu&rsquo;à 3 ans. Cash en main, CPF détourné, facturation
-            offshore : l&rsquo;avantage est immédiat, le risque est pour vous. Notre réponse : un cadre 100 % légal où
-            l&rsquo;optimisation vient des dispositifs officiels, pas des angles morts.
-          </p>
-          <div className="mt-6 flex items-center gap-4 rounded-2xl border border-[#ECEEF3] bg-white p-4">
+          <div className="flex items-center gap-4 rounded-2xl border border-[#ECEEF3] bg-white p-4">
             <Image src="/ridha.png" alt="Ridha Chammam" width={56} height={56} className="rounded-full" />
             <div>
               <p className="text-sm font-bold">« J&rsquo;ai moi-même été consultant porté. »</p>
@@ -380,7 +324,7 @@ function PricingCta() {
               href={`tel:${PHONE_E164}`}
               onClick={() => {
                 trackEvent("rdv_clicked", { from: "lp_pricing" });
-                metaContact("lp_pricing_tel");
+                trackContact("lp_pricing_tel");
               }}
               className={OUTLINE_BTN}
             >
@@ -462,7 +406,7 @@ function HeroVsl({ angle }: { angle: Angle }) {
           href={`tel:${PHONE_E164}`}
           onClick={() => {
             trackEvent("rdv_clicked", { from: "lp_vsl_hero" });
-            metaContact("lp_vsl_hero_tel");
+            trackContact("lp_vsl_hero_tel");
           }}
           className={OUTLINE_BTN}
         >
@@ -483,7 +427,7 @@ function HeroVsl({ angle }: { angle: Angle }) {
       </Reveal>
       <div className="mt-6 flex items-center justify-center gap-2 text-xs font-semibold text-[#7A8093]">
         <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: BRASS }} />
-        ~30 consultants portés depuis {ANNEE_CREATION} · {RCS}
+        {RAISON_SOCIALE} · {RCS}
       </div>
     </section>
   );

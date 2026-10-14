@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SiteFooter } from "@/components/SiteFooter";
-import { POLICY_VERSION, SEQUENCE_NB_EMAILS } from "@/config/contact";
+import { AnalyticsOptOut } from "@/components/AnalyticsOptOut";
+import { DELAI_RAPPEL, POLICY_VERSION, SEQUENCE_NB_EMAILS } from "@/config/contact";
 
 const SANS = "'Manrope','IBM Plex Sans',sans-serif";
 
@@ -15,9 +16,16 @@ export default function Confidentialite() {
         <p className="mt-1 text-xs text-[#9aa0b0]">Version {POLICY_VERSION}</p>
         <div className="mt-6 space-y-4 text-sm leading-relaxed text-[#4A5061]">
           <p>
-            <strong>Données collectées :</strong> prénom, email, téléphone (optionnel), réponses de simulation
-            (statut, revenus, composition du foyer, optimisations) et données d&rsquo;attribution marketing
-            (UTM, appareil). Aucune donnée n&rsquo;est collectée sans action volontaire de votre part.
+            <strong>Données collectées :</strong> prénom, téléphone, email, réponses de simulation (statut, revenus,
+            composition du foyer, optimisations) et données d&rsquo;attribution marketing (publicité d&rsquo;origine, page
+            d&rsquo;arrivée, appareil). Aucune donnée n&rsquo;est collectée sans action volontaire de votre part.
+          </p>
+          <p>
+            <strong>Téléphone :</strong> il est demandé pour une seule raison, vous rappeler {DELAI_RAPPEL} au sujet de
+            votre simulation. Il n&rsquo;est ni transmis à des tiers à des fins commerciales, ni utilisé pour de la
+            prospection automatisée.
+            {/* TODO(juridique) : base légale du rappel (mesures précontractuelles à la demande de la personne, art. 6.1.b
+                RGPD ?) et durée de conservation propre au téléphone d'un prospect non converti — à valider. */}
           </p>
           <p>
             <strong>Finalités :</strong> envoi de votre simulation détaillée (objet même du formulaire), séquence de{" "}
@@ -57,8 +65,17 @@ export default function Confidentialite() {
             </li>
           </ul>
           <p>
-            <strong>Mesure d&rsquo;audience :</strong> Plausible Analytics, sans cookie tiers ni profilage publicitaire.
+            <strong>Mesure d&rsquo;audience :</strong> nous comptons les visites et les étapes du parcours avec Plausible
+            Analytics (Plausible Insights OÜ, Estonie, serveurs dans l&rsquo;Union européenne). Aucun cookie n&rsquo;est
+            déposé, aucune donnée ne permet de vous identifier ni de vous suivre d&rsquo;un site à l&rsquo;autre : seules
+            des statistiques agrégées sont produites (pages vues, publicité d&rsquo;origine, étapes atteintes), sans aucune
+            donnée de votre simulation. Pour cette raison, cette mesure ne dépend pas de votre choix dans le bandeau cookies.
+            Vous pouvez néanmoins vous y opposer pour cet appareil :
+            {/* TODO(juridique) : confirmer l'exemption de consentement (lignes directrices CNIL sur la mesure d'audience :
+                finalité strictement statistique, données anonymes, pas de recoupement ni de transmission à des tiers,
+                droit d'opposition) et la durée de conservation des statistiques côté Plausible. */}
           </p>
+          <AnalyticsOptOut />
         </div>
       </div>
       <SiteFooter />
