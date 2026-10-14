@@ -36,7 +36,7 @@ export function validateInputs(form: FormState): MissingInput[] {
   // chiffre n'a de sens (§4.3). Il n'a plus de valeur par défaut.
   if (!form.status) {
     missing.push({
-      message: "Votre profil n'est pas renseigné — c'est lui qui détermine tout le calcul.",
+      message: "Ton profil n'est pas renseigné : c'est lui qui détermine tout le calcul.",
       step: "profil",
       cta: "Choisir mon profil",
     });
@@ -44,21 +44,21 @@ export function validateInputs(form: FormState): MissingInput[] {
 
   if (!Number.isFinite(tjm) || tjm <= 0) {
     missing.push({
-      message: "Votre TJM (ou votre fourchette de TJM) n'est pas renseigné.",
+      message: "Ton TJM (ou ta fourchette de TJM) n'est pas renseigné.",
       step: "activite",
       cta: "Renseigner mon TJM",
     });
   }
   if (!Number.isFinite(form.days) || form.days <= 0) {
     missing.push({
-      message: "Votre nombre de jours facturés par mois n'est pas renseigné.",
+      message: "Ton nombre de jours facturés par mois n'est pas renseigné.",
       step: "activite",
       cta: "Renseigner mes jours facturés",
     });
   }
   if (form.situation === "marie_pacse" && !Number.isFinite(form.revenuConjoint)) {
     missing.push({
-      message: "Le revenu imposable de votre conjoint n'est pas exploitable.",
+      message: "Le revenu imposable de ton conjoint n'est pas exploitable.",
       step: "foyer",
       cta: "Corriger mon foyer",
     });

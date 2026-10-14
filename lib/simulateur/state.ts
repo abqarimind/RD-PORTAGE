@@ -12,7 +12,7 @@
 import type { CagnotteChoice } from "@/config/fiscal-2026";
 import type { CurrentStatus } from "@/lib/fiscal/scenarios";
 import { bracketForValue, findBracket, TJM_BRACKETS, type TjmBracket } from "./brackets";
-import { findSegment, type DiagnosticAnswers } from "@/lib/diagnostic/answers";
+import { findSegment, type DiagnosticAnswers, type FoyerDiag } from "@/lib/diagnostic/answers";
 
 /* ————————————————————————— étapes ————————————————————————— */
 
@@ -189,10 +189,12 @@ export interface SimulatorState {
    */
   prefilled: { status: boolean; tjm: boolean };
   /**
-   * Réponse à la 3e question du diagnostic. N'alimente AUCUN calcul :
-   * conservée pour l'analyse et pour moduler la formulation du résultat.
+   * Foyer déclaré au diagnostic (3e question). Il préremplit la situation et
+   * les enfants, et décide de ce que l'écran Foyer affiche : rien du tout
+   * pour une personne seule sans enfant (l'écran est sauté), seulement ce
+   * qui la concerne sinon. Nul pour une arrivée directe sur /simulateur.
    */
-  dejaCalcule: string | null;
+  foyerDiag: FoyerDiag | null;
 }
 
 export function createInitialState(simulationId: string, now = new Date()): SimulatorState {
@@ -205,7 +207,7 @@ export function createInitialState(simulationId: string, now = new Date()): Simu
     simulationId,
     startedAt: now.toISOString(),
     prefilled: { status: false, tjm: false },
-    dejaCalcule: null,
+    foyerDiag: null,
   };
 }
 
@@ -290,11 +292,19 @@ export function reducer(state: SimulatorState, action: SimulatorAction): Simulat
         form.tjmMode = "fourchette";
         form.tjmBracketId = bracket.id;
       }
+      const foyer = action.answers.foyer;
+      if (foyer === "seul" || foyer === "couple") {
+        form.situation = foyer === "couple" ? "marie_pacse" : "celibataire";
+        form.enfants = 0;
+        form.gardeAlternee = 0;
+      } else if (foyer === "enfants" && form.enfants === 0) {
+        form.enfants = 1;
+      }
       return {
         ...state,
         form,
         prefilled: { status: Boolean(segment), tjm: Boolean(bracket) },
-        dejaCalcule: action.answers.dejaCalcule ?? state.dejaCalcule,
+        foyerDiag: foyer ?? state.foyerDiag,
       };
     }
 

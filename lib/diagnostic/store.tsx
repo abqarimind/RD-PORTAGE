@@ -12,11 +12,9 @@
  *    le reste de l'état du parcours (§4.1 de la session précédente).
  *
  * Le provider existe par ailleurs pour que plusieurs instances de diagnostic
- * sur une même page restent synchronisées. LandingC déclare aujourd'hui deux
- * points de montage (hero en variante « flash », section dédiée en variante
- * « vsl ») mais ils sont MUTUELLEMENT EXCLUSIFS : une seule instance est
- * rendue à la fois. Le partage ne coûte rien et couvre le cas où une
- * variante en afficherait deux.
+ * sur une même page restent synchronisées (une seule aujourd'hui, dans
+ * components/landing/Landing.tsx). Pendant la restauration (`hydrating`), le
+ * diagnostic affiche déjà la question 1 : elle est rendue côté serveur.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { EMPTY_ANSWERS, sanitizeAnswers, type DiagnosticAnswers } from "./answers";

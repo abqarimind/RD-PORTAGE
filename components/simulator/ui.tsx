@@ -15,6 +15,7 @@
  */
 import { useEffect, useId, useState } from "react";
 import { groupFr } from "@/lib/format";
+import { useSimulator } from "@/lib/simulateur/store";
 
 export const PEACH = "#FFF1DE";
 export const MINT = "#E7F6EE";
@@ -342,5 +343,19 @@ export function SimulatorStyles() {
         }
       }
     `}</style>
+  );
+}
+
+/**
+ * « Passer : être rappelé par Ridha » — demander le rappel sans finir le
+ * simulateur (14/10). Le résultat se calcule déjà avec les valeurs reprises
+ * et les valeurs par défaut ; le formulaire de rappel est sur cet écran.
+ */
+export function PasserAuRappel() {
+  const { goTo } = useSimulator();
+  return (
+    <button type="button" onClick={() => goTo("resultats")} className={`${GHOST_BTN} -ml-4 w-full justify-center sm:w-auto`}>
+      Passer : être rappelé par Ridha
+    </button>
   );
 }

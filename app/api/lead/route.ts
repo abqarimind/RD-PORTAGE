@@ -29,7 +29,7 @@ import { baseUrlFrom, buildServerPayload, coerceForm } from "@/lib/email/context
 import { sendNouveauLead, sendRecapLead } from "@/lib/email/send";
 import { dossierUrl } from "@/lib/dossier/token";
 import { unsubscribeUrl } from "@/lib/email/unsubscribe";
-import { resumeSimulation } from "@/lib/lead/summary";
+import { resumeDiagnostic, resumeSimulation } from "@/lib/lead/summary";
 import { normalizePhone, PHONE_ERROR } from "@/lib/phone";
 import type { SimulationResultPayload } from "@/types/simulation-result";
 
@@ -149,24 +149,36 @@ export async function POST(req: NextRequest) {
   let dossierLink: string | undefined;
   let emailSent = false;
 
-  try {
-    payload = buildServerPayload({
-      form: coerceForm(parsed.form),
-      identite: { prenom: lead.identity.first_name, email: lead.identity.email, telephone: phone },
-      simulationId,
-      baseUrl,
-      source: {
-        utmSource: lead.attribution.first_touch.utm_source,
-        utmMedium: lead.attribution.first_touch.utm_medium,
-        utmCampaign: lead.attribution.first_touch.utm_campaign,
-        utmContent: lead.attribution.first_touch.utm_content,
-        utmTerm: lead.attribution.first_touch.utm_term,
-        leadSource: lead.attribution.lead_source,
-        device: lead.attribution.device,
-      },
-    });
-  } catch (err) {
-    console.error("[lead] échec de préparation du récapitulatif", JSON.stringify({ leadId: lead.lead_id, error: String(err) }));
+  /**
+   * Rappel demandé dès la fourchette du diagnostic (simulation.completed =
+   * false) : pas de récapitulatif à recalculer ni de dossier à envoyer, la
+   * personne n'a pas rempli le simulateur. Seule la notification interne part.
+   */
+  const flashSeulement = parsed.simulation.completed === false;
+  if (flashSeulement) {
+    lead.journey = { ...lead.journey, summary: resumeDiagnostic(coerceForm(parsed.form)) };
+  }
+
+  if (!flashSeulement) {
+    try {
+      payload = buildServerPayload({
+        form: coerceForm(parsed.form),
+        identite: { prenom: lead.identity.first_name, email: lead.identity.email, telephone: phone },
+        simulationId,
+        baseUrl,
+        source: {
+          utmSource: lead.attribution.first_touch.utm_source,
+          utmMedium: lead.attribution.first_touch.utm_medium,
+          utmCampaign: lead.attribution.first_touch.utm_campaign,
+          utmContent: lead.attribution.first_touch.utm_content,
+          utmTerm: lead.attribution.first_touch.utm_term,
+          leadSource: lead.attribution.lead_source,
+          device: lead.attribution.device,
+        },
+      });
+    } catch (err) {
+      console.error("[lead] échec de préparation du récapitulatif", JSON.stringify({ leadId: lead.lead_id, error: String(err) }));
+    }
   }
 
   if (payload) {
@@ -187,7 +199,7 @@ export async function POST(req: NextRequest) {
     const recap = await sendRecapLead(payload, { unsubscribeUrl: lienDesinscription(lead.identity.email, baseUrl) });
     emailSent = recap.ok;
     if (!recap.ok) console.error("[lead] récapitulatif non envoyé au lead", JSON.stringify({ leadId: lead.lead_id, error: recap.error }));
-  } else {
+  } else if (!flashSeulement) {
     alertes.push("le récapitulatif n'a pas pu être calculé : aucun email n'est parti au prospect");
     console.error("[lead] récapitulatif non calculable — aucun email au lead", JSON.stringify({ leadId: lead.lead_id }));
   }

@@ -8,15 +8,22 @@
 import { EMAIL_ENTREPRISE, PHONE_LABEL, RDV_BOOKING_URL, TEL_URL, WHATSAPP_URL } from "@/config/contact";
 import { trackContact } from "@/lib/tracking/analytics";
 
-export function ContactOptions({ className = "mt-2 text-sm text-[#7A8093]" }: { className?: string }) {
+export function ContactOptions({
+  className = "mt-2 text-sm text-[#5E6475]",
+  tu = false,
+}: {
+  className?: string;
+  /** Tutoiement dans le parcours (14/10), vouvoiement dans le dossier envoyé par e-mail. */
+  tu?: boolean;
+}) {
   const lien = "font-semibold text-[#0B0D12] underline underline-offset-2";
   return (
     <p className={className}>
-      Appelez-nous au{" "}
+      {tu ? "Appelle-nous au" : "Appelez-nous au"}{" "}
       <a href={TEL_URL} onClick={() => trackContact("contact_options_tel")} className={`${lien} tabular-nums`}>
         {PHONE_LABEL}
       </a>
-      , écrivez à{" "}
+      {tu ? ", écris à" : ", écrivez à"}{" "}
       <a href={`mailto:${EMAIL_ENTREPRISE}`} onClick={() => trackContact("contact_options_email")} className={lien}>
         {EMAIL_ENTREPRISE}
       </a>
@@ -38,7 +45,7 @@ export function ContactOptions({ className = "mt-2 text-sm text-[#7A8093]" }: { 
         <>
           {" ou "}
           <a href={RDV_BOOKING_URL} target="_blank" rel="noopener noreferrer" className={lien}>
-            choisissez un créneau
+            {tu ? "choisis un créneau" : "choisissez un créneau"}
           </a>
         </>
       )}

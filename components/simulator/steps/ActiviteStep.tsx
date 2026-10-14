@@ -21,23 +21,24 @@ import { useSimulator } from "@/lib/simulateur/store";
 import { useSimulation } from "@/lib/simulateur/useSimulation";
 import { trackEvent } from "@/lib/tracking/events";
 import { CountUp } from "@/components/lp/CountUp";
-import { AmountInput, BRASS, eur, Field, MINT, pct, PRIMARY_BTN, Screen, Segmented, VALIDE } from "../ui";
+import { AmountInput, BRASS, eur, Field, MINT, PasserAuRappel, pct, PRIMARY_BTN, Screen, Segmented, VALIDE } from "../ui";
 
 export function ActiviteStep() {
   const { state, dispatch, setField, goTo } = useSimulator();
   const { form } = state;
   const { live, avantages, tjm } = useSimulation();
   const bracket = activeBracket(form);
+  const sauterFoyer = state.foyerDiag === "seul";
 
   return (
     <Screen
-      title="Votre activité"
-      subtitle={form.status === "salarie_esn" ? "Votre TJM cible en portage." : "Ce que vous facturez (ou visez)."}
+      title="Ton activité"
+      subtitle={form.status === "salarie_esn" ? "Ton TJM cible en portage." : "Ce que tu factures (ou vises)."}
     >
       {/* #8 : une seule carte « Freelance », la structure oriente le calcul
           (le scénario SASU existe dans le moteur, il n'était jamais atteint). */}
       {(form.status === "freelance_micro" || form.status === "freelance_sasu") && (
-        <Field label="Votre structure aujourd'hui">
+        <Field label="Ta structure aujourd'hui">
           <Segmented
             options={[
               { value: "freelance_micro", label: "Micro-entreprise" },
@@ -53,7 +54,7 @@ export function ActiviteStep() {
       <Field label="TJM — tarif jour HT">
         {state.prefilled.tjm && (
           <p className="mb-2 rounded-xl px-3 py-2 text-sm" style={{ backgroundColor: "#FFF1DE" }}>
-            Fourchette reprise de votre diagnostic. Affinez-la en montant exact si vous le connaissez.
+            Fourchette reprise de ton diagnostic. Affine-la en montant exact si tu le connais.
           </p>
         )}
         <Segmented
@@ -68,8 +69,8 @@ export function ActiviteStep() {
         {form.tjmMode === "exact" ? (
           <div className="mt-4">
             <AmountInput
-              label="Votre TJM exact"
-              hint="Saisissez le montant au clavier — le curseur n'est là que pour ajuster."
+              label="Ton TJM exact"
+              hint="Saisis le montant au clavier : le curseur n'est là que pour ajuster."
               value={form.tjmExact}
               min={150}
               max={2000}
@@ -114,7 +115,7 @@ export function ActiviteStep() {
       {/* #9 : au-delà du plafond, la micro-entreprise n'est plus tenable. */}
       {form.status === "freelance_micro" && tjm * form.days * 12 > MICRO_BNC_2026.plafondCa && (
         <p className="rounded-xl px-3 py-2 text-sm" style={{ backgroundColor: "#FFF1DE" }}>
-          À ce rythme, votre chiffre d&rsquo;affaires annuel ({eur(tjm * form.days * 12)} €) dépasse le plafond de la
+          À ce rythme, ton chiffre d&rsquo;affaires annuel ({eur(tjm * form.days * 12)} €) dépasse le plafond de la
           micro-entreprise ({eur(MICRO_BNC_2026.plafondCa)} € en 2026 pour les prestations de services). Deux années de
           dépassement de suite font sortir du régime.
         </p>
@@ -129,64 +130,81 @@ export function ActiviteStep() {
         onChange={(v) => setField("days", v)}
       />
 
-      <AmountInput
-        label="Frais professionnels mensuels"
-        hint="Déplacements, matériel, télétravail… Limités à 30 % de votre salaire brut (règle interne RD Portage)."
-        value={form.fraisMensuels}
-        min={0}
-        max={2000}
-        step={50}
-        onChange={(v) => setField("fraisMensuels", v)}
-      />
-
-      {/* —————————— Choix des avantages —————————— */}
-      <Field
-        label="Choix des avantages"
-        hint="Enveloppe d'avantages exonérés (chèques cadeaux, services à la personne, mobilité, culture), dans les plafonds URSSAF. Toujours affichée nette de frais de service."
-      >
-        <Segmented
-          columns={3}
-          options={[
-            { value: "may", label: "May" },
-            { value: "wawashi", label: "Wawashi" },
-            { value: "aucune", label: "Aucune" },
-          ]}
-          value={form.cagnotte}
-          onChange={(v) => setField("cagnotte", v as CagnotteChoice)}
+      {/*
+        14/10 — repliés par défaut : ils ont une valeur par défaut sensée
+        (0 € de frais, cagnotte May, titres-restaurant) et la plupart des
+        personnes n'y touchent pas. Le résumé dit ce qui est retenu, pour
+        que rien ne soit caché.
+      */}
+      <details className="rounded-2xl border border-[#ECEEF3] bg-[#FAFBFD] px-4 py-2">
+        <summary className="min-h-[44px] cursor-pointer py-2 text-base font-bold text-[#0B0D12]">
+          Affiner (facultatif) : frais et avantages
+          <span className="block text-sm font-medium text-[#5E6475]">
+            Retenus : {eur(form.fraisMensuels)} € de frais par mois ·{" "}
+            {avantages.avantagesInclus ? avantages.selection.map((x) => x.label).join(" + ") : "aucun avantage"}
+          </span>
+        </summary>
+        <div className="mt-3 space-y-5 pb-3">
+        <AmountInput
+          label="Frais professionnels mensuels"
+          hint="Déplacements, matériel, télétravail… Limités à 30 % de ton salaire brut (règle interne RD Portage)."
+          value={form.fraisMensuels}
+          min={0}
+          max={2000}
+          step={50}
+          onChange={(v) => setField("fraisMensuels", v)}
         />
-        <label className="mt-3 flex min-h-[44px] items-center gap-3 text-base text-[#0B0D12]">
-          <input
-            type="checkbox"
-            className="h-5 w-5 accent-[#0B0D12]"
-            checked={form.titresResto}
-            onChange={(e) => setField("titresResto", e.target.checked)}
-          />
-          <span>Titres-restaurant</span>
-        </label>
 
-        {/* Récapitulatif dérivé : disparaît entièrement si rien n'est retenu. */}
-        {avantages.avantagesInclus ? (
-          <div className="mt-3 space-y-1">
-            {avantages.selection.map((a) => (
-              <p key={a.id} className="flex justify-between text-sm tabular-nums text-[#7A8093]">
-                <span>
-                  {a.label} <span className="text-xs">({a.fraisDeService})</span>
-                </span>
-                <span className="font-semibold text-[#0B0D12]">
-                  {/* #6 : Wawashi est une enveloppe annuelle utilisable quand on veut, pas un montant mensuel fixe. */}
-                  {a.id === "wawashi" ? `${eur(a.montantNetAnnuel)} €/an` : `${eur(a.montantNetMensuel)} € net/mois`}
-                </span>
+        {/* —————————— Choix des avantages —————————— */}
+        <Field
+          label="Choix des avantages"
+          hint="Enveloppe d'avantages exonérés (chèques cadeaux, services à la personne, mobilité, culture), dans les plafonds URSSAF. Toujours affichée nette de frais de service."
+        >
+          <Segmented
+            columns={3}
+            options={[
+              { value: "may", label: "May" },
+              { value: "wawashi", label: "Wawashi" },
+              { value: "aucune", label: "Aucune" },
+            ]}
+            value={form.cagnotte}
+            onChange={(v) => setField("cagnotte", v as CagnotteChoice)}
+          />
+          <label className="mt-3 flex min-h-[44px] items-center gap-3 text-base text-[#0B0D12]">
+            <input
+              type="checkbox"
+              className="h-5 w-5 accent-[#0B0D12]"
+              checked={form.titresResto}
+              onChange={(e) => setField("titresResto", e.target.checked)}
+            />
+            <span>Titres-restaurant</span>
+          </label>
+
+          {/* Récapitulatif dérivé : disparaît entièrement si rien n'est retenu. */}
+          {avantages.avantagesInclus ? (
+            <div className="mt-3 space-y-1">
+              {avantages.selection.map((a) => (
+                <p key={a.id} className="flex justify-between text-sm tabular-nums text-[#7A8093]">
+                  <span>
+                    {a.label} <span className="text-xs">({a.fraisDeService})</span>
+                  </span>
+                  <span className="font-semibold text-[#0B0D12]">
+                    {/* #6 : Wawashi est une enveloppe annuelle utilisable quand on veut, pas un montant mensuel fixe. */}
+                    {a.id === "wawashi" ? `${eur(a.montantNetAnnuel)} €/an` : `${eur(a.montantNetMensuel)} € net/mois`}
+                  </span>
+                </p>
+              ))}
+              <p className="flex justify-between border-t border-[#ECEEF3] pt-1 text-sm font-bold tabular-nums">
+                <span>Total avantages</span>
+                <span style={{ color: VALIDE }}>{eur(avantages.totalNetMensuel)} € net/mois</span>
               </p>
-            ))}
-            <p className="flex justify-between border-t border-[#ECEEF3] pt-1 text-sm font-bold tabular-nums">
-              <span>Total avantages</span>
-              <span style={{ color: VALIDE }}>{eur(avantages.totalNetMensuel)} € net/mois</span>
-            </p>
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-[#7A8093]">Aucun avantage retenu — le net perçu ci-dessous n&rsquo;en tient pas compte.</p>
-        )}
-      </Field>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-[#7A8093]">Aucun avantage retenu — le net perçu ci-dessous n&rsquo;en tient pas compte.</p>
+          )}
+        </Field>
+        </div>
+      </details>
 
       {form.fraisMensuels > live.ndf && tjm > 0 && (
         <p className="-mt-2 text-sm text-[#7A8093]">
@@ -197,16 +215,18 @@ export function ActiviteStep() {
 
       <LiveFeedback live={live} avantagesInclus={avantages.avantagesInclus} tjm={tjm} />
 
+      {/* Seul·e sans enfant (diagnostic) : l'écran Foyer n'apporte rien, on va droit au résultat. */}
       <button
         type="button"
         onClick={() => {
           trackEvent("sim_step_1_completed");
-          goTo("foyer");
+          goTo(sauterFoyer ? "resultats" : "foyer");
         }}
         className={`${PRIMARY_BTN} w-full sm:w-auto`}
       >
-        Continuer
+        {sauterFoyer ? "Voir mon résultat" : "Continuer"}
       </button>
+      {!sauterFoyer && <PasserAuRappel />}
     </Screen>
   );
 }
@@ -262,11 +282,11 @@ function LiveFeedback({
             {avantagesInclus
               ? `Dont ${pct(live.benefitsRate)} du CA en avantages, non retirables en argent. `
               : "Sans avantages. "}
-            Le détail foyer (votre vrai taux d&rsquo;imposition) arrive à l&rsquo;étape suivante.
+            Le détail foyer (ton vrai taux d&rsquo;imposition) arrive à l&rsquo;étape suivante.
           </p>
         </>
       ) : (
-        <p className="mt-2 text-sm text-[#4A5061]">Renseignez votre TJM pour voir l&rsquo;aperçu.</p>
+        <p className="mt-2 text-sm text-[#4A5061]">Renseigne ton TJM pour voir l&rsquo;aperçu.</p>
       )}
     </div>
   );

@@ -14,7 +14,7 @@ import { ConsentSettingsLink } from "@/components/ConsentBanner";
 export function SiteFooter() {
   return (
     <footer className="border-t border-[#ECEEF3]">
-      <div className="mx-auto max-w-page px-4 py-8 text-xs leading-relaxed text-[#7A8093]">
+      <div className="mx-auto max-w-page px-4 py-8 text-xs leading-relaxed text-[#5E6475]">
         <p>{LIGNE_LEGALE} · {PHONE_INTL_LABEL}</p>
         <p className="mt-1 flex flex-wrap items-center gap-x-3">
           <Link href="/mentions-legales" className="inline-flex min-h-[44px] items-center underline">

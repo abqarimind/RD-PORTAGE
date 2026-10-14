@@ -100,7 +100,7 @@ describe("BUG-02 — le mode de saisie du TJM est mémorisé et réversible", ()
 });
 
 describe("§3.2 — relais du diagnostic flash", () => {
-  const relais: DiagnosticAnswers = { segment: "porte", tjmBracketId: "500-650", dejaCalcule: "non" };
+  const relais: DiagnosticAnswers = { segment: "porte", tjmBracketId: "500-650", foyer: "couple" };
 
   it("préremplit le profil et la fourchette, et les marque comme repris", () => {
     const s = reducer(initial(), { type: "apply_diagnostic", answers: relais });
@@ -109,8 +109,23 @@ describe("§3.2 — relais du diagnostic flash", () => {
     expect(s.form.tjmBracketId).toBe("500-650");
     expect(resolvedTjm(s.form)).toBe(575);
     expect(s.prefilled).toEqual({ status: true, tjm: true });
-    // La 3e réponse est conservée mais n'entre dans aucun calcul.
-    expect(s.dejaCalcule).toBe("non");
+    // La 3e réponse (foyer) préremplit la situation et décide de l'écran Foyer.
+    expect(s.foyerDiag).toBe("couple");
+    expect(s.form.situation).toBe("marie_pacse");
+    expect(s.form.enfants).toBe(0);
+  });
+
+  it("un foyer « avec enfant(s) » amorce un enfant, à préciser dans le simulateur", () => {
+    const s = reducer(initial(), { type: "apply_diagnostic", answers: { ...relais, foyer: "enfants" } });
+    expect(s.form.enfants).toBe(1);
+    expect(s.foyerDiag).toBe("enfants");
+  });
+
+  it("un foyer « seul·e » remet la situation à célibataire sans enfant", () => {
+    let s = reducer(initial(), { type: "set_field", key: "enfants", value: 2 });
+    s = reducer(s, { type: "apply_diagnostic", answers: { ...relais, foyer: "seul" } });
+    expect(s.form.situation).toBe("celibataire");
+    expect(s.form.enfants).toBe(0);
   });
 
   it("préremplir n'est pas verrouiller : tout reste modifiable", () => {
@@ -127,7 +142,7 @@ describe("§3.2 — relais du diagnostic flash", () => {
   it("un relais partiel ne préremplit que ce qu'il porte", () => {
     const s = reducer(initial(), {
       type: "apply_diagnostic",
-      answers: { segment: null, tjmBracketId: "lt350", dejaCalcule: null },
+      answers: { segment: null, tjmBracketId: "lt350", foyer: null },
     });
     expect(s.form.status).toBeNull();
     expect(s.prefilled).toEqual({ status: false, tjm: true });
@@ -135,7 +150,7 @@ describe("§3.2 — relais du diagnostic flash", () => {
 
   it("un relais entièrement invalide laisse l'état intact", () => {
     const base = initial();
-    const s = reducer(base, { type: "apply_diagnostic", answers: { segment: null, tjmBracketId: null, dejaCalcule: null } });
+    const s = reducer(base, { type: "apply_diagnostic", answers: { segment: null, tjmBracketId: null, foyer: null } });
     expect(s.form).toEqual(base.form);
     expect(s.prefilled).toEqual({ status: false, tjm: false });
   });
@@ -144,7 +159,7 @@ describe("§3.2 — relais du diagnostic flash", () => {
     let s = reducer(initial(), { type: "apply_diagnostic", answers: relais });
     s = reducer(s, { type: "reset", simulationId: "sim-neuf" });
     expect(s.prefilled).toEqual({ status: false, tjm: false });
-    expect(s.dejaCalcule).toBeNull();
+    expect(s.foyerDiag).toBeNull();
     expect(s.form.status).toBeNull();
   });
 });

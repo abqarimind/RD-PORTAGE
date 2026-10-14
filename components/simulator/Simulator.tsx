@@ -12,17 +12,13 @@
  * dérivés dans useSimulation(), chaque écran dans steps/.
  */
 import { Suspense } from "react";
-import { PROGRESS_STEPS, STEP_LABELS, stepIndex, type Step } from "@/lib/simulateur/state";
+import { PROGRESS_STEPS, STEP_LABELS, type Step } from "@/lib/simulateur/state";
 import { SimulatorProvider, useSimulator } from "@/lib/simulateur/store";
-import { trackEvent } from "@/lib/tracking/events";
-import { trackContact } from "@/lib/tracking/analytics";
 import { ActiviteStep } from "./steps/ActiviteStep";
 import { FoyerStep } from "./steps/FoyerStep";
 import { ProfilStep } from "./steps/ProfilStep";
-import { InscriptionStep } from "./steps/InscriptionStep";
 import { ResultatsStep } from "./steps/ResultatsStep";
 import { BRASS, GHOST_BTN, SANS, SimulatorStyles, INK } from "./ui";
-import { RDV_URL } from "@/config/contact";
 
 
 export function Simulator() {
@@ -39,24 +35,15 @@ export function Simulator() {
 function SimulatorShell() {
   const { state, goTo, reset, hydrating } = useSimulator();
 
-  /**
-   * « Nous contacter » : tant qu'aucun outil de RDV n'est intégré, le bouton
-   * appelle l'équipe (tel:) → Contact. Un lien de réservation externe ne
-   * permet pas de savoir si le RDV est confirmé : pas de Schedule au clic
-   * (voir docs/meta-pixel.md).
-   */
-  function onRdv(from: string) {
-    trackEvent("rdv_clicked", { from });
-    trackContact(`${from}_tel`, { meta: RDV_URL.startsWith("tel:") });
-  }
-
   if (hydrating) return <SimulatorSkeleton />;
 
-  const previous = previousStep(state.step);
+  // Seul·e sans enfant (diagnostic) : l'écran Foyer est sauté, aller comme retour.
+  const sauterFoyer = state.foyerDiag === "seul";
+  const previous = previousStep(state.step, sauterFoyer);
 
   return (
     <div className="mx-auto max-w-form px-4 py-8" style={{ fontFamily: SANS, color: INK }}>
-      <ProgressBar current={state.step} />
+      <ProgressBar current={state.step} sauterFoyer={sauterFoyer} />
 
       {/* Retour d'interface — strictement équivalent au retour natif du
           navigateur, puisque les deux reposent sur l'historique d'URL. */}
@@ -67,16 +54,16 @@ function SimulatorShell() {
       )}
 
       {/* §3.3 — l'effort conservé doit se VOIR, sinon le bénéfice est perdu. */}
-      {(state.prefilled.status || state.prefilled.tjm) && state.step !== "profil" && (
+      {(state.prefilled.status || state.prefilled.tjm) && state.step === "activite" && (
         <div className="mb-5 rounded-2xl px-4 py-3" style={{ backgroundColor: "#E7F6EE" }}>
-          <p className="text-sm font-semibold">On reprend là où vous vous êtes arrêté.</p>
+          <p className="text-sm font-semibold">Tes réponses du diagnostic sont reprises.</p>
           <p className="mt-0.5 text-sm text-[#4A5061]">
             {state.prefilled.status && state.prefilled.tjm
-              ? "Votre profil et votre TJM sont repris de votre diagnostic"
+              ? "Ton profil et ton TJM"
               : state.prefilled.status
-                ? "Votre profil est repris de votre diagnostic"
-                : "Votre TJM est repris de votre diagnostic"}{" "}
-            — modifiable{state.prefilled.status && state.prefilled.tjm ? "s" : ""} à tout moment.
+                ? "Ton profil"
+                : "Ton TJM"}{" "}
+            : modifiable{state.prefilled.status && state.prefilled.tjm ? "s" : ""} à tout moment.
           </p>
         </div>
       )}
@@ -85,8 +72,8 @@ function SimulatorShell() {
         {state.step === "profil" && <ProfilStep />}
         {state.step === "activite" && <ActiviteStep />}
         {state.step === "foyer" && <FoyerStep />}
-        {state.step === "resultats" && <ResultatsStep onRdv={onRdv} />}
-        {state.step === "inscription" && <InscriptionStep onRdv={onRdv} />}
+        {/* « inscription » : ancienne étape, le formulaire est désormais sur l'écran du résultat. */}
+        {(state.step === "resultats" || state.step === "inscription") && <ResultatsStep />}
       </div>
 
       <div className="mt-10 border-t border-[#ECEEF3] pt-5 text-center">
@@ -106,19 +93,19 @@ function SimulatorShell() {
   );
 }
 
-function previousStep(step: Step): Step | null {
-  const order: Step[] = ["profil", "activite", "foyer", "resultats", "inscription"];
-  const i = order.indexOf(step);
+function previousStep(step: Step, sauterFoyer: boolean): Step | null {
+  const order: Step[] = sauterFoyer ? ["profil", "activite", "resultats"] : ["profil", "activite", "foyer", "resultats"];
+  const i = order.indexOf(step === "inscription" ? "resultats" : step);
   return i > 0 ? order[i - 1] : null;
 }
 
-function ProgressBar({ current }: { current: Step }) {
-  // L'inscription n'est pas une étape de simulation : la barre reste pleine.
-  const shown = Math.min(stepIndex(current), PROGRESS_STEPS.length - 1);
+function ProgressBar({ current, sauterFoyer }: { current: Step; sauterFoyer: boolean }) {
+  const steps = sauterFoyer ? PROGRESS_STEPS.filter((s) => s !== "foyer") : PROGRESS_STEPS;
+  const shown = Math.max(0, steps.indexOf(current === "inscription" ? "resultats" : current));
   return (
     <div className="mb-6">
-      <div className="flex justify-between text-xs text-[#7A8093]">
-        {PROGRESS_STEPS.map((s, i) => (
+      <div className="flex justify-between text-xs text-[#5E6475]">
+        {steps.map((s, i) => (
           <span key={s} className={i <= shown ? "font-bold text-[#0B0D12]" : ""}>
             {STEP_LABELS[s]}
           </span>
@@ -129,7 +116,7 @@ function ProgressBar({ current }: { current: Step }) {
             recalcul de mise en page à chaque image. */}
         <div
           className="h-1.5 w-full origin-left rounded-full transition-transform duration-300"
-          style={{ transform: `scaleX(${(shown + 1) / PROGRESS_STEPS.length})`, backgroundColor: BRASS }}
+          style={{ transform: `scaleX(${(shown + 1) / steps.length})`, backgroundColor: BRASS }}
         />
       </div>
     </div>
