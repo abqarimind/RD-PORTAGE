@@ -26,3 +26,18 @@ describe("capture UTM / fbclid", () => {
     expect(hasAttribution(s.first)).toBe(true);
   });
 });
+
+describe("withoutUnknownParams", () => {
+  const allowed = new Set(["utm_source", "utm_content", "fbclid", "step"]);
+  it("retire les paramètres inconnus et garde l'attribution", async () => {
+    const { withoutUnknownParams } = await import("../utm");
+    expect(
+      withoutUnknownParams("https://simulateur.rdportage.com/?utm_source=meta&igsh=abc&utm_content=B_Foyer_s04&fbclid=X", allowed),
+    ).toBe("https://simulateur.rdportage.com/?utm_source=meta&utm_content=B_Foyer_s04&fbclid=X");
+  });
+  it("renvoie null quand il n'y a rien à retirer", async () => {
+    const { withoutUnknownParams } = await import("../utm");
+    expect(withoutUnknownParams("https://simulateur.rdportage.com/simulateur?step=foyer", allowed)).toBeNull();
+    expect(withoutUnknownParams("https://simulateur.rdportage.com/", allowed)).toBeNull();
+  });
+});

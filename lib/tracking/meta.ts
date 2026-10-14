@@ -3,9 +3,13 @@
  *
  * - RIEN ne part avant le consentement « publicité » : le script Meta n'est
  *   même pas téléchargé tant que rdp_consent !== "granted". À l'acceptation :
- *   consent revoke → init → consent grant, puis le PageView de la page en
- *   cours. Tout autre événement survenu avant le consentement est abandonné,
- *   jamais rejoué (pas de Lead a posteriori).
+ *   consent revoke → init → consent grant, puis le PageView et le ViewContent
+ *   de la page en cours (ils décrivent l'affichage que la personne a sous les
+ *   yeux au moment où elle accepte). Tout autre événement survenu avant le
+ *   consentement est abandonné, jamais rejoué (pas de Lead ni de
+ *   DiagnosticFlashComplete a posteriori).
+ * - Le fbclid de la pub, gardé en session, devient le cookie _fbc après
+ *   consentement, même si la personne a quitté la landing entre-temps.
  * - Retrait du consentement : fbq('consent', 'revoke') + suppression des
  *   cookies _fbp / _fbc.
  * - Chaque événement porte un event_id unique (déduplication future avec
@@ -18,7 +22,9 @@
  * - Configuration automatique et PageView automatiques sur pushState
  *   désactivés : seuls les événements explicites ci-dessous partent.
  */
+import { DEPLOY_ENV } from "@/lib/runtime-env";
 import { hasMarketingConsent, onConsentChange } from "./consent";
+import { getStoredFbclid } from "./utm";
 import {
   isPixelEnabled,
   isStandardEvent,
@@ -32,10 +38,18 @@ import {
 export const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || "4019768748330072";
 
 export const META_ENABLED = isPixelEnabled({
-  nodeEnv: process.env.NODE_ENV,
+  deployEnv: DEPLOY_ENV,
   pixelId: META_PIXEL_ID,
   debug: process.env.NEXT_PUBLIC_META_PIXEL_DEBUG,
 });
+
+/**
+ * La bannière s'affiche partout où le Pixel peut tourner, et AUSSI sur les
+ * Preview Vercel, pour juger le parcours tel qu'il sera en production. Sur
+ * une Preview sans drapeau de debug, le choix est enregistré mais rien ne
+ * part : track() et ensureMetaInit() ne font rien tant que META_ENABLED est faux.
+ */
+export const CONSENT_UI_ENABLED = META_ENABLED || DEPLOY_ENV === "preview";
 
 type Fbq = ((...args: unknown[]) => void) & {
   callMethod?: (...args: unknown[]) => void;
@@ -64,8 +78,17 @@ export function newEventId(): string {
 
 let pixelReady = false;
 let listening = false;
-/** Seul événement conservé avant consentement : le PageView de la page en cours. */
-let pendingPageView: { path: string; eventId: string } | null = null;
+/**
+ * Seuls événements conservés avant consentement : le PageView et le
+ * ViewContent de la page en cours, envoyés à l'acceptation si la personne
+ * est toujours sur cette page. Un changement de page vide l'attente.
+ */
+interface PendingEvent {
+  event: "PageView" | "ViewContent";
+  params: MetaParams;
+  eventId: string;
+}
+let pendingPage: { path: string; events: PendingEvent[] } | null = null;
 /** Dernier chemin ayant reçu un PageView (anti-doublon StrictMode / re-rendus). */
 let lastPageViewPath: string | null = null;
 /** Clés « une seule fois » déjà consommées (portée session). */
@@ -74,6 +97,31 @@ const onceMemory = new Set<string>();
 const pageOnce = new Set<string>();
 
 const browser = () => typeof window !== "undefined" && typeof document !== "undefined";
+
+const NINETY_DAYS = 90 * 24 * 3600;
+
+/**
+ * Pose le cookie _fbc (format Meta « fb.<index>.<horodatage>.<fbclid> ») à
+ * partir du fbclid gardé en session, UNIQUEMENT après consentement et s'il
+ * n'existe pas déjà. Le Pixel ne le pose lui-même que s'il est chargé sur une
+ * URL qui porte encore le fbclid, ce qui n'est plus le cas dès que la
+ * personne accepte après avoir quitté la landing.
+ */
+function ensureFbc(): void {
+  if (!hasMarketingConsent() || /(?:^|; )_fbc=/.test(document.cookie)) return;
+  const fbclid = getStoredFbclid();
+  if (!fbclid) return;
+  const host = window.location.hostname;
+  const parts = host.split(".");
+  const registrable = parts.length >= 2 ? parts.slice(-2).join(".") : "";
+  const base = `; max-age=${NINETY_DAYS}; path=/; samesite=lax`;
+  // Domaine registrable d'abord (comme le Pixel), sinon le seul hôte (localhost, *.vercel.app : suffixe public).
+  if (registrable && !/^\d+$/.test(parts[parts.length - 1])) {
+    document.cookie = `_fbc=fb.1.${Date.now()}.${fbclid}${base}; domain=.${registrable}`;
+    if (/(?:^|; )_fbc=/.test(document.cookie)) return;
+  }
+  document.cookie = `_fbc=fb.0.${Date.now()}.${fbclid}${base}`;
+}
 
 /**
  * Snippet officiel Meta, réécrit pour TypeScript, sans <noscript>.
@@ -85,6 +133,7 @@ const browser = () => typeof window !== "undefined" && typeof document !== "unde
 function loadPixel(): void {
   if (pixelReady || !browser()) return;
   pixelReady = true;
+  ensureFbc();
   // Revérifié au moment du grant : un retrait survenu pendant le chargement l'emporte.
   const grant = () => {
     if (hasMarketingConsent()) window.fbq?.("consent", "grant");
@@ -143,12 +192,16 @@ function send(event: MetaEventName, params: MetaParams, eventId: string): boolea
 
 function onGrant(): void {
   // Re-consentement après un retrait sur la même page : le Pixel est déjà là.
-  if (pixelReady) window.fbq?.("consent", "grant");
-  else maybeLoadPixel();
-  const pv = pendingPageView;
-  pendingPageView = null;
-  // Le PageView en attente ne part que si l'utilisateur est toujours sur la même page.
-  if (pv && pv.path === currentPath()) send("PageView", {}, pv.eventId);
+  if (pixelReady) {
+    ensureFbc();
+    window.fbq?.("consent", "grant");
+  } else maybeLoadPixel();
+  const pending = pendingPage;
+  pendingPage = null;
+  // L'attente ne part que si l'utilisateur est toujours sur la même page.
+  if (pending && pending.path === currentPath()) {
+    for (const e of pending.events) send(e.event, e.params, e.eventId);
+  }
 }
 
 function deleteMetaCookies(): void {
@@ -162,7 +215,7 @@ function deleteMetaCookies(): void {
 }
 
 function onRevoke(): void {
-  pendingPageView = null;
+  pendingPage = null;
   if (window.fbq) window.fbq("consent", "revoke");
   deleteMetaCookies();
 }
@@ -214,16 +267,23 @@ export function track(event: MetaEventName, params?: Record<string, unknown>, op
   if (!META_ENABLED || !browser()) return null;
   ensureMetaInit();
   if (opts.once && !(opts.onceScope === "page" ? pageOnceCheck(opts.once) : sessionOnce(opts.once))) return null;
-  if (!hasMarketingConsent()) return null;
-  maybeLoadPixel();
   const eventId = opts.eventId ?? newEventId();
+  if (!hasMarketingConsent()) {
+    // ViewContent attend l'acceptation avec le PageView de la même page ; le reste est abandonné.
+    if (event === "ViewContent" && pendingPage && pendingPage.path === currentPath()) {
+      pendingPage.events.push({ event, params: sanitizeParams(params), eventId });
+    }
+    return null;
+  }
+  maybeLoadPixel();
   return send(event, sanitizeParams(params), eventId) ? eventId : null;
 }
 
 /**
  * PageView du chemin courant, un seul par changement de route. Avant
- * consentement, il est mis en attente (et remplace le précédent) : c'est le
- * seul événement qui peut partir au moment de l'acceptation.
+ * consentement, il est mis en attente (et remplace l'attente précédente) :
+ * avec le ViewContent de la même page, c'est le seul événement qui peut
+ * partir au moment de l'acceptation.
  */
 export function trackPageView(path: string): void {
   if (!META_ENABLED || !browser()) return;
@@ -233,11 +293,11 @@ export function trackPageView(path: string): void {
   pageOnce.clear();
   const eventId = newEventId();
   if (hasMarketingConsent()) {
-    pendingPageView = null;
+    pendingPage = null;
     maybeLoadPixel();
     send("PageView", {}, eventId);
   } else {
-    pendingPageView = isUrlSafeForMeta(window.location.href) ? { path, eventId } : null;
+    pendingPage = isUrlSafeForMeta(window.location.href) ? { path, events: [{ event: "PageView", params: {}, eventId }] } : null;
   }
 }
 
@@ -251,7 +311,12 @@ export const metaViewContent = (contentName: string) =>
 export const metaDiagnosticFlashStart = () =>
   track("DiagnosticFlashStart", { step: "flash" }, { once: "diag_flash_start" });
 
-/** Fourchette affichée — sans aucun montant. */
+/**
+ * Diagnostic terminé (réponse à la 3e question, fourchette affichée) — sans
+ * aucun montant. Candidat à l'optimisation de la campagne : il part UNE fois
+ * par session, au moment de la réponse, jamais à la simple restauration de
+ * réponses déjà enregistrées sur l'appareil.
+ */
 export const metaDiagnosticFlashComplete = () => track("DiagnosticFlashComplete", {}, { once: "diag_flash_complete" });
 
 /** Résultat du simulateur foyer affiché, une fois par simulation. */

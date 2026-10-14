@@ -136,9 +136,12 @@ describe("URL vue par Meta", () => {
 
 describe("activation du Pixel", () => {
   it("actif en production, inactif en local sauf debug", () => {
-    expect(isPixelEnabled({ nodeEnv: "production", pixelId: "4019768748330072" })).toBe(true);
-    expect(isPixelEnabled({ nodeEnv: "development", pixelId: "4019768748330072" })).toBe(false);
-    expect(isPixelEnabled({ nodeEnv: "development", pixelId: "4019768748330072", debug: "true" })).toBe(true);
-    expect(isPixelEnabled({ nodeEnv: "production", pixelId: "off" })).toBe(false);
+    expect(isPixelEnabled({ deployEnv: "production", pixelId: "4019768748330072" })).toBe(true);
+    // Preview Vercel : coupé par défaut, activable par le seul drapeau de debug.
+    expect(isPixelEnabled({ deployEnv: "preview", pixelId: "4019768748330072" })).toBe(false);
+    expect(isPixelEnabled({ deployEnv: "preview", pixelId: "4019768748330072", debug: "true" })).toBe(true);
+    expect(isPixelEnabled({ deployEnv: "", pixelId: "4019768748330072" })).toBe(false);
+    expect(isPixelEnabled({ deployEnv: "development", pixelId: "4019768748330072", debug: "true" })).toBe(true);
+    expect(isPixelEnabled({ deployEnv: "production", pixelId: "off" })).toBe(false);
   });
 });

@@ -15,7 +15,7 @@ import { Suspense } from "react";
 import { PROGRESS_STEPS, STEP_LABELS, stepIndex, type Step } from "@/lib/simulateur/state";
 import { SimulatorProvider, useSimulator } from "@/lib/simulateur/store";
 import { trackEvent } from "@/lib/tracking/events";
-import { metaContact } from "@/lib/tracking/meta";
+import { trackContact } from "@/lib/tracking/analytics";
 import { ActiviteStep } from "./steps/ActiviteStep";
 import { FoyerStep } from "./steps/FoyerStep";
 import { ProfilStep } from "./steps/ProfilStep";
@@ -47,7 +47,7 @@ function SimulatorShell() {
    */
   function onRdv(from: string) {
     trackEvent("rdv_clicked", { from });
-    if (RDV_URL.startsWith("tel:")) metaContact(`${from}_tel`);
+    trackContact(`${from}_tel`, { meta: RDV_URL.startsWith("tel:") });
   }
 
   if (hydrating) return <SimulatorSkeleton />;
