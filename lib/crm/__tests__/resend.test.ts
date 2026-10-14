@@ -12,26 +12,43 @@ import type { Lead } from "@/lib/crm/schema";
 
 const appels: { methode: string; payload: unknown }[] = [];
 let echecCreate: { message: string } | null = null;
+/** Propriétés déclarées dans le compte Resend simulé ; null = toutes. */
+let declarees: string[] | null = null;
+const erreurPropriete = { name: "validation_error", message: "One or more properties do not exist" };
 
 const trace = (methode: string, retour: unknown = { data: { id: "c_1" }, error: null }) => async (payload: unknown) => {
   appels.push({ methode, payload });
   return retour;
 };
 
+function proprietesInconnues(payload: unknown): boolean {
+  if (declarees === null) return false;
+  const props = (payload as { properties?: Record<string, unknown> }).properties ?? {};
+  return Object.keys(props).some((k) => !declarees!.includes(k));
+}
+
 vi.mock("resend", () => ({
   Resend: class {
     contacts = {
       create: async (payload: unknown) => {
         appels.push({ methode: "contacts.create", payload });
+        if (proprietesInconnues(payload)) return { data: null, error: erreurPropriete };
         return echecCreate ? { data: null, error: echecCreate } : { data: { id: "c_1" }, error: null };
       },
-      update: trace("contacts.update"),
+      update: async (payload: unknown) => {
+        appels.push({ methode: "contacts.update", payload });
+        if (proprietesInconnues(payload)) return { data: null, error: erreurPropriete };
+        return { data: { id: "c_1" }, error: null };
+      },
       remove: trace("contacts.remove"),
       get: trace("contacts.get"),
       list: trace("contacts.list", { data: { object: "list", data: [], has_more: false }, error: null }),
       segments: { add: trace("contacts.segments.add") },
     };
     events = { send: trace("events.send", { data: { object: "event", event: "x" }, error: null }) };
+    contactProperties = {
+      list: async () => ({ data: { object: "list", has_more: false, data: (declarees ?? []).map((key) => ({ key })) }, error: null }),
+    };
   },
 }));
 
@@ -69,6 +86,7 @@ const { resendAdapter } = await import("@/lib/crm/resend");
 beforeEach(() => {
   appels.length = 0;
   echecCreate = null;
+  declarees = null;
   delete process.env.RESEND_SEGMENT_LEADS_ID;
 });
 
@@ -115,6 +133,60 @@ describe("upsertLead", () => {
     process.env.RESEND_SEGMENT_LEADS_ID = "seg_123";
     await resendAdapter.upsertLead(lead);
     expect((appels[0].payload as { segments: { id: string }[] }).segments).toEqual([{ id: "seg_123" }]);
+  });
+});
+
+describe("propriétés de contact (14/10)", () => {
+  const avecSource: Lead = {
+    ...lead,
+    attribution: {
+      ...lead.attribution,
+      first_touch: {
+        utm_source: "meta",
+        utm_medium: "paid_social",
+        utm_campaign: "RDP_Leads",
+        utm_content: "B_Foyer_s04",
+        fbclid: "IwAR-x",
+        timestamp: "2026-10-14T09:00:00.000Z",
+      },
+    },
+    journey: { angle: "lp_b", last_step: "inscription", summary: "Freelance · TJM 500 à 650 €" },
+  };
+
+  it("enregistre le téléphone et la source complète", async () => {
+    await resendAdapter.upsertLead(avecSource);
+    const props = (appels[0].payload as { properties: Record<string, unknown> }).properties;
+    expect(props).toMatchObject({
+      telephone: "+33600000000",
+      utm_source: "meta",
+      utm_medium: "paid_social",
+      utm_campaign: "RDP_Leads",
+      utm_content: "B_Foyer_s04",
+      fbclid_present: "oui",
+      angle: "lp_b",
+      derniere_etape: "inscription",
+      appareil: "mobile",
+      resume_simulation: "Freelance · TJM 500 à 650 €",
+    });
+    // La valeur du fbclid elle-même ne sert à rien à l'équipe : elle n'est pas stockée.
+    expect(JSON.stringify(props)).not.toContain("IwAR-x");
+  });
+
+  it("n'utilise que des clés de la liste déclarée (sinon Resend refuse tout le contact)", async () => {
+    const { RESEND_CONTACT_PROPERTIES } = await import("@/lib/crm/resend");
+    await resendAdapter.upsertLead(avecSource);
+    const props = (appels[0].payload as { properties: Record<string, unknown> }).properties;
+    for (const key of Object.keys(props)) expect(RESEND_CONTACT_PROPERTIES).toHaveProperty(key);
+  });
+
+  it("propriétés absentes de Resend : le contact est quand même enregistré, et c'est signalé", async () => {
+    declarees = ["lead_id", "telephone"];
+    const issue = await resendAdapter.upsertLead(avecSource);
+    // Le contact finit créé sans propriétés plutôt que perdu.
+    const sansProps = appels.find((a) => a.methode === "contacts.create" && !(a.payload as { properties?: unknown }).properties);
+    expect(sansProps).toBeDefined();
+    expect(issue && issue.warnings?.[0]).toMatch(/utm_content/);
+    expect(issue && issue.warnings?.[0]).not.toMatch(/\btelephone\b/);
   });
 });
 

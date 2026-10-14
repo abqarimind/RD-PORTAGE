@@ -46,7 +46,8 @@ export function warnIfMailAddressesCollide(): void {
   const to = process.env.MAIL_INTERNAL_TO ?? "";
   if (!from || !to) return;
   const address = (v: string) => (v.match(/<([^>]+)>/)?.[1] ?? v).trim().toLowerCase();
-  if (address(from) === address(to)) {
+  // MAIL_INTERNAL_TO peut être une liste séparée par des virgules.
+  if (to.split(",").some((t) => t.trim() && address(t) === address(from))) {
     mailWarned = true;
     console.error(
       "[email] L'expéditeur des copies internes (MAIL_FROM_INTERNE, à défaut MAIL_FROM) et MAIL_INTERNAL_TO sont la MÊME adresse " +

@@ -1,13 +1,15 @@
 /**
  * Orchestration des envois transactionnels (§5.1).
  *
- *   E1 — récapitulatif au lead        E2 — copie intégrale en interne
- *   E3 — confirmation d'inscription   E4 — notification de nouveau lead
+ *   E1 — récapitulatif au lead
+ *   Notification « Nouveau lead simulateur » — à l'équipe, à chaque lead (14/10)
+ *   E3 — accusé de demande de diagnostic   E4 — copie interne de la demande
  *
- * E2 et E4 sont des envois SÉPARÉS et non un Bcc : le client doit pouvoir les
+ * Les envois internes sont SÉPARÉS et non un Bcc : le client doit pouvoir les
  * filtrer dans sa boîte, et ils doivent partir même si l'envoi au lead
- * échoue. C'est pourquoi les deux promesses sont lancées ensemble et
- * attendues avec allSettled : aucun des deux ne conditionne l'autre.
+ * échoue. La notification de lead est envoyée en arrière-plan par /api/lead
+ * (waitUntil), avec davantage de tentatives : elle ne retarde jamais la
+ * réponse au prospect.
  *
  * Aucune fonction de ce module ne lève : l'échec d'un email ne casse jamais
  * le parcours utilisateur ni l'affichage du résultat (§5.2).
@@ -15,7 +17,8 @@
 import type { SimulationResultPayload } from "@/types/simulation-result";
 import { mailFromInterne, mailInternalTo, mailReplyTo, sendEmail, type SendResult } from "./client";
 import { emailDemandeDiagnosticInterne, emailDemandeDiagnosticLead } from "./templates/diagnostic";
-import { emailRecapInterne, emailRecapLead } from "./templates/recap";
+import { emailNouveauLead, type NouveauLeadArgs } from "./templates/nouveau-lead";
+import { emailRecapLead } from "./templates/recap";
 
 export interface DeliveryReport {
   lead: SendResult;
@@ -31,7 +34,7 @@ export interface DeliveryReport {
 const key = (kind: string, simulationId: string) => `rdp-${kind}-${simulationId}`;
 
 async function deliver(
-  kind: "recap" | "diagnostic",
+  kind: "diagnostic",
   payload: SimulationResultPayload,
   lead: { subject: string; html: string; text: string },
   interne: { subject: string; html: string; text: string },
@@ -89,14 +92,54 @@ export interface DeliveryOptions {
   alerteInterne?: string;
 }
 
-/** E1 + E2 — fin de simulation, email renseigné. */
-export function sendRecap(payload: SimulationResultPayload, opts: DeliveryOptions = {}): Promise<DeliveryReport> {
-  return deliver(
-    "recap",
-    payload,
-    emailRecapLead(payload, opts.unsubscribeUrl),
-    emailRecapInterne(payload, opts.alerteInterne),
-  );
+/** E1 — fin de simulation : le récapitulatif au lead. */
+export function sendRecapLead(payload: SimulationResultPayload, opts: DeliveryOptions = {}): Promise<SendResult> {
+  const mail = emailRecapLead(payload, opts.unsubscribeUrl);
+  return sendEmail({
+    to: payload.identite.email,
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
+    idempotencyKey: key("recap-lead", payload.meta.simulationId),
+    replyTo: mailReplyTo(),
+    tags: [
+      { name: "type", value: "recap" },
+      { name: "destinataire", value: "lead" },
+    ],
+  }).catch((err): SendResult => ({ ok: false, error: String(err) }));
+}
+
+/** Tentatives supplémentaires de la notification interne (backoff 0,4 s → 6,4 s). */
+const NOTIFICATION_RETRIES = 4;
+
+/**
+ * Notification interne d'un nouveau lead — minimum non négociable : elle part
+ * à chaque lead, réessaie sur toute erreur non liée à la configuration, et ne
+ * lève jamais. Renvoie null quand aucun destinataire n'est configuré.
+ */
+export async function sendNouveauLead(args: NouveauLeadArgs): Promise<SendResult | null> {
+  const to = mailInternalTo();
+  if (!to) {
+    console.error("[email] MAIL_INTERNAL_TO non configuré — notification de lead NON envoyée", JSON.stringify({ leadId: args.lead.lead_id }));
+    return null;
+  }
+  const mail = emailNouveauLead(args);
+  return sendEmail({
+    from: mailFromInterne(),
+    to,
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
+    idempotencyKey: key("lead-interne", args.lead.lead_id),
+    // « Répondre » écrit directement au prospect.
+    replyTo: args.lead.identity.email,
+    tags: [
+      { name: "type", value: "nouveau_lead" },
+      { name: "destinataire", value: "interne" },
+    ],
+    retries: NOTIFICATION_RETRIES,
+    retryOnAnyError: true,
+  }).catch((err): SendResult => ({ ok: false, error: String(err) }));
 }
 
 /**

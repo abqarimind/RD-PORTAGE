@@ -43,12 +43,54 @@ function getClient(): Resend {
 const segmentLeads = () => process.env.RESEND_SEGMENT_LEADS_ID || null;
 
 /**
- * Propriétés personnalisées. Elles acceptent `string | number | null` — pas
- * seulement des chaînes, contrairement à ce que j'avais écrit dans la note
- * d'outillage. Les montants restent donc des nombres, filtrables tels quels
- * dans un segment.
+ * Propriétés personnalisées du contact — LISTE FERMÉE.
+ *
+ * Resend refuse tout le contact (« One or more properties do not exist ») dès
+ * qu'une seule clé n'a pas été déclarée au préalable dans Paramètres →
+ * Contacts → Propriétés. C'est ce qui a fait échouer chaque lead de
+ * production jusqu'au 14/10. Cette liste est la source unique : à recopier
+ * telle quelle dans Resend (clé + type), voir docs/schema-lead.md.
+ *
+ * Valeurs : `string | number | null` ; les montants restent des nombres,
+ * filtrables tels quels dans un segment.
  */
-function proprietes(lead: Lead): Record<string, string | number | null> {
+export const RESEND_CONTACT_PROPERTIES = {
+  lead_id: "string",
+  created_at: "string",
+  telephone: "string",
+  statut_actuel: "string",
+  tjm_ou_ca: "number",
+  jours_factures: "number",
+  economie_annuelle_eur: "number",
+  // Variable de l'email J14 de la séquence (« environ X € laissés chaque mois »).
+  economie_mensuelle: "number",
+  // Condition d'arrêt de la séquence : « oui » dès que le prospect demande
+  // son Diagnostic (automatique), répond ou est joint (à la main).
+  sequence_stop: "string",
+  funnel_stage: "string",
+  lead_source: "string",
+  consentement_marketing: "string",
+  consent_ts: "string",
+  policy_version: "string",
+  // Source complète (14/10) : sans elles, impossible de savoir de quelle pub vient un lead.
+  utm_source: "string",
+  utm_medium: "string",
+  utm_campaign: "string",
+  utm_content: "string",
+  fbclid_present: "string",
+  angle: "string",
+  derniere_etape: "string",
+  appareil: "string",
+  resume_simulation: "string",
+  // Posées par appendEvent.
+  last_event: "string",
+  last_event_at: "string",
+} as const;
+
+export type ResendPropertyKey = keyof typeof RESEND_CONTACT_PROPERTIES;
+
+export function proprietes(lead: Lead): Partial<Record<ResendPropertyKey, string | number | null>> {
+  const first = lead.attribution.first_touch;
   return {
     lead_id: lead.lead_id,
     created_at: lead.created_at,
@@ -57,18 +99,28 @@ function proprietes(lead: Lead): Record<string, string | number | null> {
     tjm_ou_ca: lead.profile.tjm_ou_ca,
     jours_factures: lead.profile.jours_factures,
     economie_annuelle_eur: lead.simulation.economie_annuelle_eur,
-    // Variable de l'email J14 de la séquence (« environ X € laissés chaque mois »).
     economie_mensuelle: Math.round(lead.simulation.economie_annuelle_eur / 12),
-    // Condition d'arrêt de la séquence : « oui » dès que le prospect demande
-    // son Diagnostic (automatique), répond ou est joint (à la main).
     sequence_stop: "non",
     funnel_stage: lead.funnel_stage,
     lead_source: lead.attribution.lead_source,
     consentement_marketing: lead.consent.marketing_optin ? "oui" : "non",
     consent_ts: lead.consent.timestamp,
     policy_version: lead.consent.policy_version,
+    utm_source: first.utm_source ?? null,
+    utm_medium: first.utm_medium ?? null,
+    utm_campaign: first.utm_campaign ?? null,
+    utm_content: first.utm_content ?? null,
+    // La présence seule : la valeur du fbclid n'a aucune utilité pour l'équipe.
+    fbclid_present: first.fbclid || lead.attribution.last_touch.fbclid ? "oui" : "non",
+    angle: lead.journey?.angle ?? null,
+    derniere_etape: lead.journey?.last_step ?? null,
+    appareil: lead.attribution.device,
+    resume_simulation: lead.journey?.summary ?? null,
   };
 }
+
+/** Erreur Resend due à une propriété non déclarée dans le tableau de bord. */
+const erreurDePropriete = (error: unknown) => /propert/i.test(messageErreur(error));
 
 /**
  * Miroir leadId → email, pour les appels qui ne portent que l'identifiant.
@@ -94,6 +146,17 @@ function messageErreur(error: unknown): string {
   return e.message ?? e.name ?? JSON.stringify(error);
 }
 
+/** Clés attendues absentes du compte Resend (best effort : liste vide si l'API ne répond pas). */
+async function proprietesManquantes(): Promise<string[]> {
+  try {
+    const res = await getClient().contactProperties.list();
+    const existantes = new Set((res.data?.data ?? []).map((p: { key: string }) => p.key));
+    return Object.keys(RESEND_CONTACT_PROPERTIES).filter((k) => !existantes.has(k));
+  } catch {
+    return [];
+  }
+}
+
 async function rangerDansLeSegment(email: string): Promise<void> {
   const segmentId = segmentLeads();
   if (!segmentId) return;
@@ -113,33 +176,55 @@ export const resendAdapter: CRMAdapter = {
     const email = lead.identity.email;
     emailParLeadId.set(lead.lead_id, email);
 
-    const commun = {
+    const base = {
       email,
       firstName: lead.identity.first_name,
       // RGPD : le récapitulatif transactionnel part de toute façon (il a été
       // demandé), mais le contact n'est démarchable que s'il a coché la case.
       unsubscribed: !lead.consent.marketing_optin,
-      properties: proprietes(lead),
+    };
+    const avecProprietes = { ...base, properties: proprietes(lead) };
+    const segments = segmentLeads() ? { segments: [{ id: segmentLeads() as string }] } : {};
+
+    /**
+     * Les contacts étant globaux, une adresse déjà connue fait échouer la
+     * création : on met alors à jour (cas normal d'un lead qui refait une
+     * simulation). Renvoie l'erreur restante, ou null.
+     */
+    const ecrire = async (payload: typeof base & { properties?: ReturnType<typeof proprietes> }) => {
+      const cree = await resend.contacts.create({ ...payload, ...segments });
+      if (!cree.error) return null;
+      if (erreurDePropriete(cree.error)) return cree.error;
+      const maj = await resend.contacts.update(payload);
+      if (!maj.error) {
+        await rangerDansLeSegment(email);
+        return null;
+      }
+      return erreurDePropriete(maj.error) ? maj.error : new Error(
+        `Resend upsertLead a échoué — création : ${messageErreur(cree.error)} ; mise à jour : ${messageErreur(maj.error)}`,
+      );
     };
 
-    const cree = await resend.contacts.create({
-      ...commun,
-      ...(segmentLeads() ? { segments: [{ id: segmentLeads() as string }] } : {}),
-    });
+    const erreur = await ecrire(avecProprietes);
+    if (!erreur) return;
+    if (!erreurDePropriete(erreur)) throw erreur;
 
-    if (cree.error) {
-      // Les contacts étant globaux, une adresse déjà connue fait échouer la
-      // création. On met alors à jour : c'est le cas normal d'un lead qui
-      // refait une simulation, pas une erreur.
-      const maj = await resend.contacts.update(commun);
-      if (maj.error) {
-        throw new Error(
-          `Resend upsertLead a échoué — création : ${messageErreur(cree.error)} ; ` +
-            `mise à jour : ${messageErreur(maj.error)}`,
-        );
-      }
-      await rangerDansLeSegment(email);
-    }
+    /**
+     * Propriétés non déclarées dans Resend : plutôt que de perdre le contact,
+     * on l'enregistre sans elles et on le SIGNALE. L'avertissement remonte
+     * dans la notification interne, qui porte alors les données complètes.
+     */
+    const repli = await ecrire(base);
+    if (repli) throw new Error(`Resend upsertLead a échoué, même sans propriétés : ${messageErreur(repli)}`);
+    const manquantes = await proprietesManquantes();
+    const detail = manquantes.length > 0 ? ` : ${manquantes.join(", ")}` : "";
+    console.error(`[crm-resend] contact enregistré SANS ses propriétés — propriétés à créer dans Resend${detail}`);
+    return {
+      warnings: [
+        `Resend : contact enregistré sans téléphone ni source, des propriétés n'existent pas dans Resend${detail}. ` +
+          "Les créer dans Resend → Contacts → Propriétés (liste dans docs/schema-lead.md).",
+      ],
+    };
   },
 
   async appendEvent(leadId: string, event: FunnelEvent, emailConnu?: string) {

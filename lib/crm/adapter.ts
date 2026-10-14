@@ -12,10 +12,19 @@ export interface ExportFilter {
   funnelStage?: Lead["funnel_stage"];
 }
 
+/**
+ * Résultat d'un upsert qui a abouti mais pas complètement (ex. contact créé
+ * sans ses propriétés). Les avertissements remontent dans la notification
+ * interne : un enregistrement dégradé ne doit jamais passer inaperçu.
+ */
+export interface UpsertOutcome {
+  warnings?: string[];
+}
+
 export interface CRMAdapter {
   readonly name: string;
   /** Create or update a lead (idempotent on lead_id / email). */
-  upsertLead(lead: Lead): Promise<void>;
+  upsertLead(lead: Lead): Promise<UpsertOutcome | void>;
   /**
    * Append a funnel event to an existing lead. `email` est passé quand
    * l'appelant le connaît : en serverless, le lead a pu être créé dans une

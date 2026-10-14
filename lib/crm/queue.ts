@@ -2,6 +2,9 @@
  * Write-through queue: journal first, then CRM call with 3 retries and
  * exponential backoff (500ms, 1s, 2s). If all retries fail the journal entry
  * is marked failed=true so scripts/replay-journal.ts can replay it.
+ *
+ * La valeur renvoyée par l'écriture (ex. les avertissements d'un upsert
+ * partiel) est remontée telle quelle à l'appelant.
  */
 import { journalAppend, type JournalEntry } from "./journal";
 
@@ -10,17 +13,17 @@ const BASE_DELAY_MS = 500;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export async function reliableWrite(
+export async function reliableWrite<T>(
   kind: JournalEntry["kind"],
   payload: unknown,
-  write: () => Promise<void>,
-): Promise<{ ok: boolean }> {
+  write: () => Promise<T>,
+): Promise<{ ok: boolean; value?: T }> {
   await journalAppend({ kind, at: new Date().toISOString(), payload });
 
   for (let attempt = 1; attempt <= RETRIES; attempt++) {
     try {
-      await write();
-      return { ok: true };
+      const value = await write();
+      return { ok: true, value };
     } catch (err) {
       console.error(`[crm-queue] ${kind} attempt ${attempt}/${RETRIES} failed`, err);
       if (attempt < RETRIES) await sleep(BASE_DELAY_MS * 2 ** (attempt - 1));

@@ -8,14 +8,15 @@
  */
 import { describe, expect, it } from "vitest";
 import { emailDemandeDiagnosticInterne, emailDemandeDiagnosticLead } from "@/lib/email/templates/diagnostic";
-import { emailRecapInterne, emailRecapLead } from "@/lib/email/templates/recap";
-import { makePayload } from "./fixtures";
+import { emailNouveauLead } from "@/lib/email/templates/nouveau-lead";
+import { emailRecapLead } from "@/lib/email/templates/recap";
+import { makeLead, makePayload } from "./fixtures";
 
 const tousLesEmails = () => {
   const p = makePayload();
   return [
     ["E1 récapitulatif lead", emailRecapLead(p)],
-    ["E2 copie interne", emailRecapInterne(p)],
+    ["Notification interne — nouveau lead", emailNouveauLead({ lead: makeLead(), payload: p, dossierUrl: "https://simulateur.rdportage.com/dossier?d=x&s=y" })],
     ["E3 demande de diagnostic — lead", emailDemandeDiagnosticLead(p)],
     ["E4 demande de diagnostic — interne", emailDemandeDiagnosticInterne(p)],
   ] as const;
@@ -128,18 +129,53 @@ describe("échappement des données utilisateur", () => {
   });
 });
 
-describe("E2 et E4 — copies internes distinctes", () => {
-  it("E2 reprend le corps de E1 et identifie le lead", () => {
-    const p = makePayload();
-    const interne = emailRecapInterne(p);
-    expect(interne.subject).toContain("[Lead]");
-    expect(interne.subject).toContain(p.identite.email);
-    expect(interne.html).toContain("Copie interne");
-    expect(interne.html).toContain(p.identite.email);
-    // Le corps du récapitulatif est bien le même que celui du lead.
-    expect(interne.html).toContain("Votre rémunération, mois par mois");
+describe("notification « Nouveau lead simulateur »", () => {
+  const dossierUrl = "https://simulateur.rdportage.com/dossier?d=abc&s=def";
+
+  it("porte l'objet exigé : prénom et annonce d'origine", () => {
+    expect(emailNouveauLead({ lead: makeLead(), payload: makePayload(), dossierUrl }).subject).toBe(
+      "Nouveau lead simulateur — Camille — B_Foyer_s04",
+    );
   });
 
+  it("retombe sur la campagne, puis sur « accès direct », quand l'annonce manque", () => {
+    const sansAnnonce = makeLead();
+    sansAnnonce.attribution.first_touch = { utm_campaign: "Campagne_X", timestamp: sansAnnonce.created_at };
+    expect(emailNouveauLead({ lead: sansAnnonce, payload: null }).subject).toContain("— Campagne_X");
+    const direct = makeLead();
+    direct.attribution = { ...direct.attribution, first_touch: { timestamp: direct.created_at }, lead_source: "direct" };
+    expect(emailNouveauLead({ lead: direct, payload: null }).subject).toContain("— accès direct");
+  });
+
+  it("met le téléphone en lien tel:, la source complète, le résumé et le dossier", () => {
+    const { html, text } = emailNouveauLead({ lead: makeLead(), payload: makePayload(), dossierUrl });
+    expect(html).toContain('href="tel:+33612345678"');
+    expect(html).toContain("+33 6 12 34 56 78");
+    for (const v of ["B_Foyer_s04", "RDP_Leads_10-2026", "meta", "paid_social", "lp_b", "inscription", "Freelance · TJM 500 à 650 €"]) {
+      expect(html).toContain(v);
+    }
+    expect(html).toContain("Clic publicitaire Meta (fbclid)");
+    expect(html).toContain(dossierUrl.replace(/&/g, "&amp;"));
+    expect(text).toContain("tel:+33612345678");
+    // La copie de l'email reçu par le prospect suit, comme demandé le 08/09.
+    expect(html).toContain("Copie de l'email reçu par le prospect");
+  });
+
+  it("en cas d'alerte, le signale dans l'objet et joint les données brutes", () => {
+    const mail = emailNouveauLead({ lead: makeLead(), payload: null, alertes: ["l'écriture dans le CRM a échoué"] });
+    expect(mail.subject.startsWith("[ALERTE] ")).toBe(true);
+    expect(mail.html).toContain("DONNÉES BRUTES");
+    expect(mail.text).toContain("DONNÉES BRUTES");
+  });
+
+  it("échappe les données saisies par le prospect", () => {
+    const lead = makeLead({ identity: { email: "camille@example.com", first_name: '<img src=x onerror="alert(1)">', phone: "+33612345678" } });
+    const { html } = emailNouveauLead({ lead, payload: null });
+    expect(html).not.toContain("<img src=x");
+  });
+});
+
+describe("E4 — copie interne de la demande de diagnostic", () => {
   it("E4 porte les coordonnées et les données clés", () => {
     const p = makePayload();
     const interne = emailDemandeDiagnosticInterne(p);
@@ -151,7 +187,6 @@ describe("E2 et E4 — copies internes distinctes", () => {
 
   it("les sujets internes et lead sont distincts, pour rester filtrables", () => {
     const p = makePayload();
-    expect(emailRecapInterne(p).subject).not.toBe(emailRecapLead(p).subject);
     expect(emailDemandeDiagnosticInterne(p).subject).not.toBe(emailDemandeDiagnosticLead(p).subject);
   });
 });

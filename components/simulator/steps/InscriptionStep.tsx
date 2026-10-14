@@ -12,8 +12,15 @@
  *
  * L'échec d'envoi n'est jamais bloquant (spec §5.2) : le dossier reste
  * accessible même si l'email part en erreur.
+ *
+ * 14/10 — le téléphone devient OBLIGATOIRE (décision de Ridha) : il est
+ * demandé juste après le prénom, avec la raison et le délai du rappel, et
+ * vérifié ici (confort) puis par /api/lead (autorité). Un champ piège
+ * invisible écarte les robots.
  */
 import { useId, useRef, useState } from "react";
+import { formatPhone, normalizePhone, PHONE_ERROR } from "@/lib/phone";
+import { getLandingAngle } from "@/lib/tracking/journey";
 import { useSimulator } from "@/lib/simulateur/store";
 import { useSimulation } from "@/lib/simulateur/useSimulation";
 import { setLeadId, trackEvent } from "@/lib/tracking/events";
@@ -28,10 +35,14 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
   const { state, dispatch, goTo, reset } = useSimulator();
   const { result, live, simInput, missing } = useSimulation();
 
-  const ids = { prenom: useId(), email: useId(), tel: useId() };
+  const ids = { prenom: useId(), email: useId(), tel: useId(), telErreur: useId() };
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  /** Champ piège : un humain ne le voit pas, un robot le remplit. */
+  const [website, setWebsite] = useState("");
+  const phoneRef = useRef<HTMLInputElement>(null);
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -60,6 +71,12 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (inFlight.current) return;
+    const telephone = normalizePhone(phone);
+    if (!telephone) {
+      setPhoneError(PHONE_ERROR);
+      phoneRef.current?.focus();
+      return;
+    }
     inFlight.current = true;
     setSubmitting(true);
     setSubmitError(null);
@@ -77,7 +94,9 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
           ad_consent: hasMarketingConsent(),
           // Clé d'idempotence : même simulation + même email = un seul envoi.
           simulation_id: state.simulationId,
-          identity: { email, first_name: firstName, phone: phone || undefined },
+          identity: { email, first_name: firstName, phone: telephone },
+          website,
+          journey: { angle: getLandingAngle(), last_step: "inscription" },
           form: state.form,
           profile: {
             statut_actuel: state.form.status,
@@ -99,7 +118,16 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
           attribution: { ...attribution, lead_source: deriveLeadSource(attribution.first_touch), device: deviceType() },
         }),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const erreur = (await res.json().catch(() => null)) as { error?: string; message?: string } | null;
+        if (erreur?.error === "invalid_phone") {
+          setPhoneError(erreur.message ?? PHONE_ERROR);
+          phoneRef.current?.focus();
+          inFlight.current = false;
+          return;
+        }
+        throw new Error(erreur?.message ?? `HTTP ${res.status}`);
+      }
       const data = (await res.json()) as { leadId: string; dossierUrl?: string; emailSent?: boolean };
 
       setLeadId(data.leadId);
@@ -140,7 +168,7 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
       body: JSON.stringify({
         lead_id: state.leadId,
         simulation_id: state.simulationId,
-        identity: { first_name: firstName, email, phone: phone || undefined },
+        identity: { first_name: firstName, email, phone: normalizePhone(phone) ?? undefined },
         form: state.form,
         source: {
           utmSource: attribution.first_touch?.utm_source,
@@ -202,7 +230,7 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
         </div>
 
         <p className="mt-3 text-sm text-[#7A8093]">
-          {phone ? `Un conseiller RD Portage vous rappelle ${DELAI_RAPPEL} au ${phone}. ` : ""}
+          {`Ridha vous rappelle ${DELAI_RAPPEL} au ${formatPhone(normalizePhone(phone) ?? phone)}. `}
           Diagnostic de 30 minutes, proposition ferme, signature possible sous 48 h.
         </p>
         <ContactOptions />
@@ -238,7 +266,38 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
             onChange={(e) => setFirstName(e.target.value)}
           />
         </Field>
-        <Field label="Votre email" htmlFor={ids.email}>
+        <Field
+          label="Votre téléphone"
+          hint={`Ridha vous rappelle ${DELAI_RAPPEL} pour commenter votre simulation avec vous. Votre numéro ne sert qu’à ce rappel.`}
+          htmlFor={ids.tel}
+        >
+          <input
+            id={ids.tel}
+            ref={phoneRef}
+            className="sim-input"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="06 12 34 56 78"
+            required
+            aria-invalid={phoneError ? true : undefined}
+            aria-describedby={phoneError ? ids.telErreur : undefined}
+            value={phone}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              if (phoneError) setPhoneError(null);
+            }}
+            onBlur={() => {
+              if (phone.trim() && !normalizePhone(phone)) setPhoneError(PHONE_ERROR);
+            }}
+          />
+          {phoneError && (
+            <p id={ids.telErreur} role="alert" className="mt-2 text-sm font-semibold" style={{ color: ALERTE }}>
+              {phoneError}
+            </p>
+          )}
+        </Field>
+        <Field label="Votre email" hint="Pour recevoir votre dossier." htmlFor={ids.email}>
           <input
             id={ids.email}
             className="sim-input"
@@ -250,17 +309,13 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
             onChange={(e) => setEmail(e.target.value)}
           />
         </Field>
-        <Field label="Votre téléphone (optionnel)" hint={`Uniquement si vous souhaitez qu’un conseiller vous rappelle (${DELAI_RAPPEL}).`} htmlFor={ids.tel}>
-          <input
-            id={ids.tel}
-            className="sim-input"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-        </Field>
+        {/* Champ piège anti-robot : hors écran, hors tabulation, ignoré des lecteurs d'écran. */}
+        <div aria-hidden="true" style={{ position: "absolute", left: "-10000px", width: 1, height: 1, overflow: "hidden" }}>
+          <label>
+            Site web
+            <input type="text" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} />
+          </label>
+        </div>
         {/*
          * #10 (RGPD, validé par Ridha) : l'envoi de la simulation est l'objet
          * même du formulaire, il ne dépend d'aucune case. Les emails de
@@ -268,7 +323,7 @@ export function InscriptionStep({ onRdv }: { onRdv: (from: string) => void }) {
          * la seule qui alimente consent.marketing_optin.
          */}
         <p className="text-sm text-[#4A5061]">
-          Nous utilisons votre email pour vous envoyer votre simulation.{" "}
+          Nous utilisons votre email pour vous envoyer votre simulation, et votre téléphone pour vous rappeler.{" "}
           <a href="/confidentialite" className="underline">
             Politique de confidentialité
           </a>{" "}
