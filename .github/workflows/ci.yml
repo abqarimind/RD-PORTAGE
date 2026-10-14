@@ -1,0 +1,45 @@
+name: CI
+
+# Garde-fou : types, tests unitaires (moteur fiscal, emails, CRM, règles de
+# tracking) et test de bout en bout du tracking sur écran d'iPhone
+# (e2e/tracking.spec.ts). Aucun secret requis : CRM en mode mock, emails
+# simulés, scripts Meta et Plausible remplacés par des doublures.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Types
+        run: npm run typecheck
+      - name: Tests unitaires
+        run: npm test
+      - name: Navigateur Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Test de bout en bout du tracking
+        run: npm run test:e2e
+        env:
+          CI: "true"
+      - name: Rapport Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
