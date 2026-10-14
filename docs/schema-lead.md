@@ -45,13 +45,19 @@ refuse le contact entier dès qu'une seule clé n'existe pas (« One or more
 properties do not exist ») : c'est ce qui a fait échouer chaque lead de
 production jusqu'au 14/10. Source unique : `RESEND_CONTACT_PROPERTIES` dans
 `lib/crm/resend.ts`. Si une propriété manque malgré tout, le contact est
-enregistré sans propriétés et la notification interne arrive avec
-`[ALERTE]`, la liste des clés manquantes et les données brutes.
+enregistré avec les propriétés qui existent (sans propriétés si Resend ne
+répond pas à la liste), et la notification interne arrive avec `[ALERTE]`,
+la liste des clés manquantes et les données brutes.
+
+Resend refuse de créer une propriété qui porte le nom d'un champ natif du
+contact (« This property name cannot be used ») : `created_at`, `email`,
+`first_name`, `last_name`, `unsubscribed`… La date du lead s'appelle donc
+`lead_created_at`.
 
 | Clé | Type | Contenu |
 |---|---|---|
 | `lead_id` | string | identifiant du lead |
-| `created_at` | string | date d'envoi (ISO) |
+| `lead_created_at` | string | date d'envoi (ISO) |
 | `telephone` | string | E.164, ex. +33612345678 |
 | `statut_actuel` | string | salarie_esn, freelance_micro… |
 | `tjm_ou_ca` | number | TJM retenu par le calcul |

@@ -53,10 +53,14 @@ const segmentLeads = () => process.env.RESEND_SEGMENT_LEADS_ID || null;
  *
  * Valeurs : `string | number | null` ; les montants restent des nombres,
  * filtrables tels quels dans un segment.
+ *
+ * Noms réservés : Resend refuse de créer une propriété qui porte le nom d'un
+ * champ natif du contact (`created_at`, `email`, `first_name`…). D'où
+ * `lead_created_at` (14/10).
  */
 export const RESEND_CONTACT_PROPERTIES = {
   lead_id: "string",
-  created_at: "string",
+  lead_created_at: "string",
   telephone: "string",
   statut_actuel: "string",
   tjm_ou_ca: "number",
@@ -93,7 +97,7 @@ export function proprietes(lead: Lead): Partial<Record<ResendPropertyKey, string
   const first = lead.attribution.first_touch;
   return {
     lead_id: lead.lead_id,
-    created_at: lead.created_at,
+    lead_created_at: lead.created_at,
     telephone: lead.identity.phone ?? null,
     statut_actuel: lead.profile.statut_actuel,
     tjm_ou_ca: lead.profile.tjm_ou_ca,
@@ -146,14 +150,25 @@ function messageErreur(error: unknown): string {
   return e.message ?? e.name ?? JSON.stringify(error);
 }
 
-/** Clés attendues absentes du compte Resend (best effort : liste vide si l'API ne répond pas). */
-async function proprietesManquantes(): Promise<string[]> {
+/**
+ * Clés déclarées dans le compte Resend, ou null si l'API ne répond pas.
+ * La liste est paginée (20 par défaut) : sans `limit` ni suite, les dernières
+ * propriétés passeraient pour absentes.
+ */
+async function proprietesDeclarees(): Promise<Set<string> | null> {
   try {
-    const res = await getClient().contactProperties.list();
-    const existantes = new Set((res.data?.data ?? []).map((p: { key: string }) => p.key));
-    return Object.keys(RESEND_CONTACT_PROPERTIES).filter((k) => !existantes.has(k));
+    const cles = new Set<string>();
+    let after: string | undefined;
+    for (let page = 0; page < 5; page++) {
+      const res = await getClient().contactProperties.list({ limit: 100, ...(after ? { after } : {}) });
+      if (res.error || !res.data) return null;
+      for (const p of res.data.data) cles.add(p.key);
+      if (!res.data.has_more || res.data.data.length === 0) break;
+      after = res.data.data[res.data.data.length - 1].id;
+    }
+    return cles;
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -210,18 +225,36 @@ export const resendAdapter: CRMAdapter = {
     if (!erreurDePropriete(erreur)) throw erreur;
 
     /**
-     * Propriétés non déclarées dans Resend : plutôt que de perdre le contact,
-     * on l'enregistre sans elles et on le SIGNALE. L'avertissement remonte
-     * dans la notification interne, qui porte alors les données complètes.
+     * Une propriété manque dans Resend (ou porte un nom refusé) : Resend
+     * rejette alors le contact ENTIER. Plutôt que de le perdre, on le
+     * réenregistre avec les seules propriétés déclarées, à défaut sans
+     * propriétés, et on le SIGNALE dans la notification interne, qui porte
+     * les données complètes.
      */
-    const repli = await ecrire(base);
+    const declarees = await proprietesDeclarees();
+    const toutes = proprietes(lead);
+    const gardees = declarees
+      ? (Object.fromEntries(Object.entries(toutes).filter(([cle]) => declarees.has(cle))) as ReturnType<typeof proprietes>)
+      : {};
+    const manquantes = declarees ? Object.keys(toutes).filter((cle) => !declarees.has(cle)) : [];
+
+    let partiel = Object.keys(gardees).length > 0;
+    let repli = partiel ? await ecrire({ ...base, properties: gardees }) : await ecrire(base);
+    if (repli && partiel && erreurDePropriete(repli)) {
+      partiel = false;
+      repli = await ecrire(base);
+    }
     if (repli) throw new Error(`Resend upsertLead a échoué, même sans propriétés : ${messageErreur(repli)}`);
-    const manquantes = await proprietesManquantes();
+
     const detail = manquantes.length > 0 ? ` : ${manquantes.join(", ")}` : "";
-    console.error(`[crm-resend] contact enregistré SANS ses propriétés — propriétés à créer dans Resend${detail}`);
+    console.error(
+      `[crm-resend] contact enregistré ${partiel ? "SANS certaines propriétés" : "SANS ses propriétés"} — propriétés à créer dans Resend${detail}`,
+    );
     return {
       warnings: [
-        `Resend : contact enregistré sans téléphone ni source, des propriétés n'existent pas dans Resend${detail}. ` +
+        (partiel
+          ? `Resend : contact enregistré, mais ces propriétés n'existent pas dans Resend et n'ont pas été enregistrées${detail}. `
+          : `Resend : contact enregistré sans téléphone ni source, des propriétés n'existent pas dans Resend${detail}. `) +
           "Les créer dans Resend → Contacts → Propriétés (liste dans docs/schema-lead.md).",
       ],
     };
@@ -307,7 +340,7 @@ export const resendAdapter: CRMAdapter = {
         };
 
         if (filter?.funnelStage && val("funnel_stage") !== filter.funnelStage) continue;
-        const cree = val("created_at") || detail.data.created_at;
+        const cree = val("lead_created_at") || detail.data.created_at;
         if (filter?.from && cree < filter.from) continue;
         if (filter?.to && cree > filter.to) continue;
 
