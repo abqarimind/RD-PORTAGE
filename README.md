@@ -12,6 +12,7 @@ npm install
 npm run dev        # http://localhost:3000
 npm test           # moteur fiscal (16 cas calculés à la main)
 npm run build      # build production (cible Vercel)
+npm run test:e2e   # garde-fou du tracking, parcours complet sur iPhone (Playwright)
 npm run report:weekly  # rapport KPI Markdown
 ```
 
@@ -24,7 +25,8 @@ npm run report:weekly  # rapport KPI Markdown
 | `config/fiscal-2026.ts` | **Source unique** des taux/barèmes fiscaux & sociaux, datés + sourcés (spec simulateur §4) |
 | `lib/fiscal/` | Moteur A (portage) + Moteur B (IR foyer) + 3 scénarios, tests Vitest, `AUDIT.md` |
 | `lib/crm/` | `lead_schema_v1` (Zod), interface CRMAdapter, Brevo/Airtable + stubs, file + journal NDJSON |
-| `lib/tracking/` | UTM first/last touch + fbclid (sessionStorage), événements funnel (Plausible), Pixel Meta + consentement CNIL (`docs/meta-pixel.md`) |
+| `lib/tracking/` | UTM first/last touch + fbclid (sessionStorage), mesure sans cookie Plausible (`docs/mesure-sans-cookie.md`), Pixel Meta + consentement CNIL (`docs/meta-pixel.md`) |
+| `e2e/` | Test de bout en bout du tracking (Meta, Plausible, payload `/api/lead`), lancé en CI |
 | `lib/server/capi.ts` | Conversions API serveur — préparée, **non activée** (`docs/meta-capi.md`) |
 | `content/claims.ts` | Tous les chiffres Atarhib/Targhib avec source obligatoire |
 | `content/emails/` | Séquence prospects J3→J14 (4 envois en texte simple, 5 variantes à J10) — voir `content/emails/sequence.md` |
@@ -41,7 +43,9 @@ mock (aucune clé requise) : les leads vont dans `data/leads-fallback.ndjson`.
 - [x] CTA « Parler à mon conseiller » : ligne de l'équipe +33 1 71 49 71 57 par défaut
       (`config/contact.ts`) ;
       définir `NEXT_PUBLIC_RDV_URL` plus tard si un Calendly arrive
-- [ ] `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` (domaine de prod)
+- [x] Plausible : script du site branché, actif en production (`docs/mesure-sans-cookie.md`) ;
+      objectifs et propriétés à déclarer dans Plausible
+- [ ] Propriétés de contact Resend à créer (`docs/schema-lead.md` § Propriétés)
 - [ ] Pixel Meta : tester en Preview (`docs/meta-pixel.md` § Vérification) avant la mise en production
 - [ ] Politique de confidentialité : compléter la section cookies (`docs/meta-pixel.md` § Politique de confidentialité)
 - [ ] CRM réel (`docs/branchement-brevo-airtable.md`) + `EXPORT_TOKEN`

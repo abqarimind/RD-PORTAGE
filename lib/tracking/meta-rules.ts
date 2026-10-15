@@ -84,10 +84,12 @@ export function isUrlSafeForMeta(href: string): boolean {
 }
 
 /**
- * Le Pixel n'est actif qu'en production, ou en local quand
- * NEXT_PUBLIC_META_PIXEL_DEBUG=true. `off` dans l'ID le coupe partout.
+ * Le Pixel n'est actif que sur le déploiement de PRODUCTION (VERCEL_ENV), ou
+ * partout où NEXT_PUBLIC_META_PIXEL_DEBUG=true (Preview de test, local, CI).
+ * Les Preview sont coupées par défaut : leurs visites fausseraient les
+ * données de la campagne. `off` dans l'ID le coupe partout.
  */
-export function isPixelEnabled(env: { nodeEnv?: string; pixelId?: string; debug?: string }): boolean {
+export function isPixelEnabled(env: { deployEnv?: string; pixelId?: string; debug?: string }): boolean {
   if (!env.pixelId || env.pixelId === "off") return false;
-  return env.nodeEnv === "production" || env.debug === "true";
+  return env.deployEnv === "production" || env.debug === "true";
 }

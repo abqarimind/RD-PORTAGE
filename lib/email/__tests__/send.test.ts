@@ -10,67 +10,62 @@ import type { SendArgs, SendResult } from "@/lib/email/client";
 
 const envois: SendArgs[] = [];
 let reponse: (args: SendArgs) => SendResult = () => ({ ok: true, id: "ok" });
+let destinataires: string[] | null = ["marketing@rdportage.com"];
 
 vi.mock("@/lib/email/client", () => ({
   mailFrom: () => "RD Portage <test@example.com>",
   mailFromInterne: () => "Simulateur RD Portage <simulateur@example.com>",
   mailReplyTo: () => "marketing@rdportage.com",
-  mailInternalTo: () => "marketing@rdportage.com",
+  mailInternalTo: () => destinataires,
   sendEmail: async (args: SendArgs) => {
     envois.push(args);
     return reponse(args);
   },
 }));
 
-const { sendDemandeDiagnostic, sendRecap } = await import("@/lib/email/send");
-const { makePayload } = await import("./fixtures");
+const { sendDemandeDiagnostic, sendNouveauLead, sendRecapLead } = await import("@/lib/email/send");
+const { makeLead, makePayload } = await import("./fixtures");
 
 beforeEach(() => {
   envois.length = 0;
   reponse = () => ({ ok: true, id: "ok" });
+  destinataires = ["marketing@rdportage.com"];
 });
 
-describe("E1 + E2", () => {
-  it("part en deux envois distincts, pas en copie cachée", async () => {
-    await sendRecap(makePayload());
-    expect(envois).toHaveLength(2);
-    const [lead, interne] = envois;
-    expect(lead.to).toBe("camille@example.com");
-    expect(interne.to).toBe("marketing@rdportage.com");
-    // Une copie cachée trahirait un envoi unique.
+describe("E1 + notification interne", () => {
+  it("le récapitulatif part au lead seul, avec une clé d'idempotence stable", async () => {
+    await sendRecapLead(makePayload());
+    expect(envois).toHaveLength(1);
+    expect(envois[0].to).toBe("camille@example.com");
+    expect(envois[0].idempotencyKey).toBe("rdp-recap-lead-sim-fixture-1");
     expect(JSON.stringify(envois)).not.toContain("bcc");
-    expect(lead.subject).not.toBe(interne.subject);
   });
 
-  it("la copie interne part même quand l'envoi au lead échoue", async () => {
-    reponse = (args) =>
-      args.to === "camille@example.com" ? { ok: false, error: "boîte pleine" } : { ok: true, id: "interne" };
-
-    const report = await sendRecap(makePayload());
-    expect(report.lead.ok).toBe(false);
-    expect(report.interne?.ok).toBe(true);
-    expect(envois.map((e) => e.to)).toContain("marketing@rdportage.com");
+  it("la notification interne est un envoi séparé, à toute la liste, avec plus de tentatives", async () => {
+    destinataires = ["marketing@rdportage.com", "ridha@example.com"];
+    const lead = makeLead();
+    await sendNouveauLead({ lead, payload: makePayload() });
+    expect(envois).toHaveLength(1);
+    const [notif] = envois;
+    expect(notif.to).toEqual(["marketing@rdportage.com", "ridha@example.com"]);
+    expect(notif.idempotencyKey).toBe(`rdp-lead-interne-${lead.lead_id}`);
+    expect(notif.retries).toBeGreaterThanOrEqual(3);
+    expect(notif.retryOnAnyError).toBe(true);
+    expect(notif.subject).toBe("Nouveau lead simulateur — Camille — B_Foyer_s04");
   });
 
-  it("porte des clés d'idempotence stables et distinctes par destinataire", async () => {
-    await sendRecap(makePayload());
-    const [lead, interne] = envois;
-    expect(lead.idempotencyKey).toBe("rdp-recap-lead-sim-fixture-1");
-    expect(interne.idempotencyKey).toBe("rdp-recap-interne-sim-fixture-1");
-
-    // Rejouer la même simulation redonne exactement les mêmes clés : c'est ce
-    // qui permet à Resend de dédoublonner un double-clic ou un retry réseau.
-    envois.length = 0;
-    await sendRecap(makePayload());
-    expect(envois[0].idempotencyKey).toBe(lead.idempotencyKey);
-    expect(envois[1].idempotencyKey).toBe(interne.idempotencyKey);
+  it("sans destinataire configuré, rien ne part et l'absence est signalée", async () => {
+    destinataires = null;
+    await expect(sendNouveauLead({ lead: makeLead(), payload: null })).resolves.toBeNull();
+    expect(envois).toHaveLength(0);
   });
 
   it("ne lève jamais, même si le transport explose", async () => {
     reponse = () => {
       throw new Error("réseau coupé");
     };
-    await expect(sendRecap(makePayload())).resolves.toBeDefined();
+    await expect(sendRecapLead(makePayload())).resolves.toMatchObject({ ok: false });
+    await expect(sendNouveauLead({ lead: makeLead(), payload: makePayload() })).resolves.toMatchObject({ ok: false });
   });
 });
 
@@ -83,7 +78,8 @@ describe("E3 + E4", () => {
   });
 
   it("les clés diagnostic ne collisionnent pas avec les clés récapitulatif", async () => {
-    await sendRecap(makePayload());
+    await sendRecapLead(makePayload());
+    await sendNouveauLead({ lead: makeLead(), payload: makePayload() });
     const recap = envois.map((e) => e.idempotencyKey);
     envois.length = 0;
     await sendDemandeDiagnostic(makePayload());
@@ -92,7 +88,7 @@ describe("E3 + E4", () => {
   });
 
   it("« Répondre » depuis la boîte du prospect écrit à l'entreprise (D5)", async () => {
-    await sendRecap(makePayload());
+    await sendRecapLead(makePayload());
     expect(envois[0].replyTo).toBe("marketing@rdportage.com");
     envois.length = 0;
     await sendDemandeDiagnostic(makePayload());
@@ -100,13 +96,17 @@ describe("E3 + E4", () => {
   });
 
   it("les copies internes partent d'un expéditeur distinct de leur destinataire", async () => {
-    await sendRecap(makePayload());
+    await sendRecapLead(makePayload());
+    await sendNouveauLead({ lead: makeLead(), payload: makePayload() });
     expect(envois[0].from).toBeUndefined();
     expect(envois[1].from).toBe("Simulateur RD Portage <simulateur@example.com>");
   });
 
-  it("la notification interne permet de répondre directement au lead", async () => {
+  it("les notifications internes permettent de répondre directement au lead", async () => {
     await sendDemandeDiagnostic(makePayload());
     expect(envois[1].replyTo).toBe("camille@example.com");
+    envois.length = 0;
+    await sendNouveauLead({ lead: makeLead(), payload: makePayload() });
+    expect(envois[0].replyTo).toBe("camille@example.com");
   });
 });

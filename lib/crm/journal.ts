@@ -8,9 +8,16 @@
  * replace with a durable store (see docs/bascule-crm.md §4).
  */
 import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
-const JOURNAL_DIR = process.env.JOURNAL_DIR ?? path.join(process.cwd(), "data");
+/**
+ * Sur Vercel, seul /tmp est inscriptible : le dossier du projet
+ * (/var/task) est en lecture seule, et chaque écriture du journal y échouait
+ * (`ENOENT mkdir '/var/task/data'`, 18 erreurs entre le 07 et le 14/10).
+ * /tmp reste éphémère : le journal y protège la requête en cours, pas plus.
+ */
+const JOURNAL_DIR = process.env.JOURNAL_DIR ?? (process.env.VERCEL ? path.join(tmpdir(), "rdp-journal") : path.join(process.cwd(), "data"));
 const JOURNAL_FILE = path.join(JOURNAL_DIR, "leads-fallback.ndjson");
 
 export interface JournalEntry {

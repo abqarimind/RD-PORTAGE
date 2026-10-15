@@ -99,7 +99,7 @@ export function ResultatsStep({ onRdv }: { onRdv: (from: string) => void }) {
         <p className="mt-3 text-lg text-[#4A5061]">
           Vous laissez{" "}
           <span className="text-2xl font-extrabold tabular-nums" style={{ color: VALIDE }}>
-            <CountUp value={ecart} /> €
+            <CountUp value={ecart} animateOnMount /> €
           </span>{" "}
           par an sur la table.
         </p>

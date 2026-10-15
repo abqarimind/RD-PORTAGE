@@ -18,16 +18,22 @@
 
 ### Activation
 
-- Actif quand `NODE_ENV=production` (production **et** Preview Vercel).
-- En local : inactif (aucun script, aucune bannière), sauf `NEXT_PUBLIC_META_PIXEL_DEBUG=true`.
+- Actif sur le seul déploiement de **production** Vercel (`VERCEL_ENV=production`,
+  figé au build sous `NEXT_PUBLIC_DEPLOY_ENV`, voir `lib/runtime-env.ts`).
+  Avant le 14/10, il l'était aussi sur chaque Preview (`NODE_ENV=production`).
+- Preview, local, CI : inactif (aucun script, aucune bannière), sauf
+  `NEXT_PUBLIC_META_PIXEL_DEBUG=true` (à poser pour une branche précise dans
+  Vercel pour utiliser « Tester les événements »).
 - `NEXT_PUBLIC_META_PIXEL_ID` surcharge l'ID par défaut ; `off` coupe le Pixel partout.
 
 ## Consentement (CNIL)
 
 1. Avant tout choix : **aucun script Meta n'est téléchargé**, aucun cookie `_fbp`/`_fbc`.
-2. Le seul événement conservé en attente est le **PageView de la page en
-   cours**. Tout autre événement survenu avant le consentement est abandonné,
-   jamais rejoué (pas de `Lead` a posteriori).
+2. Les seuls événements conservés en attente sont le **PageView et le
+   ViewContent de la page en cours** : ils décrivent l'affichage que la
+   personne a sous les yeux quand elle accepte. Tout autre événement survenu
+   avant le consentement est abandonné, jamais rejoué (pas de `Lead` ni de
+   `DiagnosticFlashComplete` a posteriori).
 3. À l'acceptation : `fbq('consent','revoke')` → `fbq('set','autoConfig',false)` →
    `fbq('init', …)` → chargement de `fbevents.js` → `fbq('consent','grant')` →
    PageView en attente. (Le `grant` est envoyé après le chargement du
@@ -46,13 +52,26 @@
 | Chaque route (hors pages exclues) | `track PageView` | un par changement de chemin (`?step=` ne compte pas) |
 | Landing `/` et `/lp/<angle>` | `track ViewContent {content_name: 'lp_<angle>'}` | une fois par affichage de page |
 | 1re réponse du diagnostic flash | `trackCustom DiagnosticFlashStart {step: 'flash'}` | une fois par session |
-| Fourchette du diagnostic affichée | `trackCustom DiagnosticFlashComplete` (sans paramètre) | une fois par session |
+| Réponse à la 3ᵉ question du diagnostic (fourchette affichée) | `trackCustom DiagnosticFlashComplete` (sans paramètre) | une fois par session, **au moment de la réponse** : une fourchette restaurée à la visite suivante ne le renvoie pas (avant le 14/10, si) |
 | Résultat du simulateur foyer affiché | `trackCustom SimulateurFoyerComplete` (sans paramètre) | une fois par simulation |
 | Formulaire « Recevoir mon dossier » : réponse **200** de `/api/lead` | `track Lead {content_name: 'simulateur_dossier'}` | un par envoi (`event_id` = celui transmis à `/api/lead`) |
 | Clic `tel:`, `mailto:`, WhatsApp, « Nous contacter » | `track Contact {from: '<emplacement>'}` | un par clic |
 | RDV « diagnostic 30 min » confirmé | `track Schedule` | **non implémenté**, voir ci-dessous |
 
 Chaque appel porte `{eventID: <uuid>}` (déduplication future avec la CAPI).
+
+**fbclid → `_fbc`** : le fbclid de la pub est gardé pour la session
+(`sessionStorage`). Après consentement, et seulement après, il devient le
+cookie `_fbc` (`fb.<index>.<horodatage>.<fbclid>`), même si la personne a
+quitté la landing entre-temps : le Pixel ne le pose lui-même que sur une URL
+qui porte encore le fbclid.
+
+**Paramètres d'URL inconnus** : retirés de l'URL au chargement (après la
+capture des UTM), sinon ils bloquaient le Pixel sur toute la page.
+
+**Garde-fou** : `e2e/tracking.spec.ts` rejoue le parcours complet, accepté
+puis refusé, et vérifie ordre, unicité, paramètres et absence de données
+interdites (CI).
 
 Valeurs de `from` : `lp_pricing_tel`, `lp_vsl_hero_tel`, `sim_result_tel`,
 `sim_unlocked_tel`, `contact_options_tel`, `contact_options_email`,

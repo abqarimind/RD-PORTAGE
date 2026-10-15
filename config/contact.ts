@@ -59,8 +59,10 @@ export const PHONE_INTL_LABEL = "+33 1 71 49 71 57";
  * Version de la politique de confidentialité, enregistrée avec chaque
  * consentement. Incrémentée le 25/09 : consentement scindé en deux (#10),
  * section transferts hors UE (#18), séquence ramenée à 4 emails.
+ * Incrémentée le 14/10 : téléphone obligatoire pour le rappel, mesure
+ * d'audience Plausible (exemptée de consentement) et droit d'opposition.
  */
-export const POLICY_VERSION = "privacy-2026-09";
+export const POLICY_VERSION = "privacy-2026-10";
 /** Nombre d'emails de conseil de la séquence prospects (content/emails/sequence.md). */
 export const SEQUENCE_NB_EMAILS = 4;
 

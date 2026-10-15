@@ -101,6 +101,34 @@ export function captureUtm(): void {
   }
 }
 
+/** fbclid de la pub, gardé pour la session (cookie _fbc posé après consentement, voir meta.ts). */
+export function getStoredFbclid(): string | null {
+  try {
+    return sessionStorage.getItem(FBCLID_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Retire de l'URL les paramètres hors liste autorisée (fonction pure).
+ * Renvoie la nouvelle URL, ou null si rien ne change. Un paramètre inconnu
+ * (ajouté par une application, un raccourcisseur…) bloquerait sinon le Pixel
+ * sur toute la page (meta-rules.ts → isUrlSafeForMeta).
+ */
+export function withoutUnknownParams(href: string, allowed: ReadonlySet<string>): string | null {
+  let url: URL;
+  try {
+    url = new URL(href);
+  } catch {
+    return null;
+  }
+  const unknown = [...url.searchParams.keys()].filter((k) => !allowed.has(k));
+  if (unknown.length === 0) return null;
+  for (const k of unknown) url.searchParams.delete(k);
+  return url.toString();
+}
+
 export function getAttribution(): { first_touch: Touch; last_touch: Touch } {
   const fallback = currentTouch();
   return {

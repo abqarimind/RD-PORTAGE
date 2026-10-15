@@ -23,7 +23,7 @@
  * le simulateur ne peut que faire mieux, jamais contredire.
  */
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   answeredCount,
   answersBracket,
@@ -69,7 +69,12 @@ export function FlashDiagnostic({ angle, simulateurHref: base = "/simulateur" }:
     }
     setAnswer(key, value as never);
     trackEvent(event);
-    if (event === "diag_q3_answered") trackEvent("diag_completed");
+    if (event === "diag_q3_answered") {
+      trackEvent("diag_completed");
+      // Au moment de la réponse, et seulement là : une fourchette restaurée
+      // depuis l'appareil (visite suivante) n'est pas un nouveau diagnostic.
+      metaDiagnosticFlashComplete();
+    }
   }
 
   if (hydrating) {
@@ -179,11 +184,6 @@ function FlashResult({
   base: string;
   angle: string;
 }) {
-  // Aucun montant, aucune réponse : l'événement dit seulement « fourchette affichée ».
-  useEffect(() => {
-    metaDiagnosticFlashComplete();
-  }, []);
-
   const { setAnswer } = useDiagnostic();
 
   return (
@@ -191,9 +191,9 @@ function FlashResult({
       <p className="text-xs font-semibold uppercase tracking-widest text-[#7A8093]">Estimation immédiate</p>
       <p className="mt-2 text-sm text-[#4A5061]">En portage RD, vous percevriez chaque mois, net :</p>
       <p className="mt-1 leading-none">
-        <CountUp value={low} className="text-3xl font-bold tabular-nums md:text-4xl" />
+        <CountUp value={low} animateOnMount className="text-3xl font-bold tabular-nums md:text-4xl" />
         <span className="mx-1 text-2xl font-bold text-[#7A8093]">–</span>
-        <CountUp value={high} className="text-4xl font-extrabold tabular-nums md:text-5xl" />
+        <CountUp value={high} animateOnMount className="text-4xl font-extrabold tabular-nums md:text-5xl" />
         <span className="ml-1 text-2xl font-bold" style={{ color: BRASS }}>
           €
         </span>

@@ -41,6 +41,14 @@ export interface SendArgs {
   replyTo?: string;
   /** Étiquettes Resend, pour filtrer les envois dans le tableau de bord. */
   tags?: { name: string; value: string }[];
+  /**
+   * Nouvelles tentatives après le premier essai (défaut 2, erreurs
+   * transitoires seulement). La notification interne d'un lead en demande
+   * davantage, sur toute erreur sauf une erreur de configuration : la clé
+   * d'idempotence garantit qu'un essai de trop ne produit pas de doublon.
+   */
+  retries?: number;
+  retryOnAnyError?: boolean;
 }
 
 const RETRIES = 2;
@@ -80,9 +88,16 @@ export function mailReplyTo(): string {
   return process.env.MAIL_REPLY_TO || EMAIL_ENTREPRISE;
 }
 
-/** Destinataire interne des copies E2/E4. */
-export function mailInternalTo(): string | null {
-  return process.env.MAIL_INTERNAL_TO ?? null;
+/**
+ * Destinataires internes (notification de lead, E4). MAIL_INTERNAL_TO accepte
+ * une liste séparée par des virgules, ex. « marketing@…, ridha@… ».
+ */
+export function mailInternalTo(): string[] | null {
+  const list = (process.env.MAIL_INTERNAL_TO ?? "")
+    .split(",")
+    .map((a) => a.trim())
+    .filter(Boolean);
+  return list.length > 0 ? list : null;
 }
 
 /**
@@ -120,8 +135,11 @@ export async function sendEmail(args: SendArgs): Promise<SendResult> {
     return { ok: true, mocked: true };
   }
 
+  const retries = args.retries ?? RETRIES;
+  const retryable = (message: string) =>
+    isTransient(message) || (Boolean(args.retryOnAnyError) && !isDomainNotVerified(message) && !/validation_error/i.test(message));
   let lastError = "";
-  for (let attempt = 1; attempt <= RETRIES + 1; attempt++) {
+  for (let attempt = 1; attempt <= retries + 1; attempt++) {
     try {
       const { data, error } = await resend.emails.send(
         {
@@ -139,10 +157,10 @@ export async function sendEmail(args: SendArgs): Promise<SendResult> {
       if (!error) return { ok: true, id: data?.id };
 
       lastError = `${error.name}: ${error.message}`;
-      if (!isTransient(lastError) || attempt > RETRIES) break;
+      if (!retryable(lastError) || attempt > retries) break;
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err);
-      if (!isTransient(lastError) || attempt > RETRIES) break;
+      if (!retryable(lastError) || attempt > retries) break;
     }
     await sleep(BASE_DELAY_MS * 2 ** (attempt - 1));
   }

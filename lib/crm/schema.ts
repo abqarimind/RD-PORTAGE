@@ -102,6 +102,19 @@ export const leadSchema = z.object({
   }),
   funnel_stage: z.enum(["interet", "consideration", "decision", "signe", "perdu"]),
   funnel_events: z.array(funnelEventSchema),
+  /**
+   * Contexte du parcours (ajout du 14/10, rétrocompatible : facultatif).
+   * `angle` = landing ou promesse d'arrivée (ex. lp_b), `last_step` = écran
+   * depuis lequel le lead a été envoyé, `summary` = résumé de simulation pour
+   * l'équipe — interne uniquement, jamais transmis à Meta ni à Plausible.
+   */
+  journey: z
+    .object({
+      angle: z.string().max(64).optional(),
+      last_step: z.string().max(64).optional(),
+      summary: z.string().max(500).optional(),
+    })
+    .optional(),
 });
 
 export type Lead = z.infer<typeof leadSchema>;

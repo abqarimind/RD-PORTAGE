@@ -1,20 +1,20 @@
 /**
  * E1 — récapitulatif de simulation envoyé au lead.
- * E2 — copie intégrale au client interne (marketing@rdportage.com).
  *
- * E2 reprend EXACTEMENT le corps de E1, comme demandé le 08/09 (« le client
- * veut voir exactement ce que reçoit le lead »), avec un bandeau
- * d'identification en tête et un pied de page interne. Ce sont deux envois
- * distincts et non un Bcc : ils restent filtrables, et E2 part même si E1
- * échoue (§5.1).
+ * Depuis le 14/10, la copie interne E2 est remplacée par la notification
+ * « Nouveau lead simulateur » (templates/nouveau-lead.ts), qui reprend ce même
+ * corps en fin d'email. Ce sont deux envois distincts et non un Bcc : ils
+ * restent filtrables, et la notification part même si E1 échoue (§5.1).
  */
 import type { SimulationResultPayload } from "@/types/simulation-result";
 import { button, esc, eur, eurSigned, h2, layout, pct, row, siteDomain, table, MUTED } from "./layout";
-import { rawBlock } from "./diagnostic";
 import { EMAIL_ENTREPRISE, LIGNE_LEGALE } from "@/config/contact";
 
-/** Corps partagé E1 / E2 — une seule rédaction, deux destinataires. */
-function corps(p: SimulationResultPayload, pourInterne: boolean): string {
+/**
+ * Corps partagé : E1 au lead, et sa copie en fin de notification interne
+ * (« le client veut voir exactement ce que reçoit le lead », 08/09).
+ */
+export function corps(p: SimulationResultPayload, pourInterne: boolean): string {
   const r = p.resultats;
   const [actuel, portage, optimise] = r.scenarios;
   const ecartPositif = r.laisseSurLaTableSens === "gain";
@@ -265,33 +265,5 @@ export function emailRecapLead(p: SimulationResultPayload, unsubscribeUrl?: stri
       footer: piedLead(p, unsubscribeUrl),
     }),
     text: texte(p, unsubscribeUrl),
-  };
-}
-
-/**
- * E2 — copie interne. `alerte` est renseignée quand une écriture CRM a
- * échoué : l'email porte alors un bandeau visible et les données brutes du
- * lead, pour qu'il reste récupérable à la main plutôt que perdu (§4.2).
- */
-export function emailRecapInterne(p: SimulationResultPayload, alerte?: string) {
-  const bandeau = alerte
-    ? `<p style="margin:0 0 16px 0;padding:12px 14px;background-color:#FDF6F5;border-left:4px solid #B3261E;font-size:13px;line-height:1.6;color:#B3261E;"><strong>Alerte technique — ${esc(
-        alerte,
-      )}</strong><br>Les données brutes du lead figurent en fin d'email : elles restent récupérables à la main.</p>`
-    : "";
-  return {
-    subject: `${alerte ? "[ALERTE] " : ""}[Lead] Simulation — ${p.identite.prenom} (${p.identite.email})`,
-    html: layout({
-      title: "Copie interne — récapitulatif lead",
-      preheader: `Copie du récapitulatif envoyé à ${p.identite.email}.`,
-      body: bandeau + corps(p, true) + (alerte ? rawBlock(p) : ""),
-      footer: `Copie interne automatique — envoi séparé de l'email au lead (§5.1). Référence : ${esc(p.meta.simulationId)}.`,
-    }),
-    text:
-      (alerte ? `ALERTE TECHNIQUE — ${alerte}. Données brutes en fin d'email, récupérables à la main.\n\n` : "") +
-      `COPIE INTERNE — récapitulatif envoyé à ${p.identite.prenom} <${p.identite.email}>${
-        p.identite.telephone ? ` · ${p.identite.telephone}` : ""
-      }\n\n${texte(p)}` +
-      (alerte ? `\n\nDONNÉES BRUTES\n${JSON.stringify(p, null, 1)}` : ""),
   };
 }

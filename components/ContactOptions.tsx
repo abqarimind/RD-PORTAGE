@@ -6,18 +6,18 @@
  * seulement quand leur variable est renseignée — jamais de lien mort.
  */
 import { EMAIL_ENTREPRISE, PHONE_LABEL, RDV_BOOKING_URL, TEL_URL, WHATSAPP_URL } from "@/config/contact";
-import { metaContact } from "@/lib/tracking/meta";
+import { trackContact } from "@/lib/tracking/analytics";
 
 export function ContactOptions({ className = "mt-2 text-sm text-[#7A8093]" }: { className?: string }) {
   const lien = "font-semibold text-[#0B0D12] underline underline-offset-2";
   return (
     <p className={className}>
       Appelez-nous au{" "}
-      <a href={TEL_URL} onClick={() => metaContact("contact_options_tel")} className={`${lien} tabular-nums`}>
+      <a href={TEL_URL} onClick={() => trackContact("contact_options_tel")} className={`${lien} tabular-nums`}>
         {PHONE_LABEL}
       </a>
       , écrivez à{" "}
-      <a href={`mailto:${EMAIL_ENTREPRISE}`} onClick={() => metaContact("contact_options_email")} className={lien}>
+      <a href={`mailto:${EMAIL_ENTREPRISE}`} onClick={() => trackContact("contact_options_email")} className={lien}>
         {EMAIL_ENTREPRISE}
       </a>
       {WHATSAPP_URL && (
@@ -27,7 +27,7 @@ export function ContactOptions({ className = "mt-2 text-sm text-[#7A8093]" }: { 
             href={WHATSAPP_URL}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => metaContact("contact_options_whatsapp")}
+            onClick={() => trackContact("contact_options_whatsapp")}
             className={lien}
           >
             sur WhatsApp

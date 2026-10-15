@@ -1,13 +1,17 @@
 /**
- * Funnel event emission (client side): (a) Plausible custom event,
- * (b) lead journal via /api/event when a lead_id exists.
+ * Funnel event emission (client side):
+ *  (a) Plausible — seuls les cinq événements qui sont des objectifs partent,
+ *      avec `angle` et `utm_content` pour seules propriétés (analytics.ts) ;
+ *      les métadonnées passées ici ne vont JAMAIS à Plausible ;
+ *  (b) lead journal via /api/event when a lead_id exists.
  * GA4 is OPTIONAL and gated behind NEXT_PUBLIC_GA4_ENABLED + consent.
  */
 import type { FunnelEventName } from "@/lib/crm/schema";
+import { trackGoal } from "./analytics";
+import { isPlausibleGoal } from "./analytics-rules";
 
 declare global {
   interface Window {
-    plausible?: (event: string, options?: { props?: Record<string, string | number> }) => void;
     gtag?: (...args: unknown[]) => void;
   }
 }
@@ -30,7 +34,7 @@ export function getLeadId(): string | null {
 
 export function trackEvent(event: FunnelEventName, metadata?: Record<string, string | number>) {
   // (a) analytics
-  window.plausible?.(event, metadata ? { props: metadata } : undefined);
+  if (isPlausibleGoal(event)) trackGoal(event);
   if (process.env.NEXT_PUBLIC_GA4_ENABLED === "true") {
     window.gtag?.("event", event, metadata ?? {});
   }
