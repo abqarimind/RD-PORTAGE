@@ -50,11 +50,11 @@
 | Moment | Appel | Dédoublonnage |
 |---|---|---|
 | Chaque route (hors pages exclues) | `track PageView` | un par changement de chemin (`?step=` ne compte pas) |
-| Landing `/` et `/lp/<angle>` | `track ViewContent {content_name: 'lp_<angle>'}` | une fois par affichage de page |
+| Accueil (variante de la pub) | `track ViewContent {content_name: 'lp_<clé>'}` (ex. `lp_foyer`, voir `config/headlines.ts`) | une fois par affichage de page |
 | 1re réponse du diagnostic flash | `trackCustom DiagnosticFlashStart {step: 'flash'}` | une fois par session |
 | Réponse à la 3ᵉ question du diagnostic (fourchette affichée) | `trackCustom DiagnosticFlashComplete` (sans paramètre) | une fois par session, **au moment de la réponse** : une fourchette restaurée à la visite suivante ne le renvoie pas (avant le 14/10, si) |
 | Résultat du simulateur foyer affiché | `trackCustom SimulateurFoyerComplete` (sans paramètre) | une fois par simulation |
-| Formulaire « Recevoir mon dossier » : réponse **200** de `/api/lead` | `track Lead {content_name: 'simulateur_dossier'}` | un par envoi (`event_id` = celui transmis à `/api/lead`) |
+| Demande de rappel : réponse **200** de `/api/lead` | `track Lead {content_name: 'simulateur_dossier'}` depuis le résultat, `'rappel_fourchette'` depuis la fourchette du diagnostic | un par envoi (`event_id` = celui transmis à `/api/lead`) |
 | Clic `tel:`, `mailto:`, WhatsApp, « Nous contacter » | `track Contact {from: '<emplacement>'}` | un par clic |
 | RDV « diagnostic 30 min » confirmé | `track Schedule` | **non implémenté**, voir ci-dessous |
 
@@ -73,8 +73,8 @@ capture des UTM), sinon ils bloquaient le Pixel sur toute la page.
 puis refusé, et vérifie ordre, unicité, paramètres et absence de données
 interdites (CI).
 
-Valeurs de `from` : `lp_pricing_tel`, `lp_vsl_hero_tel`, `sim_result_tel`,
-`sim_unlocked_tel`, `contact_options_tel`, `contact_options_email`,
+Valeurs de `from` : `lp_tarif_tel`, `fourchette_confirmation_tel`,
+`resultats_confirmation_tel`, `contact_options_tel`, `contact_options_email`,
 `contact_options_whatsapp`.
 
 `SimulateurStart` n'est plus envoyé à Meta. Le démarrage du simulateur reste

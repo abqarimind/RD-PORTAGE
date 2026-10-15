@@ -20,8 +20,9 @@ npm run report:weekly  # rapport KPI Markdown
 
 | Dossier | Contenu |
 |---|---|
-| `app/` | Next.js App Router : landing, `/simulateur`, `/lp/[angle]` (ads Meta), `/dossier`, API routes lead/event/export/demande-diagnostic |
-| `app/lp/` | Landings payantes mobile-first (3 angles de hero, sans navigation) — dérivées de `/concept-c` |
+| `app/` | Next.js App Router : accueil (`components/landing/`), variantes par pub `/v/[variant]` (choisies par `middleware.ts`), `/simulateur`, `/dossier`, API routes lead/event/export/demande-diagnostic |
+| `config/headlines.ts` | Titres d'accueil validés, un par annonce Meta (`utm_content`) |
+| `components/lead/` | Formulaire de rappel (téléphone obligatoire), sur la fourchette et sur le résultat |
 | `config/fiscal-2026.ts` | **Source unique** des taux/barèmes fiscaux & sociaux, datés + sourcés (spec simulateur §4) |
 | `lib/fiscal/` | Moteur A (portage) + Moteur B (IR foyer) + 3 scénarios, tests Vitest, `AUDIT.md` |
 | `lib/crm/` | `lead_schema_v1` (Zod), interface CRMAdapter, Brevo/Airtable + stubs, file + journal NDJSON |

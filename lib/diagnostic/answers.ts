@@ -2,7 +2,7 @@
  * RÉPONSES DU DIAGNOSTIC FLASH — le contrat de relais vers le simulateur.
  *
  * Les trois questions ne produisent plus seulement une fourchette de net :
- * elles segmentent, préremplissent et réveillent. Ce module est pur — types
+ * elles segmentent et préremplissent le simulateur (statut, TJM, foyer). Ce module est pur — types
  * et validation — donc testable sans React.
  *
  * Le relais ne passe PLUS par l'URL (le Pixel Meta transmet l'URL de la page,
@@ -35,25 +35,26 @@ export const DIAGNOSTIC_SEGMENTS: DiagnosticSegment[] = [
 export const findSegment = (id: string | null | undefined): DiagnosticSegment | undefined =>
   id ? DIAGNOSTIC_SEGMENTS.find((s) => s.id === id) : undefined;
 
-/* ————————————————————— Q3 — réveiller, ne rien calculer ————————————————————— */
+/* ————————————————————— Q3 — le foyer ————————————————————— */
 
 /**
- * Cette réponse n'alimente AUCUN calcul. Elle installe le manque que le
- * simulateur vient combler — c'est la seule des trois qui porte le Aha
- * (« personne ne t'avait jamais calculé ton vrai taux de foyer »). Elle est
- * conservée dans l'état pour l'analyse et pour moduler la formulation du
- * résultat, jamais pour pondérer un montant.
+ * 14/10 : la 3e question porte sur le FOYER (avant : « avez-vous déjà fait
+ * calculer votre taux ? », qui n'alimentait aucun calcul). C'est la promesse
+ * des pubs (« ton simulateur oublie ton foyer ») et elle allège le
+ * simulateur : l'écran Foyer n'affiche plus que ce qui concerne la personne,
+ * et disparaît pour une personne seule sans enfant. Libellés à valider par Ridha.
  */
-export const DEJA_CALCULE_OPTIONS = [
-  { id: "oui", label: "Oui" },
-  { id: "non", label: "Non" },
-  { id: "ignorais", label: "Je ne savais pas que c'était possible" },
+export const FOYER_OPTIONS = [
+  { id: "seul", label: "Seul·e, sans enfant" },
+  { id: "couple", label: "En couple, sans enfant" },
+  { id: "enfants", label: "Avec enfant(s)" },
 ] as const;
 
-export type DejaCalcule = (typeof DEJA_CALCULE_OPTIONS)[number]["id"];
+export type FoyerDiag = (typeof FOYER_OPTIONS)[number]["id"];
 
-const isDejaCalcule = (v: unknown): v is DejaCalcule =>
-  typeof v === "string" && DEJA_CALCULE_OPTIONS.some((o) => o.id === v);
+export const isFoyerDiag = (v: unknown): v is FoyerDiag => typeof v === "string" && FOYER_OPTIONS.some((o) => o.id === v);
+
+export const foyerLabel = (id: FoyerDiag | null | undefined): string | undefined => FOYER_OPTIONS.find((o) => o.id === id)?.label;
 
 /* ————————————————————————— état du diagnostic ————————————————————————— */
 
@@ -62,18 +63,17 @@ export interface DiagnosticAnswers {
   segment: string | null;
   /** Q2 — identifiant de fourchette de TJM (lib/simulateur/brackets.ts). */
   tjmBracketId: string | null;
-  /** Q3 — n'alimente aucun calcul. */
-  dejaCalcule: DejaCalcule | null;
+  /** Q3 — composition du foyer, préremplit l'écran Foyer du simulateur. */
+  foyer: FoyerDiag | null;
 }
 
-export const EMPTY_ANSWERS: DiagnosticAnswers = { segment: null, tjmBracketId: null, dejaCalcule: null };
+export const EMPTY_ANSWERS: DiagnosticAnswers = { segment: null, tjmBracketId: null, foyer: null };
 
-export const isComplete = (a: DiagnosticAnswers): boolean =>
-  Boolean(a.segment && a.tjmBracketId && a.dejaCalcule);
+export const isComplete = (a: DiagnosticAnswers): boolean => Boolean(a.segment && a.tjmBracketId && a.foyer);
 
 /** Combien des trois questions sont répondues — pilote la progression. */
 export const answeredCount = (a: DiagnosticAnswers): number =>
-  (a.segment ? 1 : 0) + (a.tjmBracketId ? 1 : 0) + (a.dejaCalcule ? 1 : 0);
+  (a.segment ? 1 : 0) + (a.tjmBracketId ? 1 : 0) + (a.foyer ? 1 : 0);
 
 /** Ramène un objet quelconque (localStorage, réseau) dans le domaine du valide. */
 export function sanitizeAnswers(raw: unknown): DiagnosticAnswers {
@@ -82,7 +82,8 @@ export function sanitizeAnswers(raw: unknown): DiagnosticAnswers {
   return {
     segment: findSegment(typeof src.segment === "string" ? src.segment : null)?.id ?? null,
     tjmBracketId: findBracket(typeof src.tjmBracketId === "string" ? src.tjmBracketId : null)?.id ?? null,
-    dejaCalcule: isDejaCalcule(src.dejaCalcule) ? src.dejaCalcule : null,
+    // Une ancienne réponse « déjà calculé ? » (avant le 14/10) est simplement ignorée.
+    foyer: isFoyerDiag(src.foyer) ? src.foyer : null,
   };
 }
 

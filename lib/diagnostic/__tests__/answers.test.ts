@@ -18,7 +18,7 @@ import {
 import { consumeDiagnosticRelay, RELAY_TTL_MS, setDiagnosticRelay } from "@/lib/diagnostic/relay";
 import { TJM_BRACKETS } from "@/lib/simulateur/brackets";
 
-const complete: DiagnosticAnswers = { segment: "porte", tjmBracketId: "500-650", dejaCalcule: "non" };
+const complete: DiagnosticAnswers = { segment: "porte", tjmBracketId: "500-650", foyer: "couple" };
 
 /** localStorage minimal (Vitest tourne en environnement node). */
 function installStorage(): Map<string, string> {
@@ -45,7 +45,7 @@ describe("relais — mémoire du module (stockage bloqué)", () => {
   it("chaque segment et chaque fourchette passent", () => {
     for (const s of DIAGNOSTIC_SEGMENTS) {
       for (const b of TJM_BRACKETS) {
-        const a: DiagnosticAnswers = { segment: s.id, tjmBracketId: b.id, dejaCalcule: "oui" };
+        const a: DiagnosticAnswers = { segment: s.id, tjmBracketId: b.id, foyer: "enfants" };
         setDiagnosticRelay(a);
         expect(consumeDiagnosticRelay()).toEqual(a);
       }
@@ -88,13 +88,13 @@ describe("relais — localStorage (rechargement)", () => {
       expect(() => consumeDiagnosticRelay()).not.toThrow();
     }
     map.set("rdp_diag_relay_v1", JSON.stringify({ savedAt: Date.now(), answers: { segment: "astronaute", tjmBracketId: "350-500" } }));
-    expect(consumeDiagnosticRelay()).toEqual({ segment: null, tjmBracketId: "350-500", dejaCalcule: null });
+    expect(consumeDiagnosticRelay()).toEqual({ segment: null, tjmBracketId: "350-500", foyer: null });
   });
 });
 
 describe("relais partiel", () => {
   it("un relais sans la 3e réponse reste exploitable", () => {
-    setDiagnosticRelay({ segment: "freelance", tjmBracketId: "lt350", dejaCalcule: null });
+    setDiagnosticRelay({ segment: "freelance", tjmBracketId: "lt350", foyer: null });
     const decoded = consumeDiagnosticRelay()!;
     expect(decoded.segment).toBe("freelance");
     expect(decoded.tjmBracketId).toBe("lt350");
@@ -110,7 +110,7 @@ describe("sanitizeAnswers", () => {
       const a = sanitizeAnswers(raw);
       expect(a).toHaveProperty("segment");
       expect(a).toHaveProperty("tjmBracketId");
-      expect(a).toHaveProperty("dejaCalcule");
+      expect(a).toHaveProperty("foyer");
     }
     expect(sanitizeAnswers({ segment: "porte", tjmBracketId: "nawak" }).tjmBracketId).toBeNull();
   });

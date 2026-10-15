@@ -27,7 +27,7 @@ const PROFILES: { value: CurrentStatus; impatrie?: boolean; label: string; hint:
   { value: "porte_ailleurs", label: "Déjà en portage", hint: "Porté dans une autre société." },
   // #8 : « Freelance » tout court ; micro ou société se précise à l'étape suivante.
   { value: "freelance_micro", label: "Freelance", hint: "Micro-entreprise, société (SASU / EURL) ou en lancement." },
-  { value: "salarie_esn", label: "Salarié en ESN", hint: "En poste, vous étudiez le portage." },
+  { value: "salarie_esn", label: "Salarié en ESN", hint: "En poste, tu étudies le portage." },
   { value: "transition", label: "En reconversion / transition", hint: "Entre deux statuts ou en création." },
   {
     value: "salarie_esn",
@@ -42,10 +42,10 @@ export function ProfilStep() {
   const { form } = state;
 
   return (
-    <Screen title="Vous êtes…" subtitle="Une question à la fois, comme sur impots.gouv.fr — en plus rapide.">
+    <Screen title="Tu es…" subtitle="Une question à la fois, comme sur impots.gouv.fr — en plus rapide.">
       {state.prefilled.status && (
         <p className="rounded-2xl px-4 py-3 text-sm" style={{ backgroundColor: "#FFF1DE" }}>
-          Repris de votre diagnostic. Corrigez-le si besoin — rien n&rsquo;est verrouillé.
+          Repris de ton diagnostic. Corrige-le si besoin : rien n&rsquo;est verrouillé.
         </p>
       )}
 

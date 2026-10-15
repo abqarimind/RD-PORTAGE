@@ -25,15 +25,15 @@ import { useSimulation } from "@/lib/simulateur/useSimulation";
 import { trackEvent } from "@/lib/tracking/events";
 import { metaSimulateurFoyerComplete } from "@/lib/tracking/meta";
 import { CountUp } from "@/components/lp/CountUp";
-import { CTA_CONSEILLER, RDV_URL } from "@/config/contact";
 import { ContactOptions } from "@/components/ContactOptions";
-import { ALERTE, BRASS, eur, GHOST_BTN, OUTLINE_BTN, PRIMARY_BTN, pct, VALIDE } from "../ui";
+import { LeadForm, type LeadDraft } from "@/components/lead/LeadForm";
+import { ALERTE, BRASS, eur, GHOST_BTN, OUTLINE_BTN, pct, VALIDE } from "../ui";
 
 
-export function ResultatsStep({ onRdv }: { onRdv: (from: string) => void }) {
-  const { state, goTo, reset } = useSimulator();
+export function ResultatsStep() {
+  const { state, dispatch, goTo, reset } = useSimulator();
   const { form } = state;
-  const { result, live, missing, avantages } = useSimulation();
+  const { result, live, missing, avantages, simInput } = useSimulation();
 
   /* ————— §4.2 : état explicite, jamais un chiffre vide ————— */
   if (missing.length > 0 || !result) {
@@ -43,7 +43,7 @@ export function ResultatsStep({ onRdv }: { onRdv: (from: string) => void }) {
           Calcul impossible
         </p>
         <h1 className="mt-2 text-2xl font-extrabold tracking-tight md:text-3xl">
-          Il manque une information pour calculer votre résultat
+          Il manque une information pour calculer ton résultat
         </h1>
         <ul className="mt-4 space-y-3">
           {missing.map((m) => (
@@ -57,7 +57,7 @@ export function ResultatsStep({ onRdv }: { onRdv: (from: string) => void }) {
             </li>
           ))}
         </ul>
-        <p className="mt-4 text-sm text-[#7A8093]">Vos autres réponses sont conservées — rien à ressaisir.</p>
+        <p className="mt-4 text-sm text-[#7A8093]">Tes autres réponses sont conservées : rien à ressaisir.</p>
       </section>
     );
   }
@@ -78,26 +78,26 @@ export function ResultatsStep({ onRdv }: { onRdv: (from: string) => void }) {
     <section>
       <MetaResultShown simulationId={state.simulationId} />
       <p className="text-xs font-bold uppercase tracking-widest" style={{ color: BRASS }}>
-        Votre résultat
+        Ton résultat
       </p>
       <h1 className="mt-2 text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
-        Votre vrai taux d&rsquo;imposition du foyer :{" "}
+        Ton vrai taux d&rsquo;imposition du foyer :{" "}
         <span style={{ color: VALIDE }}>{pct(optimise.averageTaxRate)}</span>
       </h1>
 
       {/* L'écart, signé, avec une lecture honnête dans les deux sens. */}
       {!comparable ? (
         <p className="mt-3 text-lg text-[#4A5061]">
-          Voici ce que le portage RD optimisé vous rapporterait :{" "}
+          Voici ce que le portage RD optimisé te rapporterait :{" "}
           <span className="text-2xl font-extrabold tabular-nums" style={{ color: VALIDE }}>
             {eur(optimise.netPerceived)} €
           </span>{" "}
-          net perçu par an, avantages compris. Vous êtes en transition : il n&rsquo;y a pas de situation actuelle à comparer, nous
-          ne vous en inventons pas une.
+          net perçu par an, avantages compris. Tu es en transition : il n&rsquo;y a pas de situation actuelle à comparer, nous
+          ne t&rsquo;en inventons pas une.
         </p>
       ) : enGain ? (
         <p className="mt-3 text-lg text-[#4A5061]">
-          Vous laissez{" "}
+          Tu laisses{" "}
           <span className="text-2xl font-extrabold tabular-nums" style={{ color: VALIDE }}>
             <CountUp value={ecart} animateOnMount /> €
           </span>{" "}
@@ -106,25 +106,25 @@ export function ResultatsStep({ onRdv }: { onRdv: (from: string) => void }) {
       ) : ecart < 0 ? (
         <div className="mt-3 rounded-2xl border border-[#ECEEF3] bg-[#FAFBFD] p-4">
           <p className="text-lg text-[#4A5061]">
-            À revenu égal, votre statut actuel vous laisse{" "}
+            À revenu égal, ton statut actuel te laisse{" "}
             <span className="text-2xl font-extrabold tabular-nums text-[#0B0D12]">{eur(Math.abs(ecart))} €</span> de plus par an que
             le portage optimisé.
           </p>
           <p className="mt-2 text-sm leading-relaxed text-[#7A8093]">
             C&rsquo;est le chiffre réel, sans arrondi à l&rsquo;avantage du portage. Ce que le portage apporte en contrepartie ne se
             lit pas sur cette ligne : statut de salarié, assurance chômage, retraite et prévoyance, congés payés, et la sécurité
-            juridique d&rsquo;un contrat de travail. À vous de peser les deux.
+            juridique d&rsquo;un contrat de travail. À toi de peser les deux.
           </p>
         </div>
       ) : (
         <p className="mt-3 text-lg text-[#4A5061]">
-          À revenu égal, votre statut actuel et le portage optimisé vous laissent le même disponible annuel.
+          À revenu égal, ton statut actuel et le portage optimisé te laissent le même disponible annuel.
         </p>
       )}
 
       <p className="mt-1 text-sm tabular-nums text-[#7A8093]">
         Tranche marginale (TMI) : {(optimise.marginalRate * 100).toFixed(0)} %
-        {comparable ? " · écart entre votre statut actuel et le portage RD optimisé." : "."}
+        {comparable ? " · écart entre ton statut actuel et le portage RD optimisé." : "."}
       </p>
 
       {form.tjmMode === "fourchette" && (
@@ -136,18 +136,44 @@ export function ResultatsStep({ onRdv }: { onRdv: (from: string) => void }) {
         </p>
       )}
 
+      {/*
+        14/10 — la demande de rappel est SUR l'écran du résultat, au moment où
+        la valeur est sous les yeux (elle remplaçait une étape « Inscription »
+        à part). Le détail du calcul suit, pour qui veut vérifier.
+      */}
+      <div id="rappel" className="mt-6 scroll-mt-4 rounded-3xl border border-[#ECEEF3] bg-white p-4 shadow-[0_8px_30px_rgba(11,13,18,0.08)]">
+        <LeadForm
+          context="resultats"
+          alreadySent={state.unlocked}
+          draft={(): LeadDraft | null =>
+            form.status
+              ? {
+                  simulation_id: state.simulationId,
+                  form,
+                  profile: {
+                    statut_actuel: form.status,
+                    tjm_ou_ca: simInput.tjmOrMonthlyGross,
+                    jours_factures: form.days,
+                    foyer: { situation: form.situation, enfants: form.enfants, garde_alternee: form.gardeAlternee },
+                  },
+                  simulation: {
+                    inputs: simInput as unknown as Record<string, unknown>,
+                    scenarios: result.scenarios as unknown as Record<string, unknown>[],
+                    economie_annuelle_eur: result.economieAnnuelleEur,
+                    completed: true,
+                  },
+                }
+              : null
+          }
+          onSent={(sent) => dispatch({ type: "unlock", leadId: sent.leadId })}
+        />
+      </div>
+
       {comparable && <ScenarioTable rows={[actuel, portage, optimise]} />}
       <CommentCalcule live={live} optimise={optimise} avantagesInclus={avantages.avantagesInclus} cagnotte={form.cagnotte} />
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <button type="button" className={PRIMARY_BTN} onClick={() => goTo("inscription")}>
-          Recevoir mon dossier complet
-        </button>
-        <a href={RDV_URL} onClick={() => onRdv("sim_result")} className={OUTLINE_BTN}>
-          {CTA_CONSEILLER}
-        </a>
-      </div>
-      <ContactOptions />
+
+      <ContactOptions tu className="mt-6 text-sm text-[#5E6475]" />
 
       {/* §4.4 — reprise et réinitialisation, explicites toutes les deux. */}
       <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-[#ECEEF3] pt-5">
@@ -266,13 +292,23 @@ function CommentCalcule({
 }
 
 /**
- * SimulateurFoyerComplete : au premier AFFICHAGE d'un résultat chiffré, une
- * fois par simulation (re-rendus, StrictMode et retours arrière compris).
- * Aucun montant n'est transmis.
+ * SimulateurFoyerComplete (Meta) et sim_completed (Plausible) : au premier
+ * AFFICHAGE d'un résultat chiffré, une fois par simulation (re-rendus,
+ * StrictMode et retours arrière compris). Aucun montant n'est transmis.
  */
 function MetaResultShown({ simulationId }: { simulationId: string }) {
   useEffect(() => {
     metaSimulateurFoyerComplete(simulationId);
+    // sim_completed (Plausible) au premier affichage du résultat, une fois par
+    // simulation, quel que soit le chemin (« Voir mon résultat » ou « Passer »).
+    try {
+      const k = `rdp_sim_completed:${simulationId}`;
+      if (sessionStorage.getItem(k)) return;
+      sessionStorage.setItem(k, "1");
+    } catch {
+      /* stockage indisponible : on mesure quand même */
+    }
+    trackEvent("sim_completed");
   }, [simulationId]);
   return null;
 }

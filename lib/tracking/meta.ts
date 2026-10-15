@@ -285,9 +285,13 @@ export function track(event: MetaEventName, params?: Record<string, unknown>, op
  * avec le ViewContent de la même page, c'est le seul événement qui peut
  * partir au moment de l'acceptation.
  */
-export function trackPageView(path: string): void {
+export function trackPageView(routePath: string): void {
   if (!META_ENABLED || !browser()) return;
   ensureMetaInit();
+  // Le chemin AFFICHÉ, pas celui de la route : le middleware réécrit « / »
+  // vers /v/<variante> sans changer l'adresse, et l'attente d'un PageView est
+  // comparée à window.location au moment du consentement.
+  const path = currentPath() || routePath;
   if (path === lastPageViewPath) return;
   lastPageViewPath = path;
   pageOnce.clear();

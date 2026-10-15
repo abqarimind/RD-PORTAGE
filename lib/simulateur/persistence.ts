@@ -10,6 +10,7 @@
  *     fonctionner sans, simplement sans reprise.
  */
 import { coerceFormState, createInitialState, isStep, type SimulatorState } from "./state";
+import { isFoyerDiag } from "@/lib/diagnostic/answers";
 
 export const STORAGE_KEY = "rdp_sim_state_v2";
 /** L'ancienne clé v1 ne portait ni version, ni TTL, ni mode de saisie TJM. */
@@ -101,6 +102,7 @@ function sanitize(candidate: SimulatorState): SimulatorState | null {
     unlocked: candidate.unlocked === true,
     leadId: typeof candidate.leadId === "string" ? candidate.leadId : null,
     startedAt: typeof candidate.startedAt === "string" ? candidate.startedAt : base.startedAt,
+    foyerDiag: isFoyerDiag(candidate.foyerDiag) ? candidate.foyerDiag : null,
   };
 }
 

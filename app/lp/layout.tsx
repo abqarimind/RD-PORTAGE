@@ -1,8 +1,7 @@
 /**
- * Dedicated "ads" layout for paid Meta traffic. These pages drop the site
- * navigation by default (only logo + the single primary CTA remain in the
- * header) — site nav costs ~10-15 % of conversion on paid traffic. Site
- * chrome lives in the page component (LandingC), gated by its showNav prop.
+ * Dedicated "ads" layout for paid Meta traffic (anciennes landings /lp/*,
+ * réécrites par le middleware vers l'accueil de leur angle, voir
+ * components/landing/Landing.tsx). Pas de navigation de site.
  */
 export default function LpLayout({ children }: { children: React.ReactNode }) {
   return <div data-traffic="ads">{children}</div>;

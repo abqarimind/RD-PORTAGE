@@ -1,56 +1,33 @@
-# Landing conversion `/lp` — système d'acquisition Meta
+# Parcours de conversion (refonte du 14/10)
 
-Landings optimisées conversion pour le trafic payant **founder-led Meta**
-(Facebook/Instagram) → **landing** → **simulateur fiscal IR foyer** →
-**lead (CRM Brevo)** → call Diagnostic 30 min. Dérivées de `/concept-c`
-(design fintech clair + « fil doré »), rebâties mobile-first et instrumentées.
-
-Tout fonctionne en **mode mock sans clé** : sans `NEXT_PUBLIC_META_PIXEL_ID`,
-aucun event Meta n'est envoyé et aucune bannière de consentement ne s'affiche.
+Références et principes : `docs/cro/references-mobbin.md`. Détail du parcours,
+chiffres avant/après et textes à valider : `docs/cro/parcours-conversion.md`.
 
 ## Routes
 
-| Route | Rôle |
+| URL | Contenu |
 |---|---|
-| `/lp/a` | Hero **Angle A — Warning** (« Depuis 2024… c'est toi ») |
-| `/lp/b` | Hero **Angle B — Vrai net** (défaut, = concept-c) |
-| `/lp/c` | Hero **Angle C — Fondateur** (Ridha, ex-porté) |
-| `/lp/<x>?nav=1` | Aperçu interne **avec** navigation (sinon masquée — trafic payant) |
-| `/simulateur` | Simulateur IR foyer complet + capture lead (existant) |
-| `/dossier` | Dossier du lead (artefact visuel) — lien signé envoyé par email |
+| `/` | Accueil, variante par défaut (« Calcule ton vrai taux ») |
+| `/?utm_content=<annonce>` | Variante de la pub, servie par le middleware (`/v/<clé>`, statique) ; l'adresse ne change pas |
+| `/lp/a` · `/lp/b` · `/lp/c` | Anciennes landings : réécrites vers la variante de leur angle (ou celle de la pub) |
+| `/simulateur` | Simulateur foyer allégé ; le formulaire de rappel est sur l'écran du résultat |
 
-Même corps de page ; **seul le bloc above-the-fold (hero) change** selon
-l'angle (message match pub → page). Un angle inconnu retombe sur `b`.
-Pages en `noindex` (destinations d'annonces).
+Titres par annonce : `config/headlines.ts` (titres validés uniquement).
 
-## Variables d'environnement, convention UTM, événements Meta
+## URL des publicités Meta
 
-- Pixel Meta, consentement, plan de marquage et procédure de test :
-  **`docs/meta-pixel.md`**.
-- API Conversions (préparée, non activée) : **`docs/meta-capi.md`**.
-- UTM : `docs/convention-utm.md` (capture en sessionStorage, injectée dans le
-  payload du lead → CRM, jamais transmise à Meta).
-- `NEXT_PUBLIC_RDV_URL` : lien de prise de RDV. Sinon appel direct de la ligne
-  de l'équipe (`config/contact.ts`).
+```
+https://simulateur.rdportage.com/?utm_source=meta&utm_medium=paid_social&utm_campaign={{campaign.name}}&utm_content={{ad.name}}
+```
 
-Exemple : `/lp/a?utm_source=facebook&utm_medium=paid_social&utm_campaign=rd-leads-test&utm_content=angleA-hook1-video`
+Le nom d'annonce (`utm_content`) choisit le titre d'accueil : `A_Offre_s01`,
+`B_Foyer_s04`, `C_Fondateur_s03`, `C01_FicheDePaie_TOF`, `C03_PlusDeFake_TOF`,
+`C06_MemeTJM_MOF`, `C09_AncienPorte_TOF`, `C16_SansEmail_BOF` (et leurs
+déclinaisons de même préfixe). Toute autre valeur affiche le titre par défaut.
 
-## Funnel interne (inchangé)
+## Mesure
 
-Les events internes (`diag_started`, `sim_completed`, `lead_submitted`, …)
-continuent d'alimenter Plausible et le journal CRM (`lib/crm/schema.ts`),
-indépendamment de Meta. Voir `docs/schema-lead.md`.
-
-## Garde-fous honnêteté
-
-- Témoignages, logos partenaires, chiffres non validés = placeholders marqués
-  `// TODO: DONNÉE RÉELLE — en attente Ridha`, jamais de faux contenu en dur.
-- Aucune fausse urgence / rareté / compteur.
-- Mention « simulation à valeur indicative — ne constitue pas un conseil
-  fiscal » conservée. La formulation Angle A (« depuis 2024 / c'est toi »)
-  porte un `TODO: VALIDATION JURIDIQUE` (cf. `content/claims.ts`).
-
-## Hors périmètre (en attente de Ridha)
-
-Vrais témoignages · chiffres validés juridiquement · comparatif nominatif ·
-logo final · droits logos partenaires · paramètres exacts du simulateur.
+- Pixel Meta : `docs/meta-pixel.md` (ViewContent `content_name = lp_<clé>`,
+  Lead `content_name = simulateur_dossier` ou `rappel_fourchette`).
+- Mesure sans cookie : `docs/mesure-sans-cookie.md`.
+- Garde-fou de bout en bout : `e2e/tracking.spec.ts` (CI).
