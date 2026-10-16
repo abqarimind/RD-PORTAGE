@@ -29,7 +29,7 @@ export const ANALYTICS_ENABLED = isAnalyticsEnabled({
   debug: process.env.NEXT_PUBLIC_PLAUSIBLE_DEBUG,
 });
 
-/** Script du site sur Plausible (fourni par Ayoub le 14/10), surchargeable. */
+/** Script du site sur Plausible, surchargeable. */
 export const PLAUSIBLE_SCRIPT_URL =
   process.env.NEXT_PUBLIC_PLAUSIBLE_SCRIPT || "https://plausible.io/js/pa-Um3XuVPoX76PZHXQpHXCw.js";
 

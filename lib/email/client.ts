@@ -170,7 +170,7 @@ export async function sendEmail(args: SendArgs): Promise<SendResult> {
     console.error(
       "[email] DOMAINE NON VÉRIFIÉ CHEZ RESEND — aucun email ne partira depuis cet expéditeur. " +
         `Expéditeur refusé : ${mailFrom()}. ` +
-        "Poser les enregistrements DNS (voir rapport-maintenance.md §4), ou repasser MAIL_FROM sur le domaine de test " +
+        "Poser les enregistrements DNS indiqués dans Resend → Domains, ou repasser MAIL_FROM sur le domaine de test " +
         "Resend (RD Portage <onboarding@resend.dev>) le temps de la propagation. " +
         JSON.stringify({ to: args.to, idempotencyKey: args.idempotencyKey, error: lastError }),
     );

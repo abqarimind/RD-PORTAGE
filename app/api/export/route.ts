@@ -1,5 +1,5 @@
 /**
- * Transition CSV export for Linda's current Excel workflow.
+ * CSV export of the leads, readable in Excel.
  * Protected by a shared token: GET /api/export?token=EXPORT_TOKEN
  * (set EXPORT_TOKEN in env; route disabled when unset).
  */

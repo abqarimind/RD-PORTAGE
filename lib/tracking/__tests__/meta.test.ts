@@ -19,13 +19,13 @@ describe("CAPI PII normalisation", () => {
   });
 
   it("normalises FR phone: digits only, leading 0 → 33", () => {
-    expect(normalizePhone("06 32 98 87 23")).toBe("33632988723");
-    expect(normalizePhone("+33 6 32 98 87 23")).toBe("33632988723");
-    expect(normalizePhone("0632988723")).toBe("33632988723");
+    expect(normalizePhone("06 98 76 54 32")).toBe("33698765432");
+    expect(normalizePhone("+33 6 32 98 87 23")).toBe("33698765432");
+    expect(normalizePhone("0632988723")).toBe("33698765432");
   });
 
   it("keeps an already international number untouched (digits only)", () => {
-    expect(normalizePhone("33632988723")).toBe("33632988723");
+    expect(normalizePhone("33698765432")).toBe("33698765432");
   });
 });
 
@@ -41,7 +41,7 @@ describe("CAPI hashing", () => {
   });
 
   it("hashPhone hashes the normalised value", () => {
-    expect(hashPhone("06 32 98 87 23")).toEqual([sha("33632988723")]);
+    expect(hashPhone("06 98 76 54 32")).toEqual([sha("33698765432")]);
   });
 
   it("returns undefined for missing PII", () => {

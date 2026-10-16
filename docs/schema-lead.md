@@ -90,7 +90,7 @@ contact (« This property name cannot be used ») : `created_at`, `email`,
 - **CONSIDÉRATION** : `sim_started`, `sim_step_1/2/3_completed`, `sim_completed`, `email_gate_viewed`, `lead_submitted`
 - **DÉCISION** : `pdf_downloaded`, `email_opened`, `email_clicked`, `rdv_clicked`, `rdv_booked`, `call_done`*, `signe`*
 
-\* saisis manuellement côté CRM — voir `docs/procedure-linda.md`.
+\* saisis manuellement côté CRM — voir `docs/procedure-suivi-leads.md`.
 
 ## RGPD
 

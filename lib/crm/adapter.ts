@@ -37,7 +37,7 @@ export interface CRMAdapter {
   unsubscribe?(email: string): Promise<void>;
   /** GDPR right to erasure. */
   deleteLead(leadId: string): Promise<void>;
-  /** CSV export compatible with Linda's current Excel workflow. */
+  /** CSV export of the leads, readable in Excel. */
   exportCSV(filter?: ExportFilter): Promise<string>;
 }
 

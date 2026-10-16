@@ -23,7 +23,7 @@ NDJSON, zéro perte). Pour basculer sur un vrai CRM :
    BREVO_SEQ14_LIST_ID=12
    ```
 
-## Option B — Airtable (recommandé si Linda veut une vue tableur)
+## Option B — Airtable (recommandé pour une vue tableur)
 
 1. Créer une base avec deux tables :
    - **Leads** : champs `lead_id`, `created_at`, `prenom`, `email`,
@@ -44,7 +44,7 @@ NDJSON, zéro perte). Pour basculer sur un vrai CRM :
    lead (`sequence_a_declencher=seq14`) ; brancher une automation
    Make/Zapier ou un sync Airtable→Brevo sur ce champ.
 
-## Export CSV (workflow Excel de Linda, transition)
+## Export CSV (ouvrable dans Excel)
 
 `GET https://<domaine>/api/export?token=<EXPORT_TOKEN>` → CSV (`;`)
 compatible Excel : prenom, email, téléphone, statut, TJM, économie, stage,

@@ -32,7 +32,7 @@ export const FUNNEL_EVENTS = [
   "email_clicked",
   "rdv_clicked",
   "rdv_booked",
-  "call_done", // entered manually in the CRM (see docs/procedure-linda.md)
+  "call_done", // entered manually in the CRM (see docs/procedure-suivi-leads.md)
   "signe", // entered manually in the CRM
 ] as const;
 

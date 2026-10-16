@@ -156,7 +156,7 @@
   - La validation doit accepter les espaces et le format +33.
   - Sous-titre : « Pour que Ridha rappelle sous 24 h et commente le dossier. »
   - Sous le bouton, une ligne sur l'usage du numéro, uniquement si elle décrit la pratique réelle, avec un lien vers la politique de confidentialité.
-  - Rester à trois champs au plus (prénom, téléphone, et l'e-mail si Ayoub le garde obligatoire) : ni nom de famille ni message libre.
+  - Rester à trois champs au plus (prénom, téléphone, et l'e-mail s'il reste obligatoire) : ni nom de famille ni message libre.
   - Voir aussi Bumble : un [cadenas et la mention « We never share this with anyone »](https://mobbin.com/screens/05c421be-e8a8-411f-aec4-c8cdf723da29) à côté du pavé numérique.
 
 ### 11. Future Pro : un appel avec une personne nommée, une durée annoncée et une sortie de secours
