@@ -1,32 +1,37 @@
-# Procédure de saisie manuelle — Linda
+# Suivi manuel des leads dans Resend
 
-Deux événements du funnel ne peuvent pas être automatisés et doivent être
-saisis à la main après chaque échange : `call_done` et `signe`.
+Chaque lead arrive de deux façons : un e-mail de notification « Nouveau lead
+simulateur — {Prénom} — {pub} » aux adresses de `MAIL_INTERNAL_TO`, et un
+contact dans Resend → Contacts. Deux étapes du parcours ne peuvent pas être
+saisies automatiquement : l'appel (`call_done`) et la signature (`signe`).
 
 ## Au quotidien
 
-1. **Récupérer les nouveaux leads** : ouvrir
-   `https://<domaine>/api/export?token=<EXPORT_TOKEN>` → le fichier CSV
-   s'ouvre dans Excel (séparateur `;`). Mêmes colonnes que le fichier
-   partenaire actuel : prénom, email, téléphone, statut, TJM, économie
-   estimée, étape funnel, source, consentement.
-2. **Prioriser** : trier par `economie_annuelle_eur` décroissante ; les leads
-   avec téléphone renseigné ont explicitement demandé à être rappelés.
+1. **Nouveaux leads** : partir de l'e-mail de notification (bouton d'appel,
+   source, résumé de la simulation, lien vers le dossier). La liste complète
+   est dans Resend → Contacts, avec les propriétés `telephone`,
+   `utm_content`, `resume_simulation`, etc. (liste : `docs/schema-lead.md`).
+2. **Export** : `https://simulateur.rdportage.com/api/export?token=<EXPORT_TOKEN>`
+   télécharge un CSV (séparateur `;`) qui s'ouvre dans Excel.
+3. **Rappeler sous 24 h** : c'est l'engagement affiché au prospect.
 
-## Après un call Diagnostic (call_done)
+## Après un appel (call_done)
 
-- **Brevo** : ouvrir le contact → attribut `FUNNEL_STAGE` → `decision`,
-  attribut `LAST_EVENT` → `call_done`.
-- **Airtable** : table Leads → ligne du lead → `funnel_stage` = `decision` ;
-  table Events → ajouter une ligne `lead_id` / `call_done` / date du jour.
+Dans Resend → Contacts, ouvrir le contact et renseigner :
+
+- `funnel_stage` = `decision`
+- `last_event` = `call_done`, `last_event_at` = la date du jour
+- `sequence_stop` = `oui` (le prospect a été joint)
 
 ## Après une signature (signe)
 
-- Même manipulation avec `signe`. C'est CE champ qui alimente la dernière
-  ligne du rapport hebdo — sans saisie, pas de mesure de conversion finale.
+- `funnel_stage` = `signe`
+- `last_event` = `signe`, `last_event_at` = la date du jour
 
-## Demande de suppression RGPD
+Sans cette saisie, la conversion finale n'est mesurée nulle part.
 
-Transmettre l'email du demandeur au technique : suppression via
-`deleteLead` + purge du journal local. Ne jamais répondre « on garde au cas
-où » — le droit à l'effacement est inconditionnel ici.
+## Demande de suppression (RGPD)
+
+Le droit à l'effacement est inconditionnel. Supprimer le contact dans
+Resend → Contacts, puis les e-mails de notification de ce lead dans la boîte
+qui les reçoit.
