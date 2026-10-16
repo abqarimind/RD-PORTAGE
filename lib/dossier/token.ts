@@ -3,9 +3,8 @@
  *
  * Pourquoi ce choix : le dossier doit rester ouvrable depuis un email, donc
  * potentiellement sur un autre appareil que celui de la simulation. Le
- * stockage des leads est aujourd'hui non durable (voir rapport §5.4 :
- * CRM_PROVIDER=mock écrit dans une Map en mémoire, perdue à chaque
- * invocation serverless). Plutôt que d'introduire une base de données sans
+ * stockage des leads peut ne pas être durable (CRM_PROVIDER=mock écrit dans
+ * une Map en mémoire, perdue à chaque invocation serverless). Plutôt que d'introduire une base de données sans
  * arbitrage du client, le récapitulatif est encodé, compressé et SIGNÉ dans
  * le lien : aucune infrastructure, aucune donnée de plus à conserver, et un
  * lien qui reste valable même si le stockage change plus tard.

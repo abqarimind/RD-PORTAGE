@@ -113,7 +113,7 @@ export const airtableAdapter: CRMAdapter = {
   async exportCSV(filter?: ExportFilter) {
     // Airtable pagine par 100 : sans suivre `offset`, l'export s'arrêtait
     // silencieusement au centième lead. Une troncature invisible dans le
-    // fichier de Linda est pire qu'une erreur.
+    // fichier exporté est pire qu'une erreur.
     const rows: string[] = [];
     let offset: string | undefined;
     let pages = 0;
