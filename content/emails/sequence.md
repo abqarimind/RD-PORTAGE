@@ -57,7 +57,7 @@
 
 ## Qui entre dans la séquence
 
-Uniquement les prospects qui ont coché la case **facultative** des conseils (#10). `/api/lead` n'envoie l'événement de déclenchement (`RESEND_SEQUENCE_EVENT`, défaut `sequence_j14`) que si `consent.marketing_optin` est vrai, et le contact est créé `unsubscribed: true` sinon.
+Uniquement les prospects qui ont coché la case **facultative** des conseils (#10). `/api/lead` n'envoie l'événement de déclenchement que si la variable `RESEND_SEQUENCE_EVENT` est définie (vide depuis le 16/10 : aucun événement ne part) et que `consent.marketing_optin` est vrai, et le contact est créé `unsubscribed: true` sinon.
 
 ## Conditions d'arrêt
 
@@ -79,6 +79,6 @@ Fonctionnement retenu : les Automations Resend savent évaluer une condition sur
 3. Aperçu : `npx tsx scripts/resend-sequence.ts` (ne crée rien).
 4. Chargement : avec `RESEND_API_KEY`, `MAIL_FROM` et `MAIL_REPLY_TO` définis, `npx tsx scripts/resend-sequence.ts --appliquer`. Le script crée et publie les 9 modèles, puis l'automation **en statut « disabled »**. Si la création de l'automation échoue, les modèles restent créés : recréer à la main dans Resend → Automations le parcours décrit ci-dessus (déclencheur `sequence_j14` → délai 3 jours → [arrêt ?] → J3 → délai 3 jours → [arrêt ?] → J6 → délai 4 jours → [arrêt ?] → branche par `statut_actuel` → délai 4 jours → [arrêt ?] → branche `economie_mensuelle > 0`).
 5. Dans Resend : ouvrir l'automation, **envoyer un test** à une adresse interne pour chaque branche, vérifier le prénom, le montant et le lien de désinscription.
-6. **Activer seulement après validation de l'équipe.**
+6. **Activer seulement après validation de l'équipe** : activer l'automation, puis définir `RESEND_SEQUENCE_EVENT=sequence_j14` dans Vercel (Production) et redéployer. Sans cette variable, le site n'envoie aucun événement.
 
 Points à vérifier au premier chargement (formats Resend documentés mais pas encore éprouvés sur ce compte) : le chemin `contact.properties.sequence_stop` dans les conditions et `contact.first_name` dans les variables.

@@ -23,7 +23,8 @@
  * Variables d'environnement :
  *   RESEND_API_KEY            (obligatoire, déjà utilisée par le transactionnel)
  *   RESEND_SEGMENT_LEADS_ID   (optionnel) segment où ranger tous les leads
- *   RESEND_SEQUENCE_EVENT     (optionnel) nom d'événement par défaut de la séquence
+ *   RESEND_SEQUENCE_EVENT     (optionnel) nom d'événement de la séquence. Vide = aucun
+ *                             événement envoyé, donc aucune Automation déclenchée
  */
 import { Resend } from "resend";
 import type { CRMAdapter, ExportFilter } from "./adapter";
@@ -172,6 +173,27 @@ async function proprietesDeclarees(): Promise<Set<string> | null> {
   }
 }
 
+/**
+ * Crée dans Resend les propriétés de la liste qui y manquent, avec leur type.
+ * Une propriété oubliée dans le tableau de bord ne fait ainsi perdre des
+ * données qu'au premier lead qui la révèle, et seulement si la création
+ * échoue. Renvoie les clés qui n'ont pas pu être créées.
+ */
+async function creerProprietes(cles: string[]): Promise<string[]> {
+  const echecs: string[] = [];
+  for (const cle of cles) {
+    const type = (RESEND_CONTACT_PROPERTIES as Record<string, "string" | "number">)[cle];
+    try {
+      const res = await getClient().contactProperties.create(type === "number" ? { key: cle, type: "number" } : { key: cle, type: "string" });
+      // Créée entre-temps par un lead simultané : elle existe, c'est ce qui compte.
+      if (res.error && !/exist/i.test(messageErreur(res.error))) echecs.push(cle);
+    } catch {
+      echecs.push(cle);
+    }
+  }
+  return echecs;
+}
+
 async function rangerDansLeSegment(email: string): Promise<void> {
   const segmentId = segmentLeads();
   if (!segmentId) return;
@@ -225,14 +247,21 @@ export const resendAdapter: CRMAdapter = {
     if (!erreurDePropriete(erreur)) throw erreur;
 
     /**
-     * Une propriété manque dans Resend (ou porte un nom refusé) : Resend
-     * rejette alors le contact ENTIER. Plutôt que de le perdre, on le
-     * réenregistre avec les seules propriétés déclarées, à défaut sans
-     * propriétés, et on le SIGNALE dans la notification interne, qui porte
-     * les données complètes.
+     * Une propriété manque dans Resend : Resend rejette alors le contact
+     * ENTIER. On crée les propriétés manquantes, puis on réenregistre le
+     * contact. Si une création échoue, le contact est enregistré avec les
+     * seules propriétés déclarées, à défaut sans propriétés, et c'est SIGNALÉ
+     * dans la notification interne, qui porte les données complètes.
      */
     const declarees = await proprietesDeclarees();
     const toutes = proprietes(lead);
+    if (declarees) {
+      const absentes = Object.keys(toutes).filter((cle) => !declarees.has(cle));
+      const echecs = await creerProprietes(absentes);
+      const creees = absentes.filter((cle) => !echecs.includes(cle));
+      for (const cle of creees) declarees.add(cle);
+      if (creees.length > 0) console.warn(`[crm-resend] propriétés créées dans Resend : ${creees.join(", ")}`);
+    }
     const gardees = declarees
       ? (Object.fromEntries(Object.entries(toutes).filter(([cle]) => declarees.has(cle))) as ReturnType<typeof proprietes>)
       : {};
@@ -245,6 +274,8 @@ export const resendAdapter: CRMAdapter = {
       repli = await ecrire(base);
     }
     if (repli) throw new Error(`Resend upsertLead a échoué, même sans propriétés : ${messageErreur(repli)}`);
+    // Toutes les propriétés manquantes ont été créées : le contact est complet.
+    if (partiel && manquantes.length === 0) return;
 
     const detail = manquantes.length > 0 ? ` : ${manquantes.join(", ")}` : "";
     console.error(
@@ -281,12 +312,15 @@ export const resendAdapter: CRMAdapter = {
   },
 
   async triggerSequence(leadId: string, _sequenceId: string, emailConnu?: string) {
+    // Aucun événement tant que la séquence n'est pas voulue (16/10) : sans
+    // RESEND_SEQUENCE_EVENT, rien ne part vers les Automations Resend, et
+    // aucune Automation branchée sur un nom d'événement ne peut se
+    // déclencher par surprise. La variable prime aussi sur l'identifiant
+    // générique passé par la route (« seq14 »).
+    const nomEvenement = process.env.RESEND_SEQUENCE_EVENT?.trim();
+    if (!nomEvenement) return;
     const email = emailConnu ?? emailParLeadId.get(leadId);
     if (!email) return;
-    // La variable d'environnement prime : l'identifiant générique passé par
-    // la route (« seq14 ») l'écrasait, et l'Automation n'aurait jamais reçu
-    // l'événement qu'elle attend.
-    const nomEvenement = process.env.RESEND_SEQUENCE_EVENT || "sequence_j14";
     // Déclenchement par ÉVÉNEMENT NOMMÉ : c'est ce qu'attend le pas de
     // déclenchement d'une Automation Resend.
     const res = await getClient().events.send({ event: nomEvenement, email });
