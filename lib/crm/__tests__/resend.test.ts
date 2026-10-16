@@ -16,6 +16,8 @@ let echecCreate: { message: string } | null = null;
 let declarees: string[] | null = null;
 /** La liste des propriétés ne répond pas. */
 let listeEnPanne = false;
+/** La création de propriété est refusée (clé API sans le droit, par exemple). */
+let creationEnPanne = false;
 const erreurPropriete = { name: "validation_error", message: "One or more properties do not exist" };
 
 const trace = (methode: string, retour: unknown = { data: { id: "c_1" }, error: null }) => async (payload: unknown) => {
@@ -58,6 +60,12 @@ vi.mock("resend", () => ({
         const page = toutes.slice(debut, debut + limite);
         return { data: { object: "list", has_more: debut + limite < toutes.length, data: page }, error: null };
       },
+      create: async (options: { key: string; type: string }) => {
+        appels.push({ methode: "contactProperties.create", payload: options });
+        if (creationEnPanne) return { data: null, error: { name: "restricted_api_key", message: "This API key is restricted" } };
+        if (declarees && !declarees.includes(options.key)) declarees.push(options.key);
+        return { data: { object: "contact_property", id: "p_new" }, error: null };
+      },
     };
   },
 }));
@@ -98,6 +106,8 @@ beforeEach(() => {
   echecCreate = null;
   declarees = null;
   listeEnPanne = false;
+  creationEnPanne = false;
+  delete process.env.RESEND_SEQUENCE_EVENT;
   delete process.env.RESEND_SEGMENT_LEADS_ID;
 });
 
@@ -190,8 +200,31 @@ describe("propriétés de contact (14/10)", () => {
     for (const key of Object.keys(props)) expect(RESEND_CONTACT_PROPERTIES).toHaveProperty(key);
   });
 
-  it("propriétés absentes de Resend : le contact est enregistré avec celles qui existent, et c'est signalé", async () => {
+  it("propriété absente de Resend : elle est créée avec son type, et le contact est enregistré complet", async () => {
+    const { RESEND_CONTACT_PROPERTIES } = await import("@/lib/crm/resend");
+    // 24 propriétés sur 25 : plus que la page par défaut de l'API (20). Seule
+    // la vraie absente doit être créée (cas du 14/10).
+    declarees = Object.keys(RESEND_CONTACT_PROPERTIES).filter((k) => k !== "lead_created_at");
+    const issue = await resendAdapter.upsertLead(avecSource);
+    const creations = appels.filter((a) => a.methode === "contactProperties.create");
+    expect(creations.map((a) => a.payload)).toEqual([{ key: "lead_created_at", type: "string" }]);
+    const derniere = appels.filter((a) => a.methode === "contacts.create").at(-1)!;
+    const props = (derniere.payload as { properties: Record<string, unknown> }).properties;
+    expect(props).toMatchObject({ lead_created_at: avecSource.created_at, telephone: "+33600000000", utm_content: "B_Foyer_s04" });
+    expect(issue?.warnings ?? []).toEqual([]);
+  });
+
+  it("garde le type nombre à la création", async () => {
+    const { RESEND_CONTACT_PROPERTIES } = await import("@/lib/crm/resend");
+    declarees = Object.keys(RESEND_CONTACT_PROPERTIES).filter((k) => k !== "tjm_ou_ca");
+    await resendAdapter.upsertLead(avecSource);
+    const creation = appels.find((a) => a.methode === "contactProperties.create");
+    expect(creation?.payload).toEqual({ key: "tjm_ou_ca", type: "number" });
+  });
+
+  it("création refusée : le contact est enregistré avec les propriétés qui existent, et c'est signalé", async () => {
     declarees = ["lead_id", "telephone"];
+    creationEnPanne = true;
     const issue = await resendAdapter.upsertLead(avecSource);
     const creations = appels.filter((a) => a.methode === "contacts.create");
     expect(creations).toHaveLength(2);
@@ -201,18 +234,6 @@ describe("propriétés de contact (14/10)", () => {
     });
     expect(issue && issue.warnings?.[0]).toMatch(/utm_content/);
     expect(issue && issue.warnings?.[0]).not.toMatch(/\btelephone\b/);
-  });
-
-  it("une seule propriété manquante ne fait plus perdre le téléphone ni la source (cas du 14/10)", async () => {
-    const { RESEND_CONTACT_PROPERTIES } = await import("@/lib/crm/resend");
-    // 24 propriétés sur 25 : plus que la page par défaut de l'API (20).
-    declarees = Object.keys(RESEND_CONTACT_PROPERTIES).filter((k) => k !== "lead_created_at");
-    const issue = await resendAdapter.upsertLead(avecSource);
-    const derniere = appels.filter((a) => a.methode === "contacts.create").at(-1)!;
-    const props = (derniere.payload as { properties: Record<string, unknown> }).properties;
-    expect(props).toMatchObject({ telephone: "+33600000000", utm_content: "B_Foyer_s04", resume_simulation: "Freelance · TJM 500 à 650 €" });
-    expect(props).not.toHaveProperty("lead_created_at");
-    expect(issue && issue.warnings?.[0]).toMatch(/: lead_created_at\./);
   });
 
   it("liste des propriétés illisible : le contact est enregistré sans propriétés plutôt que perdu", async () => {
@@ -234,12 +255,20 @@ describe("propriétés de contact (14/10)", () => {
 
 describe("séquence", () => {
   it("se déclenche par un événement nommé, pas par une entrée de segment", async () => {
+    process.env.RESEND_SEQUENCE_EVENT = "sequence_j14";
     await resendAdapter.upsertLead(lead);
     appels.length = 0;
     await resendAdapter.triggerSequence(lead.lead_id, "sequence_j14");
     expect(appels).toHaveLength(1);
     expect(appels[0].methode).toBe("events.send");
     expect(appels[0].payload).toEqual({ event: "sequence_j14", email: "camille@example.com" });
+  });
+
+  it("n'envoie rien tant que RESEND_SEQUENCE_EVENT n'est pas défini (aucune Automation déclenchée par surprise)", async () => {
+    await resendAdapter.upsertLead(lead);
+    appels.length = 0;
+    await resendAdapter.triggerSequence(lead.lead_id, "seq14", lead.identity.email);
+    expect(appels).toEqual([]);
   });
 });
 

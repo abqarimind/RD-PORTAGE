@@ -44,10 +44,12 @@ rétrocompatible) ; `summary` n'est jamais pris au navigateur.
 refuse le contact entier dès qu'une seule clé n'existe pas (« One or more
 properties do not exist ») : c'est ce qui a fait échouer chaque lead de
 production jusqu'au 14/10. Source unique : `RESEND_CONTACT_PROPERTIES` dans
-`lib/crm/resend.ts`. Si une propriété manque malgré tout, le contact est
-enregistré avec les propriétés qui existent (sans propriétés si Resend ne
-répond pas à la liste), et la notification interne arrive avec `[ALERTE]`,
-la liste des clés manquantes et les données brutes.
+`lib/crm/resend.ts`. Si une propriété manque malgré tout, le site la crée
+lui-même dans Resend, avec son type, puis enregistre le contact complet. Si
+la création échoue, le contact est enregistré avec les propriétés qui
+existent (sans propriétés si Resend ne répond pas à la liste), et la
+notification interne arrive avec `[ALERTE]`, la liste des clés manquantes et
+les données brutes.
 
 Resend refuse de créer une propriété qui porte le nom d'un champ natif du
 contact (« This property name cannot be used ») : `created_at`, `email`,
