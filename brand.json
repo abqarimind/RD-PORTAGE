@@ -1,0 +1,38 @@
+{
+  "brand": "RD Portage",
+  "concept": "TRIBUNAL FISCAL",
+  "colors": {
+    "nuit":   { "hex": "#0E1B33", "usage": "fond principal" },
+    "laiton": { "hex": "#B08D57", "usage": "accents, CTA, filets" },
+    "creme":  { "hex": "#F4EFE6", "usage": "fonds clairs, texte sur nuit" },
+    "encre":  { "hex": "#1A1A1A", "usage": "texte sur crème" },
+    "valide": { "hex": "#2F6B4F", "usage": "vert de validation, résultats du simulateur uniquement" },
+    "white":  "#FFFFFF",
+    "black":  "#000000"
+  },
+  "typography": {
+    "display": {
+      "family": "Source Serif 4",
+      "fallback": ["Iowan Old Style", "Georgia", "serif"],
+      "weights": [400, 600],
+      "style": "titres en 600, letter-spacing -0.01em"
+    },
+    "body": {
+      "family": "IBM Plex Sans",
+      "fallback": ["Helvetica Neue", "Arial", "sans-serif"],
+      "weights": [400, 500]
+    },
+    "loaded_but_unused_in_config": "Manrope 500/700/800",
+    "forbidden": ["Inter", "Roboto", "Lato", "Poppins"],
+    "numbers": "tabular-nums"
+  },
+  "ui": {
+    "border_radius": "2px",
+    "filet": "1px solid #B08D57",
+    "cta_primary": "fond laiton, texte encre, hover = fond nuit + texte crème + liseré laiton",
+    "note_juridique": "fond crème, bordure laiton",
+    "transition": "200ms ease-out",
+    "max_widths": { "page": "1140px", "reading": "768px", "form": "672px" },
+    "section_spacing": { "mobile": "48px", "tablet": "56px", "desktop": "72px" }
+  }
+}
