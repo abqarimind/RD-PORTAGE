@@ -56,12 +56,12 @@ const segmentLeads = () => process.env.RESEND_SEGMENT_LEADS_ID || null;
  * filtrables tels quels dans un segment.
  *
  * Noms réservés : Resend refuse de créer une propriété qui porte le nom d'un
- * champ natif du contact (`created_at`, `email`, `first_name`…). D'où
- * `lead_created_at` (14/10).
+ * champ natif du contact (`created_at`, `email`, `first_name`…). La date du
+ * lead n'est donc pas une propriété : l'export CSV prend la date de création
+ * native du contact.
  */
 export const RESEND_CONTACT_PROPERTIES = {
   lead_id: "string",
-  lead_created_at: "string",
   telephone: "string",
   statut_actuel: "string",
   tjm_ou_ca: "number",
@@ -98,7 +98,6 @@ export function proprietes(lead: Lead): Partial<Record<ResendPropertyKey, string
   const first = lead.attribution.first_touch;
   return {
     lead_id: lead.lead_id,
-    lead_created_at: lead.created_at,
     telephone: lead.identity.phone ?? null,
     statut_actuel: lead.profile.statut_actuel,
     tjm_ou_ca: lead.profile.tjm_ou_ca,
@@ -374,7 +373,7 @@ export const resendAdapter: CRMAdapter = {
         };
 
         if (filter?.funnelStage && val("funnel_stage") !== filter.funnelStage) continue;
-        const cree = val("lead_created_at") || detail.data.created_at;
+        const cree = detail.data.created_at;
         if (filter?.from && cree < filter.from) continue;
         if (filter?.to && cree > filter.to) continue;
 

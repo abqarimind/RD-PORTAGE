@@ -53,13 +53,13 @@ les données brutes.
 
 Resend refuse de créer une propriété qui porte le nom d'un champ natif du
 contact (« This property name cannot be used ») : `created_at`, `email`,
-`first_name`, `last_name`, `unsubscribed`… La date du lead s'appelle donc
-`lead_created_at`.
+`first_name`, `last_name`, `unsubscribed`… La date du lead n'est donc pas
+une propriété : l'export CSV (`/api/export`) prend la date de création native
+du contact Resend.
 
 | Clé | Type | Contenu |
 |---|---|---|
 | `lead_id` | string | identifiant du lead |
-| `lead_created_at` | string | date d'envoi (ISO) |
 | `telephone` | string | E.164, ex. +33612345678 |
 | `statut_actuel` | string | salarie_esn, freelance_micro… |
 | `tjm_ou_ca` | number | TJM retenu par le calcul |
