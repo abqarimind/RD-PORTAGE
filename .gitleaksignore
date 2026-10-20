@@ -1,0 +1,5 @@
+# Faux positif : DOSSIER_SECRET de test du serveur e2e (playwright.config.ts),
+# public par construction, utilisé seulement en CI avec le CRM en mode mock.
+# Ce n'est pas le secret de production, qui n'est jamais versionné.
+06cc59b409c5523f56ef437ea1bc9b2682a3689b:playwright.config.ts:generic-api-key:44
+playwright.config.ts:generic-api-key:44
