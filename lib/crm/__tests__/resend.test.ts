@@ -202,15 +202,15 @@ describe("propriétés de contact (14/10)", () => {
 
   it("propriété absente de Resend : elle est créée avec son type, et le contact est enregistré complet", async () => {
     const { RESEND_CONTACT_PROPERTIES } = await import("@/lib/crm/resend");
-    // 24 propriétés sur 25 : plus que la page par défaut de l'API (20). Seule
+    // 23 propriétés sur 24 : plus que la page par défaut de l'API (20). Seule
     // la vraie absente doit être créée (cas du 14/10).
-    declarees = Object.keys(RESEND_CONTACT_PROPERTIES).filter((k) => k !== "lead_created_at");
+    declarees = Object.keys(RESEND_CONTACT_PROPERTIES).filter((k) => k !== "utm_content");
     const issue = await resendAdapter.upsertLead(avecSource);
     const creations = appels.filter((a) => a.methode === "contactProperties.create");
-    expect(creations.map((a) => a.payload)).toEqual([{ key: "lead_created_at", type: "string" }]);
+    expect(creations.map((a) => a.payload)).toEqual([{ key: "utm_content", type: "string" }]);
     const derniere = appels.filter((a) => a.methode === "contacts.create").at(-1)!;
     const props = (derniere.payload as { properties: Record<string, unknown> }).properties;
-    expect(props).toMatchObject({ lead_created_at: avecSource.created_at, telephone: "+33600000000", utm_content: "B_Foyer_s04" });
+    expect(props).toMatchObject({ lead_id: avecSource.lead_id, telephone: "+33600000000", utm_content: "B_Foyer_s04" });
     expect(issue?.warnings ?? []).toEqual([]);
   });
 

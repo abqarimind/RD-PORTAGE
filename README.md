@@ -38,58 +38,63 @@ npm run report:weekly  # rapport KPI Markdown
 Copier `.env.example` → `.env.local`. Par défaut tout fonctionne en mode
 mock (aucune clé requise) : les leads vont dans `data/leads-fallback.ndjson`.
 
-## En production
+## Héberger hors Vercel
 
-- **Site** : https://simulateur.rdportage.com, hébergé sur Vercel (projet
-  `rd-portage`). Chaque fusion dans `main` part en production ; chaque PR a
-  son aperçu (Preview), protégé par une connexion Vercel. Le Pixel Meta est
-  coupé sur les aperçus.
-- **CI** (`.github/workflows/ci.yml`) : vérification des types, tests
-  unitaires et parcours complet sur iPhone (Playwright), à chaque PR.
-- **Comptes externes** (ceux de RD Portage) : Resend (contacts et e-mails),
-  Plausible (site simulateur.rdportage.com), Meta (pixel 4019768748330072).
-  Réglages : `docs/schema-lead.md`, `docs/mesure-sans-cookie.md`,
-  `docs/meta-pixel.md`.
+Aujourd'hui, le site tourne sur Vercel : chaque fusion dans `main` part en
+production. Pour l'héberger ailleurs (VPS, conteneur, plateforme Node), il
+faut un processus Node.js permanent (`next start`) derrière le HTTPS de
+l'hébergeur. Pas d'hébergement « serverless » : l'enregistrement du lead et
+les e-mails partent après la réponse au formulaire, dans le même processus.
 
-Variables de production (Vercel → Settings → Environment Variables) :
+```bash
+# Node.js 22, version de la CI (Next 14 exige au moins 18.17)
+npm ci                                # dépendances de développement comprises : le build en a besoin
+VERCEL_ENV=production npm run build   # serveur de production uniquement
+npm start                             # port 3000 ; PORT=8080 npm start pour un autre
+```
 
-| Variable | Rôle |
-|---|---|
-| `CRM_PROVIDER` | `resend` : les leads deviennent des contacts Resend |
-| `RESEND_API_KEY` | clé Resend (e-mails et contacts) |
-| `MAIL_FROM` | expéditeur des e-mails au prospect |
-| `MAIL_FROM_INTERNE` | expéditeur de la notification interne (différent de `MAIL_INTERNAL_TO`) |
-| `MAIL_INTERNAL_TO` | destinataires de la notification de lead, séparés par des virgules |
-| `DOSSIER_SECRET` | signature des liens de dossier envoyés par e-mail |
-| `NEXT_PUBLIC_SITE_URL` | adresse publique du site |
-| `EXPORT_TOKEN` | protège l'export CSV `/api/export?token=…` |
-| `RESEND_SEQUENCE_EVENT` | facultative, vide aujourd'hui : aucune séquence d'e-mails ne part (`content/emails/sequence.md`) |
-| `NEXT_PUBLIC_META_PIXEL_DEBUG` | facultative, Preview seulement : active le Pixel sur un aperçu pour « Tester les événements » |
+1. **`VERCEL_ENV=production` au build, sur le serveur de production
+   seulement.** Le code garde le comportement Vercel : le Pixel Meta, sa
+   bannière cookies et la mesure Plausible ne s'activent que si `VERCEL_ENV`
+   vaut `production` au moment du build (`next.config.js`). Sans elle, le
+   site fonctionne mais ne mesure rien. Ne pas la poser sur un serveur de
+   test ni en local.
+2. **Variables** : à poser sur le serveur avant le build (les
+   `NEXT_PUBLIC_*` sont figées au build), dans l'environnement du service ou
+   dans un fichier `.env.production.local` jamais versionné. Modèle :
+   `.env.example`. Indispensables en production :
 
-Les propriétés de contact Resend manquantes sont créées automatiquement au
-premier lead qui en a besoin (`lib/crm/resend.ts`).
+   | Variable | Rôle |
+   |---|---|
+   | `CRM_PROVIDER` | `resend` : les leads deviennent des contacts Resend |
+   | `RESEND_API_KEY` | clé Resend (e-mails et contacts) |
+   | `MAIL_FROM` | expéditeur des e-mails au prospect |
+   | `MAIL_FROM_INTERNE` | expéditeur de la notification interne (différent de `MAIL_INTERNAL_TO`) |
+   | `MAIL_INTERNAL_TO` | destinataires de la notification de lead, séparés par des virgules |
+   | `DOSSIER_SECRET` | signature des liens de dossier envoyés par e-mail |
+   | `NEXT_PUBLIC_SITE_URL` | adresse publique du site |
+   | `EXPORT_TOKEN` | protège l'export CSV `/api/export?token=…` |
+   | `RESEND_SEQUENCE_EVENT` | facultative, vide aujourd'hui : aucune séquence d'e-mails ne part (`content/emails/sequence.md`) |
 
-## Reprendre le projet
+   Les propriétés de contact Resend manquantes sont créées automatiquement
+   au premier lead qui en a besoin (`lib/crm/resend.ts`).
+3. **Journal des leads** : une copie de secours de chaque lead est écrite
+   dans `./data` (ou `JOURNAL_DIR`). Ce dossier doit être inscriptible et
+   conservé d'un déploiement à l'autre.
+4. **Proxy HTTPS** : il doit transmettre l'en-tête `X-Forwarded-For`, lu par
+   l'anti-spam du formulaire.
+5. **Bascule** : faire pointer simulateur.rdportage.com vers le nouvel
+   hébergeur, puis envoyer un formulaire de test et vérifier le contact
+   Resend et la notification interne.
 
-Pour que RD Portage héberge le site sur ses propres comptes, sans
-ressaisir les variables :
+Comptes externes (ceux de RD Portage) : Resend (contacts et e-mails),
+Plausible (site simulateur.rdportage.com), Meta (pixel 4019768748330072).
+Réglages : `docs/schema-lead.md`, `docs/mesure-sans-cookie.md`,
+`docs/meta-pixel.md`.
 
-1. **GitHub** : transférer le dépôt vers le compte ou l'organisation de RD
-   Portage (Settings → General → Danger Zone → Transfer ownership).
-   L'historique, les PR et la CI suivent.
-2. **Vercel** : RD Portage invite l'actuel propriétaire du projet dans son
-   équipe Vercel. Celui-ci ouvre le projet → Settings → General → Transfer
-   Project, et choisit cette équipe. Les variables, le domaine
-   simulateur.rdportage.com, les déploiements et le lien Git suivent, sans
-   interruption du site ([documentation](https://vercel.com/docs/projects/transferring-projects)).
-   Le site étant commercial, l'équipe d'arrivée doit être sur l'offre Pro.
-3. Après les deux transferts : dans Vercel → Settings → Git, vérifier que le
-   projet est relié au dépôt transféré (l'application Vercel doit avoir accès
-   au dépôt chez RD Portage), puis relancer un déploiement de production.
-
-Sans transfert possible : importer le dépôt dans un nouveau projet Vercel,
-recréer les variables du tableau ci-dessus, puis rattacher le domaine
-simulateur.rdportage.com.
+La CI GitHub (`.github/workflows/ci.yml`) vérifie les types, les tests
+unitaires et le parcours complet sur iPhone (Playwright) à chaque PR, quel
+que soit l'hébergeur. Hors Vercel, il n'y a plus d'aperçu par PR.
 
 ## Contenus à compléter par RD Portage
 
